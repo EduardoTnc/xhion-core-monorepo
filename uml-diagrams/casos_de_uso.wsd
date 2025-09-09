@@ -1,0 +1,140 @@
+@startuml
+' Título del Diagrama
+title Diagrama de Casos de Uso - Plataforma "XHION Core"
+
+' Estilo del Diagrama
+skinparam actor {
+    BackgroundColor #B0C4DE
+    BorderColor #4682B4
+}
+skinparam usecase {
+    BackgroundColor #FEFECE
+    BorderColor #A80036
+}
+skinparam package {
+    FontColor #333333
+    BorderColor #888888
+}
+left to right direction
+
+' --- DEFINICIÓN DE ACTORES ---
+actor "Colaborador" as Colaborador
+actor "Gerente" as Gerente
+actor "Administrador" as Admin
+actor "Asistente IA (Sistema)" as IA <<System>>
+
+' --- JERARQUÍA DE ACTORES ---
+' Un Gerente es un Colaborador con más permisos.
+' Un Administrador es un Gerente con permisos de sistema.
+Gerente --|> Colaborador
+Admin --|> Gerente
+
+' --- CASOS DE USO PRINCIPALES AGRUPADOS POR MÓDULOS ---
+
+package "Módulo: Núcleo y Perfil" {
+    usecase "Iniciar Sesión" as UC_Login
+    usecase "Gestionar Mi Perfil" as UC_ManageProfile
+    usecase "Ver Mi Dashboard" as UC_ViewDashboard
+    usecase "Personalizar Mi Dashboard" as UC_CustomizeDashboard
+    usecase "Ajustar Mis Configuraciones" as UC_ManageSettings
+}
+
+package "Módulo: Gestión de Proyectos" {
+    usecase "Ver Proyectos" as UC_ViewProjects
+    usecase "Gestionar Tareas" as UC_ManageTasks
+    usecase "Ver Tablero Kanban" as UC_ViewKanban
+    usecase "Adjuntar Archivos" as UC_AttachFiles
+    usecase "Añadir Comentarios" as UC_AddComments
+}
+
+package "Módulo: Gestión y Estrategia (Gerencial)" {
+    usecase "Crear y Editar Proyecto" as UC_CreateProject
+    usecase "Asignar Tareas" as UC_AssignTasks
+    usecase "Ver Dashboards del Equipo" as UC_ViewTeamDashboards
+    usecase "Consultar Datos con IA" as UC_QueryWithAI
+    usecase "Revisar Buzón de Ideas" as UC_ReviewIdeas
+}
+
+package "Módulo: Administración del Sistema" {
+    usecase "Gestionar Usuarios" as UC_ManageUsers
+    usecase "Gestionar Roles y Permisos" as UC_ManageRoles
+    usecase "Gestionar Catálogos" as UC_ManageCatalogs
+    usecase "Ver Registro de Auditoría" as UC_ViewAuditLog
+}
+
+
+package "Módulo: Gamificación" {
+    usecase "Ver Mis Puntos y Logros" as UC_ViewGamification
+    usecase "Ver Tablas de Clasificación" as UC_ViewLeaderboards
+}
+
+package "Módulo: Asistente IA (Acciones del Sistema)" {
+    usecase "Generar Estructura de Proyecto" as IA_GenerateProject
+    usecase "Sugerir Asignaciones" as IA_SuggestAssignee
+    usecase "Resumir Hilos de Tareas" as IA_SummarizeTask
+    usecase "Sugerir Habilidades" as IA_SuggestSkills
+}
+
+' --- RELACIONES DE LOS ACTORES CON LOS CASOS DE USO ---
+
+' --- Colaborador ---
+Colaborador -- UC_Login
+Colaborador -- UC_ManageProfile
+Colaborador -- UC_ViewDashboard
+Colaborador -- UC_CustomizeDashboard
+Colaborador -- UC_ManageSettings
+Colaborador -- UC_ViewProjects
+Colaborador -- UC_ManageTasks
+Colaborador -- UC_ViewKanban
+Colaborador -- UC_AttachFiles
+Colaborador -- UC_AddComments
+Colaborador -- UC_ViewGamification
+Colaborador -- UC_ViewLeaderboards
+
+' --- Gerente (Hereda los de Colaborador y añade los suyos) ---
+Gerente -- UC_CreateProject
+Gerente -- UC_AssignTasks
+Gerente -- UC_ViewTeamDashboards
+Gerente -- UC_QueryWithAI
+Gerente -- UC_ReviewIdeas
+
+' --- Administrador (Hereda los de Gerente y añade los suyos) ---
+Admin -- UC_ManageUsers
+Admin -- UC_ManageRoles
+Admin -- UC_ManageCatalogs
+Admin -- UC_ViewAuditLog
+
+' --- Asistente IA (Es invocado por otros casos de uso) ---
+' No hay una línea directa de actor, ya que es un sistema que extiende la funcionalidad.
+
+' --- RELACIONES ENTRE CASOS DE USO (include, extend) ---
+
+' Para casi todo, se necesita estar logueado.
+UC_ManageProfile .> UC_Login : <<include>>
+UC_ViewDashboard .> UC_Login : <<include>>
+UC_ViewProjects .> UC_Login : <<include>>
+
+' Gestionar tareas incluye varias acciones.
+UC_ManageTasks .> UC_ViewKanban : <<include>>
+UC_ManageTasks .> UC_AddComments : <<include>>
+UC_ManageTasks .> UC_AttachFiles : <<include>>
+
+' La creación de proyectos es extendida por la IA.
+UC_CreateProject <. IA_GenerateProject : <<extend>>
+note on link: La IA asiste al Gerente durante la creación
+
+UC_AssignTasks <. IA_SuggestAssignee : <<extend>>
+note on link: La IA puede sugerir el mejor asignado
+
+UC_ManageTasks <. IA_SummarizeTask : <<extend>>
+note on link: El usuario puede solicitar un resumen de IA
+
+' El sistema de IA es invocado para sugerir habilidades
+UC_ManageProfile <. IA_SuggestSkills : <<extend>>
+note on link
+  La IA sugiere habilidades para añadir al perfil
+  basándose en el rendimiento del Colaborador.
+end note
+
+
+@enduml
