@@ -1,0 +1,610 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// Le dice a Prisma qué debe generar y dónde.
+generator client {
+  provider        = "prisma-client-js"
+}
+
+// Configura la conexión a tu base de datos.
+datasource db {
+  provider  = "postgresql" // El "dialecto" de la BBDD (puede ser mysql, sqlite, etc.)
+  url       = env("DATABASE_URL") // Lee la URL desde las variables de entorno
+  directUrl = env("DIRECT_URL") // para migraciones en entornos con pooling
+}
+
+// -----------------------------------------------------------------------------
+// XHION Core - Plataforma de Productividad Operativa
+// Version: 1.7 (Prisma Schema from DBML)
+// Author: Eduardo Tanca
+// Description: Esquema de Prisma generado a partir del DBML v1.7.
+//              Mantiene la estructura modular y las relaciones, adaptado a las
+//              convenciones de Prisma para una integración óptima con NestJS.
+// -----------------------------------------------------------------------------
+
+// --- DEFINICION DE TIPOS ENUM ---
+
+enum EstadoUsuario {
+  INVITADO
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoProyecto {
+  Activo
+  Completado
+  En_Pausa
+  Archivado
+}
+
+enum EstadoTarea {
+  Por_Hacer
+  En_Progreso
+  Hecho
+  Bloqueado
+}
+
+enum TipoContacto {
+  telefono_principal
+  telefono_secundario
+  email_personal
+}
+
+enum TipoEnlaceProfesional {
+  linkedin
+  portafolio_personal
+  blog_tecnico
+}
+
+enum NivelHabilidad {
+  Basico
+  Intermedio
+  Avanzado
+  Experto
+}
+
+enum CategoriaHabilidad {
+  Frontend
+  Backend
+  DevOps
+  Diseno_UI_UX
+  Gestion_Proyectos
+  Habilidad_Blanda
+}
+
+enum TipoCanal {
+  directo
+  grupo_privado
+  proyecto
+  anuncios_departamento
+}
+
+enum RolCanal {
+  miembro
+  admin
+}
+
+enum TipoDatoConfiguracion {
+  booleano
+  texto
+  numero
+  seleccion
+}
+
+enum PeriodoClasificacion {
+  diario
+  semanal
+  mensual
+  trimestral
+  historico
+}
+
+// --- MODULO: NUCLEO DE LA ORGANIZACION ---
+
+/// Almacena los departamentos de la empresa.
+model Departamento {
+  id               String    @id @default(uuid()) @db.Uuid
+  nombre           String    @unique @db.VarChar(100)
+  fechaCreacion    DateTime  @default(now())
+  fechaEliminacion DateTime? // Para eliminación lógica.
+
+  puestosTrabajo PuestoTrabajo[]
+  proyectos      Proyecto[]
+  Invitacion     Invitacion[]
+}
+
+/// Catálogo centralizado de puestos de trabajo.
+model PuestoTrabajo {
+  id             String  @id @default(uuid()) @db.Uuid
+  titulo         String  @unique @db.VarChar(100)
+  descripcion    String?
+  departamentoId String  @db.Uuid
+
+  departamento Departamento @relation(fields: [departamentoId], references: [id])
+  usuarios     Usuario[]
+}
+
+/// Define los roles de usuario para la gestión de permisos.
+model Rol {
+  id               String    @id @default(uuid()) @db.Uuid
+  nombre           String    @unique @db.VarChar(50)
+  descripcion      String?
+  fechaEliminacion DateTime? // Para eliminación lógica.
+
+  usuarios                Usuario[]
+  permisos                RolPermiso[]
+  catalogoConfiguraciones CatalogoConfiguracion[]
+  plantillaDashboard      PlantillaDashboard?
+
+  // Añade la relación inversa para que un Rol sepa qué widgets lo requieren.
+  catalogoWidgets CatalogoWidget[]
+  Invitacion      Invitacion[]
+}
+
+/// Perfil del empleado.
+model Usuario {
+  id                    String        @id @default(uuid()) @db.Uuid
+  nombreCompleto        String        @db.VarChar(100)
+  email                 String        @unique @db.VarChar(100)
+  passwordHash          String?       @db.VarChar(255)
+  estado                EstadoUsuario @default(INVITADO)
+  rolId                 String        @db.Uuid
+  puestoTrabajoId       String?       @db.Uuid
+  supervisorId          String?       @db.Uuid
+  avatarUrl             String?
+  biografia             String?
+  fechaNacimiento       DateTime?     @db.Date
+  fechaIngreso          DateTime?     @db.Date
+  archivoCvId           String?       @unique @db.Uuid
+  puntajePerfilCompleto Int           @default(0)
+  fechaCreacion         DateTime      @default(now())
+  fechaActualizacion    DateTime      @updatedAt
+  fechaEliminacion      DateTime? // Para eliminación lógica.
+
+  invitaciones_enviadas     Invitacion[]               @relation("InvitadoPor")
+  rol                       Rol                        @relation(fields: [rolId], references: [id])
+  puestoTrabajo             PuestoTrabajo?             @relation(fields: [puestoTrabajoId], references: [id])
+  supervisor                Usuario?                   @relation("Supervision", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subordinados              Usuario[]                  @relation("Supervision")
+  archivoCv                 Archivo?                   @relation("CVDelUsuario", fields: [archivoCvId], references: [id])
+  contactos                 UsuarioContacto[]
+  enlacesProfesionales      UsuarioEnlaceProfesional[]
+  habilidades               UsuarioHabilidad[]
+  proyectosResponsable      Proyecto[]
+  tareasAsignadas           Tarea[]                    @relation("TareasAsignadas")
+  tareasCreadas             Tarea[]                    @relation("TareasCreadas")
+  comentarios               Comentario[]
+  plantillasProyectoCreadas PlantillaProyectoIA[]
+  logsQueriesIA             AiQueryLog[]
+  archivosSubidos           Archivo[]                  @relation("ArchivosSubidosPorUsuario")
+  canalesCreados            Canal[]
+  miembroDeCanales          CanalMiembro[]
+  mensajesEnviados          Mensaje[]
+  estadosLecturaMensajes    MensajeEstadoLectura[]
+  configuraciones           ConfiguracionUsuario[]
+  dashboardsPropios         DashboardUsuario[]
+  logros                    UsuarioLogro[]
+  registrosPuntos           RegistroPuntos[]
+  entradasClasificacion     ClasificacionEntrada[]
+  registrosAuditoria        RegistroAuditoria[]
+}
+
+/// Invitaciones para nuevos usuarios.
+model Invitacion {
+  id               String   @id @default(uuid()) @db.Uuid
+  email            String   @db.VarChar(100)
+  rol_id           String   @map("rol_id") @db.Uuid
+  departamento_id  String?  @map("departamento_id") @db.Uuid // Opcional si un invitado no tiene depto al inicio
+  token            String   @unique @db.VarChar(255)
+  fecha_expiracion DateTime
+  fue_utilizada    Boolean  @default(false)
+
+  invitado_por_id String  @map("invitado_por_id") @db.Uuid
+  invitado_por    Usuario @relation("InvitadoPor", fields: [invitado_por_id], references: [id])
+
+  fecha_creacion DateTime @default(now())
+
+  rol          Rol           @relation(fields: [rol_id], references: [id])
+  departamento Departamento? @relation(fields: [departamento_id], references: [id])
+
+  @@map("invitaciones")
+}
+
+/// Permite almacenar múltiples datos de contacto por usuario.
+model UsuarioContacto {
+  id        String       @id @default(uuid()) @db.Uuid
+  usuarioId String       @db.Uuid
+  tipo      TipoContacto
+  valor     String       @db.VarChar(255)
+  esPrivado Boolean      @default(true)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+/// Permite almacenar múltiples enlaces profesionales por usuario.
+model UsuarioEnlaceProfesional {
+  id        String                @id @default(uuid()) @db.Uuid
+  usuarioId String                @db.Uuid
+  tipo      TipoEnlaceProfesional
+  url       String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+/// Catálogo centralizado de habilidades y competencias.
+model Habilidad {
+  id        String              @id @default(uuid()) @db.Uuid
+  nombre    String              @unique @db.VarChar(100)
+  categoria CategoriaHabilidad?
+
+  usuarios UsuarioHabilidad[]
+}
+
+/// Tabla pivote para asignar habilidades a los usuarios.
+model UsuarioHabilidad {
+  usuarioId     String          @db.Uuid
+  habilidadId   String          @db.Uuid
+  nivel         NivelHabilidad?
+  sugeridoPorIa Boolean         @default(false)
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  habilidad Habilidad @relation(fields: [habilidadId], references: [id])
+
+  @@id([usuarioId, habilidadId])
+}
+
+// --- MODULO: GESTION DE PROYECTOS Y TAREAS ---
+
+/// Contiene la información de todos los proyectos creados.
+model Proyecto {
+  id                 String         @id @default(uuid()) @db.Uuid
+  nombre             String         @db.VarChar(255)
+  descripcion        String?
+  estado             EstadoProyecto @default(Activo)
+  responsableId      String         @db.Uuid
+  departamentoId     String?        @db.Uuid
+  fechaCreacion      DateTime       @default(now())
+  fechaActualizacion DateTime       @updatedAt
+  fechaEliminacion   DateTime?
+
+  responsable  Usuario       @relation(fields: [responsableId], references: [id])
+  departamento Departamento? @relation(fields: [departamentoId], references: [id])
+  tareas       Tarea[]
+}
+
+/// Registro de todas las tareas.
+model Tarea {
+  id                 String      @id @default(uuid()) @db.Uuid
+  titulo             String      @db.VarChar(255)
+  descripcion        String?
+  estado             EstadoTarea @default(Por_Hacer)
+  fechaVencimiento   DateTime?   @db.Date
+  proyectoId         String      @db.Uuid
+  asignadoId         String?     @db.Uuid
+  creadorId          String      @db.Uuid
+  resumenIa          String?
+  fechaCreacion      DateTime    @default(now())
+  fechaActualizacion DateTime    @updatedAt
+  fechaCompletado    DateTime?
+  fechaEliminacion   DateTime?
+
+  proyecto    Proyecto     @relation(fields: [proyectoId], references: [id])
+  asignado    Usuario?     @relation("TareasAsignadas", fields: [asignadoId], references: [id])
+  creador     Usuario      @relation("TareasCreadas", fields: [creadorId], references: [id])
+  comentarios Comentario[]
+}
+
+/// Comunicación contextual dentro de cada tarea.
+model Comentario {
+  id            String   @id @default(uuid()) @db.Uuid
+  contenido     String
+  usuarioId     String   @db.Uuid
+  tareaId       String   @db.Uuid
+  fechaCreacion DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  tarea   Tarea   @relation(fields: [tareaId], references: [id])
+}
+
+// --- MODULO: IA PARA ACELERACION DE PROCESOS ---
+
+/// Almacena plantillas de proyectos generadas por IA.
+model PlantillaProyectoIA {
+  id              String   @id @default(uuid()) @db.Uuid
+  nombrePlantilla String   @unique @db.VarChar(100)
+  descripcion     String?
+  promptGenerador String
+  estructuraJson  Json
+  creadoPorId     String?  @db.Uuid
+  fechaCreacion   DateTime @default(now())
+
+  creadoPor Usuario? @relation(fields: [creadoPorId], references: [id])
+}
+
+/// Audita las consultas en lenguaje natural.
+model AiQueryLog {
+  id                      String   @id @default(uuid()) @db.Uuid
+  usuarioId               String   @db.Uuid
+  consultaLenguajeNatural String
+  consultaSqlGenerada     String?
+  estadoEjecucion         String   @db.VarChar(50)
+  fueUtil                 Boolean?
+  fechaCreacion           DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+// --- MODULO: GESTION DOCUMENTAL ---
+
+/// Metadatos de los archivos.
+model Archivo {
+  id               String    @id @default(uuid()) @db.Uuid
+  nombreArchivo    String    @db.VarChar(255)
+  urlArchivo       String
+  tipoArchivo      String?   @db.VarChar(100)
+  tamanoBytes      Int?
+  subidoPorId      String    @db.Uuid
+  fechaCreacion    DateTime  @default(now())
+  fechaEliminacion DateTime?
+
+  subidoPor   Usuario          @relation("ArchivosSubidosPorUsuario", fields: [subidoPorId], references: [id])
+  cvDeUsuario Usuario?         @relation("CVDelUsuario")
+  adjuntos    ArchivoAdjunto[]
+}
+
+/// Tabla pivote polimórfica para adjuntar archivos a diferentes entidades (p. ej., Tareas, Proyectos).
+/// NOTA: Prisma no soporta relaciones polimórficas de forma nativa. La lógica para asociar
+/// entidadPadreTipo y entidadPadreId debe manejarse a nivel de la aplicación.
+model ArchivoAdjunto {
+  archivoId        String @db.Uuid
+  entidadPadreTipo String @db.VarChar(50)
+  entidadPadreId   String @db.Uuid
+
+  archivo Archivo @relation(fields: [archivoId], references: [id])
+
+  @@id([archivoId, entidadPadreTipo, entidadPadreId])
+  @@index([entidadPadreTipo, entidadPadreId])
+}
+
+// --- MODULO: MENSAJERIA INTERNA ---
+
+model Canal {
+  id                  String    @id @default(uuid()) @db.Uuid
+  nombre              String?   @db.VarChar(255)
+  tipo                TipoCanal
+  descripcion         String?
+  entidadAsociadaTipo String?   @db.VarChar(50)
+  entidadAsociadaId   String?   @db.Uuid
+  creadorId           String?   @db.Uuid
+  fechaCreacion       DateTime  @default(now())
+
+  creador        Usuario?               @relation(fields: [creadorId], references: [id])
+  miembros       CanalMiembro[]
+  mensajes       Mensaje[]
+  estadosLectura MensajeEstadoLectura[]
+}
+
+model CanalMiembro {
+  canalId    String   @db.Uuid
+  usuarioId  String   @db.Uuid
+  fechaUnion DateTime @default(now())
+  rol        RolCanal @default(miembro)
+
+  canal   Canal   @relation(fields: [canalId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@id([canalId, usuarioId])
+}
+
+model Mensaje {
+  id                 String    @id @default(uuid()) @db.Uuid
+  canalId            String    @db.Uuid
+  remitenteId        String    @db.Uuid
+  contenido          String?
+  mensajePadreId     String?   @db.Uuid
+  fechaCreacion      DateTime  @default(now())
+  fechaActualizacion DateTime  @updatedAt
+  fechaEliminacion   DateTime?
+
+  canal          Canal                  @relation(fields: [canalId], references: [id])
+  remitente      Usuario                @relation(fields: [remitenteId], references: [id])
+  mensajePadre   Mensaje?               @relation("HiloDeMensajes", fields: [mensajePadreId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  respuestas     Mensaje[]              @relation("HiloDeMensajes")
+  estadosLectura MensajeEstadoLectura[]
+}
+
+model MensajeEstadoLectura {
+  mensajeId    String   @db.Uuid
+  usuarioId    String   @db.Uuid
+  canalId      String   @db.Uuid
+  fechaLectura DateTime @default(now())
+
+  mensaje Mensaje @relation(fields: [mensajeId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  canal   Canal   @relation(fields: [canalId], references: [id])
+
+  @@id([usuarioId, canalId, mensajeId])
+}
+
+// --- MODULO: CONFIGURACION DE LA PLATAFORMA ---
+
+/// Define todas las configuraciones posibles en el sistema.
+model CatalogoConfiguracion {
+  id                   String                @id @default(uuid()) @db.Uuid
+  clave                String                @unique @db.VarChar(100)
+  nombreVisible        String                @db.VarChar(100)
+  descripcion          String?
+  tipoDato             TipoDatoConfiguracion
+  valorPorDefecto      String
+  rolMinimoRequeridoId String                @db.Uuid
+
+  rolMinimoRequerido Rol                    @relation(fields: [rolMinimoRequeridoId], references: [id])
+  valoresUsuario     ConfiguracionUsuario[]
+}
+
+/// Almacena el valor personalizado para una configuración por usuario.
+model ConfiguracionUsuario {
+  usuarioId       String @db.Uuid
+  configuracionId String @db.Uuid
+  valor           String
+
+  usuario       Usuario               @relation(fields: [usuarioId], references: [id])
+  configuracion CatalogoConfiguracion @relation(fields: [configuracionId], references: [id])
+
+  @@id([usuarioId, configuracionId])
+}
+
+// --- MODULO: ANALITICA Y DASHBOARDS ---
+
+/// Define todos los tipos de widgets disponibles y quién puede usarlos.
+model CatalogoWidget {
+  id                   String  @id @default(uuid()) @db.Uuid
+  tipoWidget           String  @unique @db.VarChar(100)
+  nombreVisible        String  @db.VarChar(100)
+  descripcion          String?
+  rolMinimoRequeridoId String  @db.Uuid
+
+  rolMinimoRequerido Rol               @relation(fields: [rolMinimoRequeridoId], references: [id])
+  instancias         WidgetInstancia[]
+}
+
+/// Plantillas de dashboards pre-configuradas por rol.
+model PlantillaDashboard {
+  id                   String @id @default(uuid()) @db.Uuid
+  nombre               String @db.VarChar(100)
+  rolId                String @unique @db.Uuid
+  configuracionWidgets Json
+
+  rol Rol @relation(fields: [rolId], references: [id])
+}
+
+/// Dashboards personalizados de cada usuario.
+model DashboardUsuario {
+  id               String    @id @default(uuid()) @db.Uuid
+  nombre           String    @db.VarChar(100)
+  propietarioId    String    @db.Uuid
+  fechaCreacion    DateTime  @default(now())
+  fechaEliminacion DateTime?
+
+  propietario Usuario           @relation(fields: [propietarioId], references: [id])
+  widgets     WidgetInstancia[]
+}
+
+/// Instancia de un widget dentro de un dashboard.
+model WidgetInstancia {
+  id                      String  @id @default(uuid()) @db.Uuid
+  dashboardId             String  @db.Uuid
+  widgetCatalogoId        String  @db.Uuid
+  tituloPersonalizado     String? @db.VarChar(255)
+  configuracionEspecifica Json?
+  posX                    Int
+  posY                    Int
+  ancho                   Int
+  alto                    Int
+
+  dashboard      DashboardUsuario @relation(fields: [dashboardId], references: [id])
+  widgetCatalogo CatalogoWidget   @relation(fields: [widgetCatalogoId], references: [id])
+}
+
+// --- MODULO: GAMIFICACION ---
+
+/// Catálogo de insignias.
+model Logro {
+  id               String  @id @default(uuid()) @db.Uuid
+  nombre           String  @db.VarChar(100)
+  descripcion      String
+  urlIcono         String?
+  puntosRecompensa Int     @default(0)
+  accionDisparador String? @unique @db.VarChar(100)
+
+  usuarios UsuarioLogro[]
+}
+
+/// Registra los logros desbloqueados por usuario.
+model UsuarioLogro {
+  usuarioId       String   @db.Uuid
+  logroId         String   @db.Uuid
+  fechaDesbloqueo DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  logro   Logro   @relation(fields: [logroId], references: [id])
+
+  @@id([usuarioId, logroId])
+}
+
+/// Historial de transacciones de puntos.
+model RegistroPuntos {
+  id            String   @id @default(uuid()) @db.Uuid
+  usuarioId     String   @db.Uuid
+  puntos        Int
+  motivo        String   @db.VarChar(255)
+  tipoOrigen    String?  @db.VarChar(50)
+  idOrigen      String?  @db.Uuid
+  fechaCreacion DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+/// Define las tablas de clasificación (solo individuales).
+model Clasificacion {
+  id          String               @id @default(uuid()) @db.Uuid
+  nombre      String               @db.VarChar(100)
+  periodo     PeriodoClasificacion
+  fechaInicio DateTime             @db.Date
+  fechaFin    DateTime             @db.Date
+  estaActiva  Boolean              @default(true)
+
+  entradas ClasificacionEntrada[]
+}
+
+/// Almacena las posiciones en cada tabla de clasificación.
+model ClasificacionEntrada {
+  id                 String   @id @default(uuid()) @db.Uuid
+  clasificacionId    String   @db.Uuid
+  usuarioId          String   @db.Uuid
+  puntaje            Int
+  posicion           Int
+  fechaActualizacion DateTime @updatedAt
+
+  clasificacion Clasificacion @relation(fields: [clasificacionId], references: [id])
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+
+  @@index([clasificacionId, posicion])
+}
+
+// --- MODULO: SEGURIDAD Y AUDITORIA ---
+
+/// Catálogo de todas las acciones posibles en el sistema.
+model Permiso {
+  id           String  @id @default(uuid()) @db.Uuid
+  nombreAccion String  @unique @db.VarChar(100)
+  descripcion  String?
+
+  roles RolPermiso[]
+}
+
+/// Asigna permisos específicos a cada rol (RBAC).
+model RolPermiso {
+  rolId     String @db.Uuid
+  permisoId String @db.Uuid
+
+  rol     Rol     @relation(fields: [rolId], references: [id])
+  permiso Permiso @relation(fields: [permisoId], references: [id])
+
+  @@id([rolId, permisoId])
+}
+
+/// Registro inmutable de todas las acciones importantes.
+model RegistroAuditoria {
+  id          String   @id @default(uuid()) @db.Uuid
+  usuarioId   String?  @db.Uuid
+  accion      String   @db.VarChar(255)
+  detalles    Json?
+  direccionIp String?  @db.VarChar(45)
+  timestamp   DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+}

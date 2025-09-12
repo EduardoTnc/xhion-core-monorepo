@@ -1,0 +1,3 @@
+packages:
+  - 'xhion-core-api'
+  - 'xhion-core-client'
