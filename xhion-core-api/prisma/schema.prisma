@@ -18,9 +18,9 @@ datasource db {
 
 // -----------------------------------------------------------------------------
 // XHION Core - Plataforma de Productividad Operativa
-// Version: 1.7 (Prisma Schema from DBML)
+// Version: 1.8 (Prisma Schema from DBML)
 // Author: Eduardo Tanca
-// Description: Esquema de Prisma generado a partir del DBML v1.7.
+// Description: Esquema de Prisma generado a partir del DBML v1.8.
 //              Mantiene la estructura modular y las relaciones, adaptado a las
 //              convenciones de Prisma para una integración óptima con NestJS.
 // -----------------------------------------------------------------------------
