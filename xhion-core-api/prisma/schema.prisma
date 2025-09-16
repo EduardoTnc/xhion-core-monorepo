@@ -31,6 +31,9 @@ enum EstadoUsuario {
   INVITADO
   ACTIVO
   INACTIVO
+  SUSPENDIDO
+  BLOQUEADO
+  ELIMINADO
 }
 
 enum EstadoProyecto {
