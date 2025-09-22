@@ -1,9 +1,20 @@
-import { UUID } from "crypto";
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateInvitacionDto {
+  @IsString()
+  @IsNotEmpty()
   nombre_completo: string;
+
+  @IsEmail()
   email: string;
-  rol_id: UUID;
-  departamento_id: UUID;
-  invitado_por_id: UUID;
+
+  @IsUUID()
+  rol_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  departamento_id?: string;
+
+  @IsUUID()
+  invitado_por_id: string;
 }

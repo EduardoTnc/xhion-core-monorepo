@@ -1,4 +1,4 @@
-// /src/types/index.ts
+// src/types/index.ts
 
 // Este archivo contiene todas las definiciones de tipos de TypeScript para las entidades
 // de la base de datos. Sirve como un contrato entre el frontend y el backend,
