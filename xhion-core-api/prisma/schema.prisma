@@ -9,6 +9,21 @@ generator client {
   provider        = "prisma-client-js"
 }
 
+/// Gestión de sesiones y refresh tokens de usuarios.
+model Sesion {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuarioId        String    @db.Uuid
+  refreshTokenHash String    @unique @db.VarChar(255)
+  userAgent        String?   @map("user_agent")
+  direccionIp      String?   @map("direccion_ip") @db.VarChar(45)
+  fechaCreacion    DateTime  @default(now())
+  fechaUltimoUso   DateTime  @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("sesiones")
+}
+
 // Configura la conexión a tu base de datos.
 datasource db {
   provider  = "postgresql" // El "dialecto" de la BBDD (puede ser mysql, sqlite, etc.)
@@ -193,11 +208,13 @@ model Usuario {
   registrosPuntos           RegistroPuntos[]
   entradasClasificacion     ClasificacionEntrada[]
   registrosAuditoria        RegistroAuditoria[]
+  sesiones                  Sesion[]
 }
 
 /// Invitaciones para nuevos usuarios.
 model Invitacion {
   id               String   @id @default(uuid()) @db.Uuid
+  nombre_completo  String   @db.VarChar(100) @default("Desconocido")
   email            String   @db.VarChar(100)
   rol_id           String   @map("rol_id") @db.Uuid
   departamento_id  String?  @map("departamento_id") @db.Uuid // Opcional si un invitado no tiene depto al inicio

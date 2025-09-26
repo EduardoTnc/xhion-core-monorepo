@@ -29,6 +29,7 @@ export class InvitacionesService {
     const invitacion = await this.prismaService.invitacion.create({
       data: {
         email: dto.email,
+        nombre_completo: dto.nombre_completo,
         rol_id: dto.rol_id,
         departamento_id: dto.departamento_id ?? null,
         token,

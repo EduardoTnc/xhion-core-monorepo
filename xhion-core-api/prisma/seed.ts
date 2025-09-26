@@ -1,3 +1,4 @@
+// xhion-core-api/prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
@@ -33,7 +34,7 @@ async function main() {
   });
 
   // 3) Usuario admin (si no existe)
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@xhion.local';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@gmail.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'Admin12345!';
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 

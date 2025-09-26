@@ -3,6 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import { SesionesService } from '../sesiones/sesiones.service';
+import { randomUUID } from 'crypto';
+import type { Request } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +13,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly sesionesService: SesionesService,
   ) {}
 
   async validateUser(email: string, pass: string) {
@@ -24,20 +28,60 @@ export class AuthService {
     return user;
   }
 
-  async login(user: { id: string; email: string; rolId: string }) {
-    const payload = { sub: user.id, email: user.email };
-    const accessTtl = this.config.get<string>('ACCESS_TOKEN_TTL') ?? '15m';
-    const refreshTtl = this.config.get<string>('REFRESH_TOKEN_TTL') ?? '7d';
-    const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: accessTtl,
+  async login(user: { id: string; email: string; rolId: string }, request: Request) {
+    const sessionId = randomUUID();
+    const tokens = await this.generateTokens({
+      userId: user.id,
+      email: user.email,
+      sessionId,
     });
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: refreshTtl,
+
+    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+    const { userAgent, ip } = this.extractRequestMetadata(request);
+
+    await this.sesionesService.createSession({
+      id: sessionId,
+      usuarioId: user.id,
+      refreshTokenHash,
+      userAgent,
+      direccionIp: ip,
     });
-    return { accessToken, refreshToken };
+
+    return { ...tokens, sessionId };
   }
 
-  async acceptInvitation(token: string, password: string) {
+  async refreshToken(userId: string, email: string, sessionId: string, refreshToken: string, request: Request) {
+    const session = await this.sesionesService.findById(sessionId);
+    if (!session || session.usuarioId !== userId) {
+      throw new UnauthorizedException('Sesión no válida');
+    }
+
+    const isValidRefresh = await bcrypt.compare(refreshToken, session.refreshTokenHash);
+    if (!isValidRefresh) {
+      // Invalida la sesión comprometida
+      await this.sesionesService.revokeSession(sessionId, userId);
+      throw new UnauthorizedException('Refresh token inválido');
+    }
+
+    const tokens = await this.generateTokens({ userId, email, sessionId });
+    const newRefreshHash = await bcrypt.hash(tokens.refreshToken, 10);
+    const { userAgent, ip } = this.extractRequestMetadata(request);
+
+    await this.sesionesService.updateSession(sessionId, {
+      refreshTokenHash: newRefreshHash,
+      userAgent,
+      direccionIp: ip,
+    });
+
+    return { ...tokens, sessionId };
+  }
+
+  async logout(sessionId: string, userId: string) {
+    await this.sesionesService.revokeSession(sessionId, userId);
+    return { success: true };
+  }
+
+  async acceptInvitation(token: string, password: string, request: Request) {
     const invitacion = await this.prisma.invitacion.findUnique({ where: { token } });
     if (!invitacion) {
       throw new BadRequestException('Invitación inválida');
@@ -72,7 +116,7 @@ export class AuthService {
         const created = await tx.usuario.create({
           data: {
             email: invitacion.email,
-            nombreCompleto: invitacion.email.split('@')[0], // TODO: origen real del nombre si está disponible
+            nombreCompleto: invitacion.nombre_completo,
             rolId: invitacion.rol_id,
             puestoTrabajoId: null,
             passwordHash,
@@ -95,6 +139,32 @@ export class AuthService {
       select: { id: true, email: true, rolId: true },
     });
 
-    return this.login(user!);
+    const tokens = await this.login(user!, request);
+    return { userId: user!.id, ...tokens };
+  }
+
+  private async generateTokens(params: { userId: string; email: string; sessionId: string }) {
+    const payload = { sub: params.userId, email: params.email, sid: params.sessionId };
+    const accessTtl = this.config.get<string>('ACCESS_TOKEN_TTL') ?? '15m';
+    const refreshTtl = this.config.get<string>('REFRESH_TOKEN_TTL') ?? '7d';
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        expiresIn: accessTtl,
+      }),
+      this.jwtService.signAsync(payload, {
+        expiresIn: refreshTtl,
+        secret: this.config.get<string>('JWT_REFRESH_SECRET') ?? this.config.get<string>('JWT_SECRET') ?? 'changeme',
+      }),
+    ]);
+
+    return { accessToken, refreshToken };
+  }
+
+  private extractRequestMetadata(request: Request) {
+    const userAgent = request.get('user-agent') ?? request.headers['user-agent']?.toString() ?? null;
+    const forwarded = request.headers['x-forwarded-for']?.toString();
+    const ip = forwarded?.split(',')[0]?.trim() ?? request.ip ?? request.socket?.remoteAddress ?? null;
+    return { userAgent, ip };
   }
 }
