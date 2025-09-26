@@ -1,0 +1,162 @@
+@startuml
+' Título del Diagrama
+title Diagrama de Casos de Uso Detallado - Plataforma "XHION Core"
+
+' Estilo del Diagrama
+' skinparam actor {
+'     BackgroundColor #B0C4DE
+'     BorderColor #4682B4
+' }
+' skinparam usecase {
+'     BackgroundColor #FEFECE
+'     BorderColor #A80036
+' }
+' skinparam package {
+'     FontColor #333333
+'     BorderColor #888888
+' }
+' left to right direction
+
+
+' --- DEFINICIÓN DE ACTORES ---
+actor "Colaborador" as Colaborador
+actor "Gerente" as Gerente
+actor "Administrador" as Admin
+actor "Asistente IA" as IA <<System>>
+
+' --- JERARQUÍA DE ACTORES ---
+Gerente --|> Colaborador
+Admin --|> Gerente
+
+' --- CASOS DE USO DESGLOSADOS POR MÓDULOS ---
+
+package "Módulo: Autenticación y Perfil" {
+    usecase "Iniciar Sesión" as UC_Login
+    usecase "Cerrar Sesión" as UC_Logout
+    usecase "Aceptar Invitación" as UC_AcceptInvite
+    usecase "Crear Contraseña" as UC_AcceptInvite
+    usecase "Ver Mi Perfil" as UC_ViewProfile
+    usecase "Editar Mi Perfil" as UC_EditProfile
+    usecase "Añadir Habilidad a Mi Perfil" as UC_AddSkill
+    usecase "Ver Mis Sesiones Activas" as UC_ViewSessions
+    usecase "Revocar Sesión" as UC_RevokeSession
+}
+
+package "Módulo: Proyectos y Tareas" {
+    usecase "Listar Proyectos" as UC_ListProjects
+    usecase "Ver Tablero Kanban de Proyecto" as UC_ViewKanban
+    usecase "Crear Tarea" as UC_CreateTask
+    usecase "Ver Detalles de Tarea" as UC_ViewTaskDetails
+    usecase "Editar Tarea" as UC_EditTask
+    usecase "Cambiar Estado de Tarea (Drag & Drop)" as UC_ChangeTaskStatus
+    usecase "Eliminar Tarea (Lógico)" as UC_DeleteTask
+    usecase "Añadir Comentario a Tarea" as UC_AddComment
+    usecase "Adjuntar Archivo a Tarea" as UC_AttachFile
+}
+
+package "Módulo: Capacidades de Gerencia" {
+    usecase "Crear Proyecto" as UC_CreateProject
+    usecase "Editar Proyecto" as UC_EditProject
+    usecase "Archivar Proyecto" as UC_ArchiveProject
+    usecase "Asignar Usuario a Tarea" as UC_AssignUser
+    usecase "Realizar Consulta con IA" as UC_QueryWithAI
+    usecase "Invitar Nuevo Usuario" as UC_InviteUser
+}
+
+package "Módulo: Administración del Sistema" {
+    usecase "Crear Usuario" as UC_CreateUser
+    usecase "Editar Usuario" as UC_EditUser
+    usecase "Activar Usuario" as UC_ToggleUserStatus
+    usecase "Desactivar Usuario" as UC_ToggleUserStatus
+    usecase "Editar Rol" as UC_ManageRoles
+    usecase "Crear Rol" as UC_ManageRoles
+    usecase "Asignar Permisos a Rol" as UC_AssignPermissions
+    usecase "Ver Registro de Auditoría" as UC_ViewAuditLog
+}
+
+package "Módulo: Gamificación y Dashboards" {
+    usecase "Ver Mi Dashboard Personal" as UC_ViewMyDashboard
+    usecase "Personalizar Mi Dashboard" as UC_CustomizeDashboard
+    usecase "Ver Mis Puntos y Logros" as UC_ViewMyGamification
+    usecase "Ver Tablas de Clasificación" as UC_ViewLeaderboards
+}
+
+package "Módulo: Acciones de IA (Extendiendo Funcionalidad)" {
+    usecase "Generar Plan de Proyecto con IA" as IA_GeneratePlan
+    usecase "Sugerir Asignado para Tarea" as IA_SuggestAssignee
+    usecase "Resumir Comentarios de Tarea" as IA_SummarizeComments
+    usecase "Sugerir Habilidad de Perfil" as IA_SuggestSkill
+}
+
+
+' --- RELACIONES ACTOR -> CASO DE USO ---
+
+' Colaborador (Acciones Base)
+Colaborador -- UC_Login
+Colaborador -- UC_Logout
+Colaborador -- UC_AcceptInvite
+Colaborador -- UC_ViewProfile
+Colaborador -- UC_EditProfile
+Colaborador -- UC_AddSkill
+Colaborador -- UC_ViewSessions
+Colaborador -- UC_RevokeSession
+Colaborador -- UC_ListProjects
+Colaborador -- UC_ViewKanban
+Colaborador -- UC_CreateTask
+Colaborador -- UC_ViewTaskDetails
+Colaborador -- UC_EditTask
+Colaborador -- UC_ChangeTaskStatus
+Colaborador -- UC_AddComment
+Colaborador -- UC_AttachFile
+Colaborador -- UC_ViewMyDashboard
+Colaborador -- UC_CustomizeDashboard
+Colaborador -- UC_ViewMyGamification
+Colaborador -- UC_ViewLeaderboards
+
+' Gerente (Hereda de Colaborador y añade estas)
+Gerente -- UC_CreateProject
+Gerente -- UC_EditProject
+Gerente -- UC_ArchiveProject
+Gerente -- UC_AssignUser
+Gerente -- UC_DeleteTask
+Gerente -- UC_QueryWithAI
+Gerente -- UC_InviteUser
+
+' Administrador (Hereda de Gerente y añade estas)
+Admin -- UC_CreateUser
+Admin -- UC_EditUser
+Admin -- UC_ToggleUserStatus
+Admin -- UC_ManageRoles
+Admin -- UC_AssignPermissions
+Admin -- UC_ViewAuditLog
+
+
+' --- RELACIONES ENTRE CASOS DE USO ---
+
+' Dependencias obligatorias (<<include>>)
+(UC_ViewProfile) .> (UC_Login) : <<include>>
+(UC_ListProjects) .> (UC_Login) : <<include>>
+(UC_ViewKanban) .> (UC_Login) : <<include>>
+(UC_CreateTask) .> (UC_Login) : <<include>>
+(UC_ViewMyDashboard) .> (UC_Login) : <<include>>
+
+' Casos de uso más complejos que incluyen acciones más simples
+(UC_ChangeTaskStatus) .> (UC_ViewKanban) : <<include>> ' Se hace desde el Kanban
+(UC_EditTask) .> (UC_ViewTaskDetails) : <<include>> ' Se edita desde la vista de detalles
+(UC_AddComment) .> (UC_ViewTaskDetails) : <<include>> ' Se comenta desde la vista de detalles
+(UC_AttachFile) .> (UC_ViewTaskDetails) : <<include>> ' Se adjunta desde la vista de detalles
+
+' Funcionalidades opcionales que extienden un caso de uso base (<<extend>>)
+(UC_CreateProject) <. (IA_GeneratePlan) : <<extend>>
+note on link: El gerente puede opcionalmente \nusar la IA para pre-llenar el plan.
+
+(UC_AssignUser) <. (IA_SuggestAssignee) : <<extend>>
+note on link: La IA puede sugerir \nel usuario más adecuado.
+
+(UC_ViewTaskDetails) <. (IA_SummarizeComments) : <<extend>>
+note on link: El usuario puede solicitar \nun resumen si hay muchos comentarios.
+
+(UC_AddSkill) <. (IA_SuggestSkill) : <<extend>>
+note on link: La IA puede sugerir una habilidad \n al sistema para que el usuario la confirme.
+
+@enduml

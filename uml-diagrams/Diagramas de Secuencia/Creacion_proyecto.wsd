@@ -1,0 +1,128 @@
+@startuml
+' Título del Diagrama
+title Diagrama de Secuencia: Creación de Proyecto Asistida por IA
+
+' Estilo del Diagrama
+skinparam sequence {
+    ActorBorderColor #4682B4
+    ActorBackgroundColor #B0C4DE
+    ParticipantBorderColor #A80036
+    ParticipantBackgroundColor #FEFECE
+    ArrowColor #333333
+    LifeLineBorderColor #A80036
+}
+autonumber "<b>[0]"
+
+' --- PARTICIPANTES (Lifelines) ---
+actor Gerente
+boundary ":Frontend (React)" as FE
+control ":ProyectoStore (Zustand)" as Store
+boundary ":ProyectoController" as Controller
+control ":ProyectoService" as Service
+control ":IAService" as IAService
+database ":PrismaService" as DB
+actor ":GeminiAPI (Externa)" as Gemini
+
+' --- GRUPO 1: El Gerente inicia el proceso y la IA genera la estructura ---
+group Fase 1: Generación de Estructura con IA
+
+    Gerente -> FE : 1. Rellena formulario (nombre, descripción)
+    activate FE
+
+    FE -> FE : 2. Valida la entrada básica
+    FE -> Store : 3. Actualiza estado (ej. `setLoading(true)`)
+    activate Store
+    deactivate Store
+
+    FE ->> Controller : 4. POST /api/v1/proyectos/sugerir-estructura\n(dto: {descripcion})
+    activate Controller
+
+    Controller -> Service : 5. sugerirEstructura(dto)
+    activate Service
+
+    Service -> IAService : 6. generarEstructuraProyecto(descripcion)
+    activate IAService
+
+    IAService -> Gemini : 7. POST /v1/models:generateContent\n(prompt estructurado)
+    note right of IAService
+        El prompt incluye la descripción del usuario,
+        el contexto de la empresa y la solicitud de
+        un output en formato JSON con fases, tareas,
+        descripciones y sugerencias.
+    end note
+    activate Gemini
+
+    Gemini -->> IAService : 8. Respuesta JSON con la estructura del proyecto
+    deactivate Gemini
+    IAService -->> Service : 9. Retorna la estructura JSON
+    deactivate IAService
+
+    Service -->> Controller : 10. Retorna la estructura JSON
+    deactivate Service
+
+    Controller -->> FE : 11. 200 OK (body: estructura JSON)
+    deactivate Controller
+
+    FE -> Store : 12. actualizaPlanSugerido(estructura), setLoading(false)
+    activate Store
+    deactivate Store
+
+    FE -> Gerente : 13. Muestra el plan de proyecto pre-llenado en la UI
+    deactivate FE
+
+end
+
+' --- GRUPO 2: El Gerente revisa, ajusta y finaliza la creación ---
+group Fase 2: Finalización y Persistencia del Proyecto
+
+    Gerente -> FE : 14. Revisa y ajusta el plan (reasigna, edita fechas)
+    activate FE
+
+    opt Guardar como Plantilla
+        Gerente -> FE : 15. Marca "Guardar como plantilla" y da un nombre
+    end
+
+    Gerente -> FE : 16. Confirma la creación del proyecto
+    FE -> Store : 17. setLoading(true)
+    activate Store
+    deactivate Store
+
+    FE ->> Controller : 18. POST /api/v1/proyectos\n(dto: ProyectoCompletoDTO)
+    activate Controller
+
+    Controller -> Service : 19. crearProyectoCompleto(dto)
+    activate Service
+
+    Service -> DB : 20. Inicia Transacción Prisma (`$transaction`)
+    activate DB
+    
+    opt Si se guardó como plantilla
+        Service -> DB : 21. `prisma.plantillaProyectoIA.create(...)`
+    end
+
+    Service -> DB : 22. `prisma.proyecto.create(...)`
+  Service -> DB : 23. `prisma.tarea.createMany(...)` (para todas las tareas del plan)
+
+    DB -->> Service : 24. Transacción completada
+    deactivate DB
+    
+    ' Notificaciones asíncronas
+    Service -> Service : 25. Dispara evento "PROYECTO_CREADO" (asíncrono)
+    note right: Esto podría notificar a los usuarios asignados.
+
+    Service -->> Controller : 26. Retorna el nuevo proyecto creado
+    deactivate Service
+
+    Controller -->> FE : 27. 201 Created (body: nuevoProyecto)
+    deactivate Controller
+
+    FE -> Store : 28. finalizaCreacion(nuevoProyecto), setLoading(false)
+    activate Store
+    deactivate Store
+    
+    FE -> FE : 29. Redirige a la página del nuevo proyecto (`/proyectos/:id`)
+    FE -> Gerente : 30. Muestra la página del proyecto recién creado
+    deactivate FE
+
+end
+@enduml

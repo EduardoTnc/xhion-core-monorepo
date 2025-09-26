@@ -1,0 +1,162 @@
+@startuml
+' Título del Diagrama
+title Diagrama de Secuencia: Flujo de Gestión Diaria de Tareas
+
+' Estilo del Diagrama
+skinparam sequence {
+    ActorBorderColor #008000
+    ActorBackgroundColor #90EE90
+    ParticipantBorderColor #006400
+    ParticipantBackgroundColor #FEFECE
+    ArrowColor #333333
+    LifeLineBorderColor #006400
+}
+autonumber "<b>[0]"
+
+' --- PARTICIPANTES (Lifelines) ---
+actor Colaborador
+boundary ":VistaProyecto (React)" as FE
+control ":ProyectoStore (Zustand)" as Store
+boundary ":TareaController" as Controller
+control ":TareaService" as Service
+control ":GamificacionService" as GamificacionService
+database ":PrismaService" as DB
+
+' --- GRUPO 1: El Colaborador actualiza el estado de una tarea ---
+group Fase 1: Actualización de Estado (Drag & Drop)
+
+    Colaborador -> FE : 1. Arrastra una tarjeta de tarea de "Por Hacer" a "En Progreso"
+    activate FE
+
+    FE -> FE : 2. Captura el evento `onDragEnd`
+    FE -> Store : 3. actualizaEstadoTareaLocal(tareaId, "En_Progreso")
+    note right
+        Actualización Optimista: La UI se actualiza
+        instantáneamente para una mejor UX.
+    end note
+    activate Store
+    deactivate Store
+
+    FE ->> Controller : 4. PATCH /api/v1/tareas/:tareaId/estado\n(dto: { estado: "En_Progreso" })
+    activate Controller
+
+    Controller -> Service : 5. actualizarEstado(tareaId, dto, usuarioActual)
+    activate Service
+
+    Service -> DB : 6. `prisma.tarea.update(...)`
+    activate DB
+    DB -->> Service : 7. Retorna la tarea actualizada
+    deactivate DB
+    
+    ' Auditoría
+    Service -> Service : 8. Dispara evento "AUDITAR_ACCION" (asíncrono)\n(accion: "ACTUALIZAR_ESTADO_TAREA")
+
+    Service -->> Controller : 9. Retorna la tarea actualizada
+    deactivate Service
+
+    Controller -->> FE : 10. 200 OK (body: tareaActualizada)
+    deactivate Controller
+
+    FE -> Store : 11. confirmaActualizacionTarea(tareaActualizada)
+    note right
+        Confirma o revierte la actualización optimista
+        con los datos reales del servidor.
+    end note
+    activate Store
+    deactivate Store
+
+    deactivate FE
+
+end
+
+' --- GRUPO 2: El Colaborador añade un comentario y adjunta un archivo ---
+group Fase 2: Colaboración y Documentación
+
+    Colaborador -> FE : 12. Abre el modal de la tarea y escribe un comentario
+    activate FE
+
+    FE ->> Controller : 13. POST /api/v1/tareas/:tareaId/comentarios\n(dto: { contenido })
+    activate Controller
+
+    ' La creación del comentario se maneja en un servicio separado (no mostrado para simplicidad)
+    Controller -->> FE : 14. 201 Created (body: nuevoComentario)
+    deactivate Controller
+
+    FE -> Store : 15. agregarComentario(nuevoComentario)
+    activate Store
+    deactivate Store
+
+    ' Adjuntar archivo (flujo simplificado)
+    Colaborador -> FE : 16. Selecciona y sube un archivo
+    FE ->> Controller : 17. POST /api/v1/archivos/upload (manejo de multipart/form-data)
+    activate Controller
+    Controller -->> FE : 18. 201 Created (body: nuevoArchivo)
+    deactivate Controller
+    FE ->> Controller : 19. POST /api/v1/tareas/:tareaId/adjuntar-archivo\n(dto: { archivoId })
+    activate Controller
+    Controller -->> FE : 20. 200 OK
+    deactivate Controller
+
+    FE -> Store : 21. agregarArchivoATarea(nuevoArchivo)
+    activate Store
+    deactivate Store
+    
+    deactivate FE
+
+end
+
+' --- GRUPO 3: El Colaborador completa la tarea y el sistema reacciona ---
+group Fase 3: Finalización de Tarea y Gamificación
+
+    Colaborador -> FE : 22. Mueve la tarea a la columna "Hecho"
+    activate FE
+
+    FE -> Store : 23. actualizaEstadoTareaLocal(tareaId, "Hecho")
+    activate Store
+    deactivate Store
+
+    FE ->> Controller : 24. PATCH /api/v1/tareas/:tareaId/estado\n(dto: { estado: "Hecho" })
+    activate Controller
+
+    Controller -> Service : 25. actualizarEstado(tareaId, dto, usuarioActual)
+    activate Service
+
+    Service -> DB : 26. `prisma.tarea.update({ where: ..., data: { estado: "Hecho", fechaCompletado: new Date() } })`
+    activate DB
+    DB -->> Service : 27. Retorna la tarea completada (con fechaCompletado)
+    deactivate DB
+
+    ' --- Lógica de Gamificación ---
+    Service -> Service : 28. Compara `fechaCompletado` vs `fechaVencimiento`
+    
+    alt Tarea completada a tiempo
+        Service -> GamificacionService : 29. otorgarPuntosPorTarea(usuarioId, tarea)
+        activate GamificacionService
+        
+        GamificacionService -> DB : 30. `prisma.registroPuntos.create(...)`
+        activate DB
+        DB -->> GamificacionService
+        deactivate DB
+
+        ' El servicio de gamificación podría también verificar si se desbloquean logros
+        GamificacionService -> GamificacionService : 31. verificarLogros(usuarioId, "TAREA_COMPLETADA")
+        
+        GamificacionService -->> Service
+        deactivate GamificacionService
+    end
+
+    Service -->> Controller : 32. Retorna la tarea completada
+    deactivate Service
+
+    Controller -->> FE : 33. 200 OK (body: tareaCompletada)
+    deactivate Controller
+
+    FE -> Store : 34. confirmaActualizacionTarea(tareaCompletada)
+    activate Store
+    deactivate Store
+
+    FE -> Colaborador : 35. Muestra notificación visual (ej. "+10 Puntos!")
+    deactivate FE
+
+end
+@enduml
