@@ -1,0 +1,79 @@
+@startuml
+' Título del Diagrama
+title Flujo de Creación y Planificación de un Nuevo Proyecto
+
+' Estilo del Diagrama
+skinparam activity {
+    BackgroundColor #FEFECE
+    BorderColor #A80036
+    ArrowColor #A80036
+    ActorBorderColor black
+    ActorBackgroundColor #ADD8E6
+}
+skinparam partition {
+    BackgroundColor #ADD8E6
+}
+
+' Particiones por Actor/Sistema
+|Gerente|
+start
+:Inicia sesión y navega a "Proyectos";
+:Hace clic en "Crear Nuevo Proyecto";
+
+' --- Formulario de Creación ---
+partition "Formulario de Creación de Proyecto" {
+    :Ingresa información básica del proyecto (Nombre, Departamento);
+    :Escribe una descripción en lenguaje natural;
+    note right
+        **Ejemplo:** "Campaña para el Día de la Madre 2026. 
+        Objetivo: incrementar ventas online un 20%.
+        Canales: Instagram y TikTok.
+        Responsable principal: Lucía Flores."
+    end note
+}
+
+|Asistente IA (Sistema)|
+:Analiza la descripción del proyecto;
+note right
+    El sistema envía la descripción y el
+    contexto (nombre, departamento) a la API de Gemini.
+end note
+
+' --- Asistencia IA en Tiempo Real ---
+partition "Asistencia IA y Estructuración" {
+    :(🤖 IA) Genera una estructura de proyecto sugerida (fases, tareas, descripciones);
+    note left
+        **Output de Gemini:**
+        - **Fases:** Planificación, Creación de Contenido, Ejecución...
+        - **Tareas:** "Definir presupuesto", "Crear copys para posts"...
+        - **Descripciones detalladas** para cada tarea.
+    end note
+    :(🤖 IA) Sugiere responsables para las tareas clave;
+    note right
+        Analiza habilidades de los usuarios
+        y su carga de trabajo actual.
+    end note
+}
+
+|Gerente|
+:Visualiza el plan completo (fases y tareas) pre-llenado en la interfaz;
+:Ajusta y refina el plan (edita tareas, reasigna responsables, ajusta fechas);
+
+' --- Decisión de Guardar como Plantilla ---
+if (¿Desea guardar esta estructura como plantilla para futuros proyectos?) then (sí)
+    :Ingresa un nombre para la plantilla (ej. "Plantilla de Campaña de Marketing");
+    |Sistema|
+    :Almacena la estructura del proyecto en la tabla `plantillas_proyecto_ia`;
+else (no)
+endif
+
+|Sistema|
+:Valida todos los datos del proyecto y sus tareas;
+:Crea los registros en la base de datos (proyecto, tareas, asignaciones);
+:Envía notificaciones a todos los usuarios asignados a las nuevas tareas;
+
+|Gerente|
+:Es redirigido a la vista del nuevo proyecto;
+stop
+
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+' Título del Diagrama
+title Flujo de Supervisión y Toma de Decisiones Estratégicas
+
+' Estilo del Diagrama
+skinparam activity {
+    BackgroundColor #FEFECE
+    BorderColor #4682B4
+    ArrowColor #4682B4
+    ActorBorderColor black
+    ActorBackgroundColor #B0C4DE
+}
+skinparam partition {
+    BackgroundColor #B0C4DE
+}
+
+' Particiones por Actor/Sistema
+|Gerente|
+start
+:Inicia sesión y accede a su Dashboard Gerencial;
+:Analiza los widgets de estado general de proyectos y carga de trabajo del equipo;
+
+partition "Búsqueda Inteligente y Análisis" {
+    :Identifica una posible área de interés;
+    :Utiliza la barra de "Búsqueda Inteligente";
+    :Escribe una consulta en lenguaje natural;
+    note right
+        **Ejemplo:** "Muéstrame todas las tareas
+        de la campaña del Día de la Madre que 
+        están bloqueadas o atrasadas."
+    end note
+
+    |Asistente IA (Sistema)|
+    :Registra la consulta en `ai_query_logs`;
+    :(🤖 IA) Traduce la consulta a SQL;
+    :Ejecuta la consulta SQL contra la base de datos;
+    :Devuelve una lista filtrada de tareas que coinciden con la consulta;
+}
+
+|Gerente|
+:Visualiza la lista de tareas problemáticas;
+:Selecciona una tarea bloqueada para investigar;
+:Revisa los comentarios y toma acciones correctivas (ej. contactar responsables);
+
+partition "Gestión de Talento Asistida por IA" {
+    |Asistente IA (Sistema)|
+    :Analiza periódicamente el rendimiento de los usuarios;
+    :(🤖 IA) Detecta un patrón de éxito (ej. un usuario completando muchas tareas de un tipo);
+    :Genera una notificación de sugerencia para el Gerente;
+    note right
+        **Ejemplo:** "Sugerencia: Carlos Mendoza
+        ha demostrado habilidad en 'Diseño Gráfico'.
+        ¿Deseas añadir esta habilidad a su perfil?"
+    end note
+    |Gerente|
+    :Recibe y revisa la sugerencia;
+    if (¿Acepta la sugerencia?) then (sí)
+        |Sistema|
+        :Añade la habilidad al perfil del usuario en `usuario_habilidades`;
+    else (no)
+    endif
+}
+
+|Gerente|
+:Navega al "Buzón de Ideas" para buscar nuevas iniciativas;
+stop
+
+@enduml

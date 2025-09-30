@@ -1,0 +1,73 @@
+@startuml
+' Título del Diagrama
+title Flujo de Gestión Diaria de Tareas
+
+' Estilo del Diagrama
+skinparam activity {
+    BackgroundColor #FEFECE
+    BorderColor #008000
+    ArrowColor #008000
+}
+skinparam partition {
+    BackgroundColor #90EE90
+}
+
+start
+
+partition "Colaborador" {
+    :Inicia sesión y accede a su Dashboard;
+    :Revisa el widget "Mis Tareas Pendientes";
+    :Selecciona una tarea y la arrastra a "En Progreso" en el tablero Kanban;
+    :Abre la vista de detalles de la tarea;
+
+    if (¿Necesita aclaraciones?) then (sí)
+        :Usa el módulo de mensajería para contactar al Gerente del proyecto;
+        :Recibe respuesta y resuelve la duda;
+    else (no)
+    endif
+
+    if (Tarea con muchos comentarios?) then (sí)
+        :Hace clic en "Resumir con IA";
+
+        ' IMPORTANTE: cambiamos de swimlane dentro del THEN
+        partition "Asistente IA (Sistema)" {
+            :Procesa el historial de comentarios;
+            :Muestra un resumen conciso de las decisiones clave;
+        }
+    else (no)
+    endif
+}
+
+partition "Colaborador" {
+    :Ejecuta el trabajo requerido por la tarea;
+    :Adjunta archivos de evidencia (si es necesario);
+    :Añade un comentario final y menciona al revisor (por ejemplo @Elena);
+    :Arrastra la tarea a la columna Hecho o En Revisión;
+}
+
+partition "Sistema (Gamificación y Notificación)" {
+    :Verifica si la tarea fue completada a tiempo;
+    if (Completada a tiempo?) then (sí)
+        :Otorga puntos al colaborador;
+        note right
+        Registra la transacción en la tabla registro_puntos.
+        end note
+        :Muestra notificación: +10 puntos;
+    endif
+
+    :Verifica si se ha desbloqueado algún logro;
+    if (Logro desbloqueado?) then (sí)
+        :Asigna el logro en usuario_logros;
+        :Otorga puntos de recompensa (si aplica);
+        :Muestra notificación: ¡Logro desbloqueado!;
+    endif
+
+    :Envía notificación al gerente/revisor sobre la finalización de la tarea;
+}
+
+partition "Colaborador" {
+    :Visualiza su puntaje actualizado y logros en su perfil;
+}
+
+stop
+@enduml
