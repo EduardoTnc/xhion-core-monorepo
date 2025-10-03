@@ -1,4 +1,5 @@
 import apiClient from '../api/axios';
+import { useAuthStore } from '../store/authStore';
 import type { LoginDTO, CompletarRegistroDTO, AuthUser, Invitacion, Sesion } from '../types';
 
 interface LoginResponse {
@@ -48,7 +49,17 @@ export const authService = {
    */
   async refreshToken(): Promise<{ accessToken: string }> {
     try {
-      const response = await apiClient.post<RefreshTokenResponse>('/api/v1/auth/refresh');
+      const { refreshToken: currentRefreshToken } = useAuthStore.getState();
+
+      if (!currentRefreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      // Enviar el refresh token en el cuerpo de la petición
+      const response = await apiClient.post<RefreshTokenResponse>('/api/v1/auth/refresh', {
+        refreshToken: currentRefreshToken
+      });
+
       return {
         accessToken: response.data.accessToken,
       };
