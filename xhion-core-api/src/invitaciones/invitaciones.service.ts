@@ -48,4 +48,36 @@ export class InvitacionesService {
     console.log(`[Invitaciones] Enviar email a ${email} con token: ${token}`);
   }
 
+  async findByToken(token: string) {
+    const invitacion = await this.prismaService.invitacion.findUnique({
+      where: { token },
+      select: {
+        id: true,
+        email: true,
+        nombre_completo: true,
+        rol_id: true,
+        departamento_id: true,
+        token: true,
+        fecha_expiracion: true,
+        fue_utilizada: true,
+        invitado_por_id: true,
+        fecha_creacion: true,
+      },
+    });
+
+    if (!invitacion) {
+      throw new BadRequestException('Invitación no encontrada');
+    }
+
+    if (invitacion.fue_utilizada) {
+      throw new BadRequestException('Esta invitación ya fue utilizada');
+    }
+
+    if (new Date(invitacion.fecha_expiracion) < new Date()) {
+      throw new BadRequestException('Esta invitación ha expirado');
+    }
+
+    return invitacion;
+  }
+
 }

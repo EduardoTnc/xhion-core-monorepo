@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, Param } from '@nestjs/common';
 import { InvitacionesService } from './invitaciones.service';
 import { CreateInvitacionDto } from './dto/create-invitacion.dto';
 import { Auditar } from '../auditoria/auditar.decorator';
@@ -15,6 +15,11 @@ constructor(private readonly invitacionesService: InvitacionesService) {}
     req.auditUsuarioId = req.user?.id ?? null;
     req.auditDetalles = JSON.stringify({ email: createInvitacionDto.email, invitado_por_id: createInvitacionDto.invitado_por_id });
     return this.invitacionesService.create(createInvitacionDto);
+  }
+
+  @Get(':token')
+  findByToken(@Param('token') token: string) {
+    return this.invitacionesService.findByToken(token);
   }
 
 }

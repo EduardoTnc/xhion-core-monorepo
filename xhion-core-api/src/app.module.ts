@@ -7,15 +7,17 @@ import { InvitacionesModule } from './invitaciones/invitaciones.module';
 import { SesionesModule } from './sesiones/sesiones.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
 import { AuditInterceptor } from './auditoria/audit.interceptor';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 20,
-    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: seconds(60), // 60 segundos
+        limit: 20, // 20 peticiones
+      },
+    ]),
     PrismaModule,
     AuthModule,
     InvitacionesModule,
@@ -23,10 +25,12 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
     AuditoriaModule,
   ],
   providers: [
+    // Guard que se encarga de limitar el número de peticiones (Aplicación Global)
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    // Interceptor que se encarga de registrar la auditoria (Aplicación Global)
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor,

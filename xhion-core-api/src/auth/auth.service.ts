@@ -16,6 +16,7 @@ export class AuthService {
     private readonly sesionesService: SesionesService,
   ) {}
 
+  // MARK: - validateUser
   async validateUser(email: string, pass: string) {
     const user = await this.prisma.usuario.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
@@ -28,6 +29,7 @@ export class AuthService {
     return user;
   }
 
+  // MARK: - login
   async login(user: { id: string; email: string; rolId: string }, request: Request) {
     const sessionId = randomUUID();
     const tokens = await this.generateTokens({
@@ -50,6 +52,7 @@ export class AuthService {
     return { ...tokens, sessionId };
   }
 
+  // MARK: - refreshToken
   async refreshToken(userId: string, email: string, sessionId: string, refreshToken: string, request: Request) {
     const session = await this.sesionesService.findById(sessionId);
     if (!session || session.usuarioId !== userId) {
@@ -76,11 +79,13 @@ export class AuthService {
     return { ...tokens, sessionId };
   }
 
+  // MARK: - logout
   async logout(sessionId: string, userId: string) {
     await this.sesionesService.revokeSession(sessionId, userId);
     return { success: true };
   }
 
+  // MARK: - acceptInvitation
   async acceptInvitation(token: string, password: string, request: Request) {
     const invitacion = await this.prisma.invitacion.findUnique({ where: { token } });
     if (!invitacion) {
@@ -143,6 +148,7 @@ export class AuthService {
     return { userId: user!.id, ...tokens };
   }
 
+  // MARK: - generateTokens
   private async generateTokens(params: { userId: string; email: string; sessionId: string }) {
     const payload = { sub: params.userId, email: params.email, sid: params.sessionId };
     const accessTtl = this.config.get<string>('ACCESS_TOKEN_TTL') ?? '15m';
@@ -161,6 +167,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  // MARK: - extractRequestMetadata
   private extractRequestMetadata(request: Request) {
     const userAgent = request.get('user-agent') ?? request.headers['user-agent']?.toString() ?? null;
     const forwarded = request.headers['x-forwarded-for']?.toString();

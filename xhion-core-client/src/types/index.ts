@@ -372,6 +372,7 @@ export type ActualizarTareaDTO = Partial<Omit<CrearTareaDTO, 'proyectoId'>> & {
 export interface Invitacion {
     id: string;
     email: string;
+    nombre_completo: string;
     rol_id: string;
     departamento_id?: string | null;
     token: string;
@@ -574,8 +575,6 @@ export interface Permiso {
 export interface RolPermiso {
     rolId: string;
     permisoId: string;
-
-    rol?: Rol;
     permiso?: Permiso;
 }
 
@@ -588,4 +587,27 @@ export interface RegistroAuditoria {
     timestamp: string; // ISO
 
     usuario?: UsuarioSimple | null;
+}
+
+// --- DTOs para Autenticación ---
+
+export interface LoginDTO {
+    email: string;
+    password: string;
+}
+
+export interface CompletarRegistroDTO {
+    token: string;
+    password: string;
+}
+
+export interface Sesion {
+    id: string;
+    usuarioId: string;
+    refreshTokenHash: string;
+    userAgent: string | null;
+    direccionIp: string | null;
+    creadaEn: string; // ISO
+    actualizadaEn: string; // ISO
+    revocadaEn: string | null; // ISO
 }

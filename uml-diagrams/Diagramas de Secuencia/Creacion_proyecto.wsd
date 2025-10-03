@@ -17,9 +17,7 @@ autonumber "<b>[0]"
 actor Gerente
 boundary ":Frontend (React)" as FE
 control ":ProyectoStore (Zustand)" as Store
-boundary ":ProyectoController" as Controller
-control ":ProyectoService" as Service
-control ":IAService" as IAService
+boundary ":ProyectoController" as Controllerññññññ
 database ":PrismaService" as DB
 actor ":GeminiAPI (Externa)" as Gemini
 
