@@ -1,0 +1,119 @@
+@startuml
+
+' Título del Diagrama
+title Diagrama de Despliegue - Arquitectura Final "XHION Core" en AWS Serverless
+
+' Estilo del Diagrama
+skinparam node {
+    BackgroundColor #FFFFF0
+    BorderColor #666666
+    Shadowing false
+}
+skinparam artifact {
+    BackgroundColor #FEFECE
+    BorderColor #A80036
+}
+skinparam cloud {
+    BackgroundColor #F0F8FF
+    BorderColor #4682B4
+}
+skinparam database {
+    BackgroundColor #E0FFFF
+    BorderColor #008B8B
+}
+skinparam frame {
+    BorderColor #FF7F50
+    BackgroundColor #FFF5EE
+}
+
+' --- ACTORES EXTERNOS ---
+actor "Usuario Final" as User
+
+cloud "Google Cloud Platform (GCP)" as GCP {
+    node "Google AI Platform" as GoogleAI {
+        artifact "API de Gemini" as GeminiApi
+    }
+}
+
+' --- NUBE PRINCIPAL DE AWS ---
+cloud "AWS Cloud (Region: us-east-1)" as AWS {
+
+    ' --- FRONTERA DE RED VIRTUAL (VPC) - Capa de Seguridad ---
+    frame "Virtual Private Cloud (VPC)" as VPC {
+        
+        node "AWS Lambda" as Lambda {
+            artifact "Backend Nest.js API\n(xhion-core-api)" as BackendApp
+            note right
+                - Lógica de negocio (Proyectos, Tareas, Gamificación)
+                - Autenticación y gestión de sesiones
+                - Orquestación de llamadas a IA
+            end note
+        }
+
+        database "AWS RDS Serverless\n(Aurora PostgreSQL)" as RDS {
+            artifact "Base de Datos Principal\n(xhion_core_db)" as MainDB
+            note left
+                - Almacenamiento persistente de todos los datos
+                - Escala automáticamente con la carga
+                - Se pausa cuando está inactiva para ahorrar costos
+            end note
+        }
+    }
+
+    ' --- SERVICIOS EN LA FRONTERA DE AWS (Edge & Gateway) ---
+    node "Amazon CloudFront (CDN)" as CloudFront
+    node "Amazon API Gateway" as ApiGateway {
+        artifact "API REST" as RestApi
+        artifact "API WebSocket" as WsApi
+    }
+
+    ' --- SERVICIOS DE ALMACENAMIENTO Y DATOS (Fuera de la VPC principal pero accesibles) ---
+    node "Amazon S3 Bucket\n(Website Hosting)" as S3_Frontend {
+        artifact "Frontend React SPA\n(xhion-core-client)" as FrontendApp
+    }
+    
+    node "Amazon S3 Bucket\n(User Storage)" as S3_Storage {
+        artifact "Archivos de Usuario\n(CVs, adjuntos, etc.)" as UserFiles
+    }
+
+    database "Amazon DynamoDB" as DynamoDB {
+        artifact "Tabla de Conexiones\n(WebSocket Sessions)" as WsConnections
+        note bottom: Almacenamiento rápido de IDs de conexión activa.
+    }
+
+    ' --- SERVICIOS TRANSVERSALES (Seguridad y Gobernanza) ---
+    node "AWS IAM\n(Identity & Access Management)" as IAM {
+        note top: Gestiona roles y permisos entre servicios.
+    }
+}
+
+
+' --- FLUJOS DE COMUNICACIÓN Y RELACIONES ---
+
+' 1. Flujo del Usuario al Frontend
+User -down-> CloudFront : "1. Petición HTTPS\n(xhion.core.com)"
+CloudFront --right-> S3_Frontend : "2. Sirve activos estáticos (React App)"
+
+' 2. Flujo de la API REST (Datos)
+FrontendApp -right-> ApiGateway : "3. Llamada a API REST\n(api.xhion.core.com)"
+RestApi --down-> Lambda : "4. Invoca Lambda Endpoint"
+Lambda --right-> RDS : "5. Conexión a DB\n(dentro de la VPC)"
+Lambda -up-> S3_Storage : "6. Lee/Escribe Archivos de Usuario"
+
+' 3. Flujo de la API WebSocket (Tiempo Real)
+FrontendApp .right.> ApiGateway : "A. Conexión WebSocket (WSS)"
+WsApi .down.> Lambda : "B. Invoca en eventos\n($connect, $disconnect, etc.)"
+Lambda .down.> DynamoDB : "C. Gestiona IDs de conexión"
+
+' 4. Flujo de la API Externa (IA)
+Lambda -right-> GoogleAI : "7. Petición a Gemini API"
+
+' 5. Relaciones de Seguridad y Despliegue
+BackendApp ..> Lambda : <<desplegado en>>
+FrontendApp ..> S3_Frontend : <<desplegado en>>
+
+Lambda ..> IAM : <<utiliza rol>>
+ApiGateway ..> IAM : <<utiliza rol>>
+RDS ..> IAM : <<utiliza rol>>
+
+@enduml
