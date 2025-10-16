@@ -1,30 +1,35 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { Spinner } from '@heroui/react';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore } from '@/store/authStore';
+import { useEffect, useState } from 'react';
 
 export const ProtectedRoute = () => {
-  const { status } = useAuthStore();
+  const { status, token, user } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
 
-  // Mostrar spinner mientras se carga el estado desde localStorage
-  if (status === 'loading') {
+  useEffect(() => {
+    // Esperar a que el estado se rehidrate desde localStorage
+    if (status !== 'loading') {
+      setIsChecking(false);
+    }
+  }, [status]);
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (isChecking || status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <Spinner size="lg" color="primary" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Cargando...
-          </p>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+          <p className="mt-4 text-sm text-muted-foreground">Verificando autenticación...</p>
         </div>
       </div>
     );
   }
 
-  // Si está autenticado, renderizar las rutas protegidas
-  if (status === 'authenticated') {
-    return <Outlet />;
+  // Si no hay token o usuario, redirigir al login
+  if (!token || !user || status === 'unauthenticated') {
+    return <Navigate to="/login" replace />;
   }
 
-  // Si no está autenticado, redirigir a login
-  return <Navigate to="/login" replace />;
+  // Si está autenticado, renderizar las rutas hijas
+  return <Outlet />;
 };
-

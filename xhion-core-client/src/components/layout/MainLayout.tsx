@@ -1,28 +1,21 @@
-import { useState } from 'react';
+// xhion-core-client/src/components/layout/MainLayout.tsx
+import { SidebarProvider } from '../providers/SidebarProvider';
+import { Sidebar } from './sidebar';
+import { Header } from './header';
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
-import { Header } from './Header';
 
 export const MainLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
-      {/* Área de contenido principal */}
-      <div className="flex-1 flex flex-col overflow-hidden lg:pl-64">
-        {/* Header */}
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        
-        {/* Contenido principal con scroll */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
-          <div className="container mx-auto px-4 py-6 lg:px-8">
-            <Outlet />
-          </div>
-        </main>
+    <SidebarProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto">
+            <Outlet /> {/* Aquí se renderizarán las páginas */}
+          </main>
+        </div>  
       </div>
-    </div>
+    </SidebarProvider>
   );
 };

@@ -8,6 +8,7 @@ import { SesionesModule } from './sesiones/sesiones.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
 import { AuditInterceptor } from './auditoria/audit.interceptor';
 import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
     InvitacionesModule,
     SesionesModule,
     AuditoriaModule,
+    RolesModule,
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)

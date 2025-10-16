@@ -150,6 +150,7 @@ model Rol {
   id               String    @id @default(uuid()) @db.Uuid
   nombre           String    @unique @db.VarChar(50)
   descripcion      String?
+  color            String    @default("bg-primary") @db.VarChar(50) // Color del rol (clase Tailwind o hex)
   fechaEliminacion DateTime? // Para eliminación lógica.
 
   usuarios                Usuario[]

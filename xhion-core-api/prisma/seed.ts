@@ -7,22 +7,34 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding base data...');
 
-  // 1) Roles base
+  // 1) Roles base con colores
   const [adminRol, gerenteRol, colaboradorRol] = await Promise.all([
     prisma.rol.upsert({
       where: { nombre: 'Admin' },
-      update: {},
-      create: { nombre: 'Admin', descripcion: 'Administrador del sistema' },
+      update: { color: 'bg-destructive', descripcion: 'Administrador del sistema con control total' },
+      create: { 
+        nombre: 'Admin', 
+        descripcion: 'Administrador del sistema con control total',
+        color: 'bg-destructive',
+      },
     }),
     prisma.rol.upsert({
       where: { nombre: 'Gerente' },
-      update: {},
-      create: { nombre: 'Gerente', descripcion: 'Líder de proyecto / Gerencia' },
+      update: { color: 'bg-primary', descripcion: 'Líder de proyecto con permisos de gestión' },
+      create: { 
+        nombre: 'Gerente', 
+        descripcion: 'Líder de proyecto con permisos de gestión',
+        color: 'bg-primary',
+      },
     }),
     prisma.rol.upsert({
       where: { nombre: 'Colaborador' },
-      update: {},
-      create: { nombre: 'Colaborador', descripcion: 'Miembro del equipo' },
+      update: { color: 'bg-chart-2', descripcion: 'Miembro del equipo con permisos básicos' },
+      create: { 
+        nombre: 'Colaborador', 
+        descripcion: 'Miembro del equipo con permisos básicos',
+        color: 'bg-chart-2',
+      },
     }),
   ]);
 

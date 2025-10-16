@@ -1,5 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Skeleton, useDisclosure } from '@heroui/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, Trash2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import type { Sesion } from '../types';
 
@@ -10,8 +29,7 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
 
   const cargarSesiones = async () => {
     setIsLoading(true);
@@ -31,7 +49,7 @@ export default function SessionsPage() {
 
   const handleRevokeClick = (sesionId: string) => {
     setSelectedSession(sesionId);
-    onOpen();
+    setIsOpen(true);
   };
 
   const handleConfirmRevoke = async () => {
@@ -55,7 +73,7 @@ export default function SessionsPage() {
       setTimeout(() => setShowToast(false), 3000);
     } finally {
       setIsRevoking(false);
-      onClose();
+      setIsOpen(false);
       setSelectedSession(null);
     }
   };
@@ -110,14 +128,15 @@ export default function SessionsPage() {
         </p>
       </div>
 
-      <Card className="p-6">
-        {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-12 rounded-lg" />
-            <Skeleton className="h-12 rounded-lg" />
-            <Skeleton className="h-12 rounded-lg" />
-          </div>
-        ) : sesiones.length === 0 ? (
+      <Card>
+        <CardContent className="p-6">
+          {isLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : sesiones.length === 0 ? (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -139,61 +158,23 @@ export default function SessionsPage() {
               Inicia sesión desde otro dispositivo para verlo aquí
             </p>
           </div>
-        ) : (
-          <Table aria-label="Tabla de sesiones activas">
-            <TableHeader>
-              <TableColumn>DISPOSITIVO</TableColumn>
-              <TableColumn>DIRECCIÓN IP</TableColumn>
-              <TableColumn>ÚLTIMO USO</TableColumn>
-              <TableColumn align="center">ACCIONES</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {sesiones.map((sesion) => (
-                <TableRow key={sesion.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {parseUserAgent(sesion.userAgent)}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {sesion.direccionIp || 'No disponible'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {formatDate(sesion.actualizadaEn)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-center">
-                      <Button
-                        isIconOnly
-                        color="danger"
-                        variant="light"
-                        size="sm"
-                        onPress={() => handleRevokeClick(sesion.id)}
-                        aria-label="Cerrar sesión"
-                      >
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>DISPOSITIVO</TableHead>
+                  <TableHead>DIRECCIÓN IP</TableHead>
+                  <TableHead>ÚLTIMO USO</TableHead>
+                  <TableHead className="text-center">ACCIONES</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sesiones.map((sesion) => (
+                  <TableRow key={sesion.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
                         <svg
-                          className="w-5 h-5"
+                          className="w-5 h-5 text-muted-foreground"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -202,64 +183,100 @@ export default function SessionsPage() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                           />
                         </svg>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+                        <div>
+                          <p className="font-medium">
+                            {parseUserAgent(sesion.userAgent)}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">
+                        {sesion.direccionIp || 'No disponible'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">
+                        {formatDate(sesion.actualizadaEn)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRevokeClick(sesion.id)}
+                          aria-label="Cerrar sesión"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
 
       {/* Modal de Confirmación */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalContent>
-          <ModalHeader>Cerrar Sesión</ModalHeader>
-          <ModalBody>
-            <p>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cerrar Sesión</DialogTitle>
+            <DialogDescription>
               ¿Estás seguro de que quieres cerrar esta sesión? Esta acción no se puede deshacer y
               tendrás que volver a iniciar sesión en ese dispositivo.
-            </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" onPress={onClose} isDisabled={isRevoking}>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isRevoking}>
               Cancelar
             </Button>
             <Button
-              color="danger"
-              onPress={handleConfirmRevoke}
-              isLoading={isRevoking}
+              variant="destructive"
+              onClick={handleConfirmRevoke}
+              disabled={isRevoking}
             >
-              Cerrar Sesión
+              {isRevoking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cerrando...
+                </>
+              ) : (
+                'Cerrar Sesión'
+              )}
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5">
-          <Card className="bg-green-500 dark:bg-green-600 text-white px-6 py-4 shadow-lg">
-            <div className="flex items-center gap-3">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="font-medium">{toastMessage}</span>
-            </div>
+          <Card className="bg-green-500 text-white shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <span className="font-medium">{toastMessage}</span>
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}

@@ -127,6 +127,7 @@ export interface Rol {
     id: string;
     nombre: string;
     descripcion?: string | null;
+    color: string; // Color del rol (clase Tailwind o hex)
     fechaEliminacion?: string;
 
     usuarios: Usuario[];
@@ -576,6 +577,42 @@ export interface RolPermiso {
     rolId: string;
     permisoId: string;
     permiso?: Permiso;
+}
+
+// Tipos específicos para el módulo de roles
+export interface RolConConteo extends Rol {
+    _count: {
+        usuarios: number;
+    };
+}
+
+export interface RolCompleto extends Rol {
+    permisos: RolPermiso[];
+    _count: {
+        usuarios: number;
+    };
+}
+
+export interface UsuarioEnRol {
+    id: string;
+    nombreCompleto: string;
+    email: string;
+    avatarUrl?: string | null;
+    estado: EstadoUsuario;
+    fechaIngreso?: string | null;
+    puestoTrabajo?: {
+        titulo: string;
+    } | null;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface RegistroAuditoria {

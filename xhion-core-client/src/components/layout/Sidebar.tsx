@@ -1,136 +1,105 @@
-import { NavLink } from 'react-router-dom';
-import { Modal, ModalContent } from '@heroui/react';
+import { useState } from "react"
+import {
+  LayoutDashboard,
+  FolderKanban,
+  CheckSquare,
+  Calendar,
+  Sparkles,
+  Lightbulb,
+  Shield,
+  Settings,
+  Plus,
+  Users,
+  Building2,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { CreateProjectModal } from "@/components/modals/create-project-modal"
+import { useSidebar } from "@/components/providers/SidebarProvider"
+import { NavLink, useLocation } from "react-router-dom"
 
-interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+const navigation = [
+  { name: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { name: "Departamentos", icon: Building2, href: "/departamentos" },
+  { name: "Proyectos", icon: FolderKanban, href: "/proyectos" },
+  { name: "Tareas", icon: CheckSquare, href: "/tareas" },
+  { name: "Calendario", icon: Calendar, href: "/calendario" },
+  { name: "IA Insights", icon: Sparkles, href: "/ai-insights" },
+  { name: "Ideas", icon: Lightbulb, href: "/ideas" },
+  { name: "Roles y Permisos", icon: Users, href: "/roles" },
+  { name: "Seguridad / Auditoría", icon: Shield, href: "/auditoria" },
+  { name: "Configuración", icon: Settings, href: "/configuraciones" },
+]
 
-const menuItems = [
-  {
-    name: 'Dashboard',
-    path: '/',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Proyectos',
-    path: '/proyectos',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Tareas',
-    path: '/tareas',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Equipo',
-    path: '/equipo',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-  },
-];
+export function Sidebar() {
+  const location = useLocation()
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false)
+  const { isMobileMenuOpen, setIsMobileMenuOpen } = useSidebar()
 
-const SidebarContent = ({ onItemClick }: { onItemClick?: () => void }) => {
-  return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800">
-      {/* Logo */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-          XHION Core
-        </h2>
-      </div>
-
-      {/* Navegación */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            onClick={onItemClick}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`
-            }
-          >
-            {item.icon}
-            <span>{item.name}</span>
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          © 2025 XHION Core
-        </p>
-      </div>
-    </div>
-  );
-};
-
-export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   return (
     <>
-      {/* Sidebar para Escritorio (siempre visible, posición fija) */}
-      <aside className="hidden lg:flex lg:w-64 lg:fixed lg:inset-y-0 lg:z-40 lg:flex-col lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
-        <SidebarContent />
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-sidebar transition-transform duration-300 lg:static lg:translate-x-0",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        {/* Logo */}
+        <div className="flex h-14 md:h-16 items-center border-b border-sidebar-border px-6">
+          <h1 className="text-xl font-bold text-sidebar-foreground">
+            Xhion <span className="text-primary">Core</span>
+          </h1>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+          {navigation.map((item) => {
+            const Icon = item.icon
+            const isActive = location.pathname === item.href
+            return (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                {item.name}
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        {/* New Project Button */}
+        <div className="border-t border-sidebar-border p-4">
+          <Button
+            className="w-full gap-2"
+            size="lg"
+            onClick={() => {
+              setIsCreateProjectOpen(true)
+              setIsMobileMenuOpen(false)
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Proyecto
+          </Button>
+        </div>
       </aside>
 
-      {/* Modal/Drawer para Móvil */}
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        placement="center"
-        size="full"
-        classNames={{
-          base: 'lg:hidden m-0 sm:m-0',
-          wrapper: 'items-start justify-start',
-          body: 'p-0',
-          closeButton: 'hidden',
-        }}
-        motionProps={{
-          variants: {
-            enter: {
-              x: 0,
-              opacity: 1,
-              transition: {
-                duration: 0.3,
-                ease: 'easeOut',
-              },
-            },
-            exit: {
-              x: -300,
-              opacity: 0,
-              transition: {
-                duration: 0.2,
-                ease: 'easeIn',
-              },
-            },
-          },
-        }}
-      >
-        <ModalContent className="w-64 h-full rounded-none">
-          <SidebarContent onItemClick={onClose} />
-        </ModalContent>
-      </Modal>
+      {/* Create Project Modal */}
+      <CreateProjectModal open={isCreateProjectOpen} onOpenChange={setIsCreateProjectOpen} />
     </>
-  );
-};
+  )
+}
