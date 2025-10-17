@@ -49,6 +49,16 @@ export class RolesController {
   }
 
   /**
+   * GET /api/v1/roles/usuarios/all
+   * Obtiene todos los usuarios con información simplificada (Eager Loading)
+   * Optimizado para carga inicial - sin paginación
+   */
+  @Get('usuarios/all')
+  findAllUsersSimple() {
+    return this.rolesService.findAllUsersSimple();
+  }
+
+  /**
    * GET /api/v1/roles/:id
    * Obtiene un rol específico con todos sus permisos
    */
@@ -57,19 +67,6 @@ export class RolesController {
     return this.rolesService.findOne(id);
   }
 
-  /**
-   * GET /api/v1/roles/:id/usuarios
-   * Obtiene los usuarios que tienen asignado un rol específico
-   * Soporta paginación con query params: page y limit
-   */
-  @Get(':id/usuarios')
-  findUsersByRole(
-    @Param('id') id: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
-    return this.rolesService.findUsersByRole(id, page, limit);
-  }
 
   /**
    * PATCH /api/v1/roles/:id/permisos

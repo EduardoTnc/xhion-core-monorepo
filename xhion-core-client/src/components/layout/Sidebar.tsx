@@ -11,6 +11,7 @@ import {
   Plus,
   Users,
   Building2,
+  UserCog,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -26,6 +27,7 @@ const navigation = [
   { name: "Calendario", icon: Calendar, href: "/calendario" },
   { name: "IA Insights", icon: Sparkles, href: "/ai-insights" },
   { name: "Ideas", icon: Lightbulb, href: "/ideas" },
+  { name: "Usuarios", icon: UserCog, href: "/usuarios" },
   { name: "Roles y Permisos", icon: Users, href: "/roles" },
   { name: "Seguridad / Auditoría", icon: Shield, href: "/auditoria" },
   { name: "Configuración", icon: Settings, href: "/configuraciones" },

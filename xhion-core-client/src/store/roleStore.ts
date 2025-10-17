@@ -1,29 +1,23 @@
 import { create } from 'zustand';
 import type { RolConConteo, RolCompleto, UsuarioEnRol } from '../types';
 import { roleService } from '../services/roleService';
+import { userService } from '../services/userService';
 import { toast } from 'sonner';
 
 interface RoleState {
-  // Estado - Eager Loading: todos los roles con detalles cargados de una vez
+  // Estado - Eager Loading: todos los roles y usuarios cargados de una vez
   rolesCompletos: RolCompleto[];
+  todosLosUsuarios: UsuarioEnRol[];
   selectedRole: RolCompleto | null;
-  usersInRole: UsuarioEnRol[];
   isLoading: boolean;
-  isLoadingUsers: boolean;
   error: string | null;
-  
-  // Paginación de usuarios
-  currentPage: number;
-  totalPages: number;
-  totalUsers: number;
   
   // Set optimizado de permisos activos (O(1) lookup)
   permisosActivosSet: Set<string>;
 
   // Acciones
-  fetchRolesWithDetails: () => Promise<void>;
+  fetchInitialData: () => Promise<void>;
   selectRole: (roleId: string) => void;
-  fetchUsersInRole: (roleId: string, page?: number) => Promise<void>;
   updateRolePermissions: (roleId: string, permisosIds: string[]) => Promise<void>;
   createRole: (data: { nombre: string; descripcion?: string; color?: string }) => Promise<RolCompleto>;
   updateRole: (roleId: string, data: { nombre?: string; descripcion?: string; color?: string }) => Promise<void>;
@@ -35,24 +29,25 @@ interface RoleState {
 export const useRoleStore = create<RoleState>((set, get) => ({
   // Estado inicial
   rolesCompletos: [],
+  todosLosUsuarios: [],
   selectedRole: null,
-  usersInRole: [],
   isLoading: false,
-  isLoadingUsers: false,
   error: null,
-  currentPage: 1,
-  totalPages: 1,
-  totalUsers: 0,
   permisosActivosSet: new Set(),
 
-  // Obtener todos los roles con detalles (Eager Loading)
-  fetchRolesWithDetails: async () => {
+  // Obtener todos los roles y usuarios en paralelo (Eager Loading)
+  fetchInitialData: async () => {
     set({ isLoading: true, error: null });
     try {
-      const rolesCompletos = await roleService.obtenerRolesConDetalles();
-      set({ rolesCompletos, isLoading: false });
+      // Cargar roles y usuarios en paralelo para máxima velocidad
+      const [rolesCompletos, todosLosUsuarios] = await Promise.all([
+        roleService.obtenerRolesConDetalles(),
+        userService.obtenerTodosLosUsuarios(), // ✅ Ahora usa el endpoint correcto
+      ]);
+      
+      set({ rolesCompletos, todosLosUsuarios, isLoading: false });
     } catch (error: any) {
-      const errorMessage = error.message || 'Error al cargar los roles';
+      const errorMessage = error.message || 'Error al cargar los datos';
       set({ error: errorMessage, isLoading: false });
       toast.error(errorMessage);
     }
@@ -78,29 +73,9 @@ export const useRoleStore = create<RoleState>((set, get) => ({
     set({ 
       selectedRole: role,
       permisosActivosSet: permisosSet,
-      usersInRole: [],
-      currentPage: 1,
     });
   },
 
-  // Obtener usuarios de un rol con paginación
-  fetchUsersInRole: async (roleId: string, page: number = 1) => {
-    set({ isLoadingUsers: true, error: null });
-    try {
-      const response = await roleService.obtenerUsuariosPorRol(roleId, page, 10);
-      set({ 
-        usersInRole: response.data,
-        currentPage: response.meta.page,
-        totalPages: response.meta.totalPages,
-        totalUsers: response.meta.total,
-        isLoadingUsers: false,
-      });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Error al cargar los usuarios';
-      set({ error: errorMessage, isLoadingUsers: false });
-      toast.error(errorMessage);
-    }
-  },
 
   // Actualizar permisos de un rol
   updateRolePermissions: async (roleId: string, permisosIds: string[]) => {
@@ -141,11 +116,15 @@ export const useRoleStore = create<RoleState>((set, get) => ({
     try {
       await roleService.crearRol(data);
       
-      // Recargar todos los roles para mantener consistencia
-      const rolesCompletos = await roleService.obtenerRolesConDetalles();
+      // Recargar todos los datos para mantener consistencia
+      const [rolesCompletos, todosLosUsuarios] = await Promise.all([
+        roleService.obtenerRolesConDetalles(),
+        userService.obtenerTodosLosUsuarios(),
+      ]);
       
       set({ 
         rolesCompletos,
+        todosLosUsuarios,
         isLoading: false,
       });
       
@@ -167,8 +146,11 @@ export const useRoleStore = create<RoleState>((set, get) => ({
     try {
       await roleService.actualizarRol(roleId, data);
       
-      // Recargar todos los roles para mantener consistencia
-      const rolesCompletos = await roleService.obtenerRolesConDetalles();
+      // Recargar todos los datos para mantener consistencia
+      const [rolesCompletos, todosLosUsuarios] = await Promise.all([
+        roleService.obtenerRolesConDetalles(),
+        userService.obtenerTodosLosUsuarios(),
+      ]);
       
       // Actualizar rol seleccionado si es el mismo
       const { selectedRole } = get();
@@ -178,6 +160,7 @@ export const useRoleStore = create<RoleState>((set, get) => ({
       
       set({ 
         rolesCompletos,
+        todosLosUsuarios,
         selectedRole: newSelectedRole,
         isLoading: false,
       });
@@ -197,8 +180,11 @@ export const useRoleStore = create<RoleState>((set, get) => ({
     try {
       await roleService.eliminarRol(roleId);
       
-      // Recargar todos los roles
-      const rolesCompletos = await roleService.obtenerRolesConDetalles();
+      // Recargar todos los datos
+      const [rolesCompletos, todosLosUsuarios] = await Promise.all([
+        roleService.obtenerRolesConDetalles(),
+        roleService.obtenerTodosLosUsuarios(),
+      ]);
       
       // Limpiar selección si era el rol eliminado
       const { selectedRole } = get();
@@ -206,6 +192,7 @@ export const useRoleStore = create<RoleState>((set, get) => ({
       
       set({ 
         rolesCompletos,
+        todosLosUsuarios,
         selectedRole: newSelectedRole,
         isLoading: false,
       });
@@ -224,10 +211,6 @@ export const useRoleStore = create<RoleState>((set, get) => ({
     set({ 
       selectedRole: null,
       permisosActivosSet: new Set(),
-      usersInRole: [],
-      currentPage: 1,
-      totalPages: 1,
-      totalUsers: 0,
     });
   },
 

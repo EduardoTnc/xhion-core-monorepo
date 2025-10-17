@@ -46,23 +46,15 @@ export const roleService = {
   },
 
   /**
-   * Obtiene los usuarios que tienen asignado un rol específico
+   * Obtiene todos los usuarios con información simplificada (Eager Loading)
+   * Optimizado para carga inicial - sin paginación
    */
-  async obtenerUsuariosPorRol(
-    id: string,
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResponse<UsuarioEnRol>> {
+  async obtenerTodosLosUsuarios(): Promise<UsuarioEnRol[]> {
     try {
-      const response = await apiClient.get<PaginatedResponse<UsuarioEnRol>>(
-        `/api/v1/roles/${id}/usuarios`,
-        {
-          params: { page, limit },
-        }
-      );
+      const response = await apiClient.get<UsuarioEnRol[]>('/api/v1/roles/usuarios/all');
       return response.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Error al obtener los usuarios del rol';
+      const errorMessage = error.response?.data?.message || 'Error al obtener los usuarios';
       throw new Error(errorMessage);
     }
   },

@@ -79,62 +79,32 @@ export class RolesService {
   }
 
   /**
-   * Obtiene los usuarios que tienen asignado un rol específico
+   * Obtiene todos los usuarios con información simplificada (Eager Loading)
+   * Optimizado para carga inicial - sin paginación
    */
-  async findUsersByRole(id: string, page: number = 1, limit: number = 10) {
-    // Verificar que el rol existe
-    const rol = await this.prisma.rol.findUnique({
-      where: { id },
-    });
-
-    if (!rol) {
-      throw new NotFoundException(`Rol con ID ${id} no encontrado`);
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [usuarios, total] = await Promise.all([
-      this.prisma.usuario.findMany({
-        where: {
-          rolId: id,
-          fechaEliminacion: null, // Solo usuarios activos
-        },
-        select: {
-          id: true,
-          nombreCompleto: true,
-          email: true,
-          avatarUrl: true,
-          estado: true,
-          fechaIngreso: true,
-          puestoTrabajo: {
-            select: {
-              titulo: true,
-            },
+  async findAllUsersSimple() {
+    return this.prisma.usuario.findMany({
+      where: {
+        fechaEliminacion: null, // Solo usuarios activos
+      },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        email: true,
+        avatarUrl: true,
+        estado: true,
+        fechaIngreso: true,
+        rolId: true,
+        puestoTrabajo: {
+          select: {
+            titulo: true,
           },
         },
-        skip,
-        take: limit,
-        orderBy: {
-          nombreCompleto: 'asc',
-        },
-      }),
-      this.prisma.usuario.count({
-        where: {
-          rolId: id,
-          fechaEliminacion: null,
-        },
-      }),
-    ]);
-
-    return {
-      data: usuarios,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
       },
-    };
+      orderBy: {
+        nombreCompleto: 'asc',
+      },
+    });
   }
 
   /**

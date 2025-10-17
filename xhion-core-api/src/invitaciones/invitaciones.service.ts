@@ -38,14 +38,15 @@ export class InvitacionesService {
       },
     });
 
-    this.enviarEmailInvitacion(dto.email, token);
-    return invitacion;
-  }
+    // Construir URL de invitación completa
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const invitationUrl = `${frontendUrl}/aceptar-invitacion?token=${token}`;
 
-  private enviarEmailInvitacion(email: string, token: string) {
-    // TODO: Integrar proveedor de email (SES/SendGrid). Por ahora, log de depuración.
-    // eslint-disable-next-line no-console
-    console.log(`[Invitaciones] Enviar email a ${email} con token: ${token}`);
+    // Retornar invitación con URL generada
+    return {
+      ...invitacion,
+      invitationUrl,
+    };
   }
 
   async findByToken(token: string) {

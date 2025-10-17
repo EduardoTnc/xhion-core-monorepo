@@ -2,10 +2,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Search, UserPlus, MoreVertical, Mail, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, UserPlus, MoreVertical, Mail, Calendar } from "lucide-react"
 import { useState } from "react"
 import { useRoleStore } from "../../store/roleStore"
+import { InviteUserModal } from "../users/InviteUserModal"
 
 // Función para formatear fechas
 const formatDate = (dateString: string | null | undefined): string => {
@@ -26,28 +26,22 @@ const getInitials = (name: string): string => {
 
 export function UsersList() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const { 
-    usersInRole, 
+    todosLosUsuarios,
     selectedRole,
-    isLoadingUsers, 
-    fetchUsersInRole,
-    currentPage,
-    totalPages,
-    totalUsers,
   } = useRoleStore()
+
+  // Filtrar usuarios del rol seleccionado (instantáneo - en memoria)
+  const usersInRole = selectedRole 
+    ? todosLosUsuarios.filter(user => user.rolId === selectedRole.id)
+    : []
 
   // Filtrar usuarios por búsqueda
   const filteredUsers = usersInRole.filter(user =>
     user.nombreCompleto.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  // Manejar cambio de página
-  const handlePageChange = (newPage: number) => {
-    if (selectedRole && newPage >= 1 && newPage <= totalPages) {
-      fetchUsersInRole(selectedRole.id, newPage)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -62,27 +56,18 @@ export function UsersList() {
             className="pl-9"
           />
         </div>
-        <Button className="gap-2">
+        <Button 
+          className="gap-2"
+          onClick={() => setIsInviteModalOpen(true)}
+        >
           <UserPlus className="h-4 w-4" />
-          Asignar Usuario
+          Invitar Usuario
         </Button>
       </div>
 
       {/* Users list */}
       <div className="space-y-2">
-        {isLoadingUsers ? (
-          // Skeleton loading
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-40 mb-2" />
-                <Skeleton className="h-3 w-60" />
-              </div>
-              <Skeleton className="h-8 w-20" />
-            </div>
-          ))
-        ) : filteredUsers.length === 0 && searchQuery ? (
+        {filteredUsers.length === 0 && searchQuery ? (
           <div className="rounded-lg border border-border bg-card p-8 text-center">
             <p className="text-sm text-muted-foreground">No se encontraron usuarios</p>
           </div>
@@ -135,49 +120,39 @@ export function UsersList() {
         )}
       </div>
 
-      {/* Paginación */}
-      {!isLoadingUsers && totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-border pt-4">
+      {/* Contador de usuarios */}
+      {filteredUsers.length > 0 && (
+        <div className="border-t border-border pt-4">
           <p className="text-sm text-muted-foreground">
-            Mostrando {filteredUsers.length} de {totalUsers} usuarios
+            Mostrando {filteredUsers.length} {filteredUsers.length === 1 ? 'usuario' : 'usuarios'}
+            {searchQuery && ` que coinciden con "${searchQuery}"`}
           </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm">
-              Página {currentPage} de {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       )}
 
-      {!isLoadingUsers && usersInRole.length === 0 && !searchQuery && (
+      {usersInRole.length === 0 && !searchQuery && (
         <div className="rounded-lg border border-dashed border-border bg-muted/30 p-12 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <UserPlus className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="mt-4 text-sm font-medium text-foreground">No hay usuarios asignados</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Comienza asignando usuarios a este rol</p>
-          <Button className="mt-4 gap-2">
+          <p className="mt-1 text-sm text-muted-foreground">Comienza invitando usuarios a este rol</p>
+          <Button 
+            className="mt-4 gap-2"
+            onClick={() => setIsInviteModalOpen(true)}
+          >
             <UserPlus className="h-4 w-4" />
-            Asignar Usuario
+            Invitar Usuario
           </Button>
         </div>
       )}
+
+      {/* Modal de invitación */}
+      <InviteUserModal
+        open={isInviteModalOpen}
+        onOpenChange={setIsInviteModalOpen}
+        initialRole={selectedRole || undefined}
+      />
     </div>
   )
 }

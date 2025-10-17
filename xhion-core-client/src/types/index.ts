@@ -600,6 +600,7 @@ export interface UsuarioEnRol {
     avatarUrl?: string | null;
     estado: EstadoUsuario;
     fechaIngreso?: string | null;
+    rolId: string;
     puestoTrabajo?: {
         titulo: string;
     } | null;
@@ -636,6 +637,11 @@ export interface LoginDTO {
 export interface CompletarRegistroDTO {
     token: string;
     password: string;
+    // Campos opcionales del perfil
+    avatarUrl?: string;
+    telefono?: string;
+    fechaNacimiento?: string;
+    biografia?: string;
 }
 
 export interface Sesion {

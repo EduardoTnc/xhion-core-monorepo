@@ -17,6 +17,7 @@ import AuditPage from './pages/AuditPage'
 import CalendarPage from './pages/CalendarPage'
 import SettingsPage from './pages/SettingsPage'
 import TasksPage from './pages/TasksPage'
+import UsuariosPage from './pages/UsuariosPage'
 
 function App() {
   const { theme } = useThemeStore();
@@ -49,6 +50,7 @@ function App() {
               <Route path='ideas' element={<IdeasPage />} />
               <Route path="proyectos" element={<ProjectsPage />} />
               <Route path="proyectos/:id" element={<ProjectsPage />} />
+              <Route path="usuarios" element={<UsuariosPage />} />
               <Route path="roles" element={<RolesPage />} />
               <Route path="perfil/sesiones" element={<SessionsPage />} />
               <Route path="configuraciones" element={<SettingsPage />} />

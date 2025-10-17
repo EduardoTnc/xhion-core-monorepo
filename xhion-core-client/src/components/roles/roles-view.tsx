@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Search, Plus, Shield, Users, Pencil } from "lucide-react"
 import { RoleCard } from "./role-card"
 import { UsersList } from "./users-list"
-import { RoleDialog } from "./role-dialog-v2"
+import { RoleDialog } from "./role-dialog"
 import { useRoleStore } from "../../store/roleStore"
 import type { RolConConteo } from "../../types"
 
@@ -30,17 +30,16 @@ export function RolesView() {
     rolesCompletos, 
     selectedRole, 
     isLoading, 
-    fetchRolesWithDetails, 
+    fetchInitialData, 
     selectRole,
-    fetchUsersInRole,
     createRole,
     updateRole,
   } = useRoleStore()
 
-  // Cargar roles con detalles al montar el componente (Eager Loading)
+  // Cargar todos los datos al montar el componente (Eager Loading)
   useEffect(() => {
-    fetchRolesWithDetails()
-  }, [fetchRolesWithDetails])
+    fetchInitialData()
+  }, [fetchInitialData])
 
   // Seleccionar el primer rol cuando se carguen
   useEffect(() => {
@@ -48,13 +47,6 @@ export function RolesView() {
       selectRole(rolesCompletos[0].id)
     }
   }, [rolesCompletos, selectedRole, selectRole])
-
-  // Cargar usuarios cuando se cambie a la vista de usuarios
-  useEffect(() => {
-    if (view === 'users' && selectedRole) {
-      fetchUsersInRole(selectedRole.id)
-    }
-  }, [view, selectedRole, fetchUsersInRole])
 
   // Filtrar roles por búsqueda
   const filteredRoles = rolesCompletos.filter(role =>

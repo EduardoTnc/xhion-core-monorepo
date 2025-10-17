@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength, IsOptional, IsDateString, IsUrl } from 'class-validator';
 
 export class AcceptInvitationDto {
   @IsString()
@@ -9,4 +9,21 @@ export class AcceptInvitationDto {
   @IsNotEmpty()
   @MinLength(8)
   password: string;
+
+  // Campos opcionales del perfil
+  @IsOptional()
+  @IsUrl()
+  avatarUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  telefono?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fechaNacimiento?: string;
+
+  @IsOptional()
+  @IsString()
+  biografia?: string;
 }

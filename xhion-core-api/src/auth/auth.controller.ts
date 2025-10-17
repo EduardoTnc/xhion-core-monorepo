@@ -27,7 +27,13 @@ export class AuthController {
   @Post('accept-invitation')
   @Auditar('ACEPTAR_INVITACION')
   async acceptInvitation(@Body() dto: AcceptInvitationDto, @Req() req: Request & { auditUsuarioId?: string; auditDetalles?: string }) {
-    const result = await this.authService.acceptInvitation(dto.token, dto.password, req);
+    const profileData = {
+      avatarUrl: dto.avatarUrl,
+      telefono: dto.telefono,
+      fechaNacimiento: dto.fechaNacimiento,
+      biografia: dto.biografia,
+    };
+    const result = await this.authService.acceptInvitation(dto.token, dto.password, profileData, req);
     req.auditUsuarioId = result.userId;
     req.auditDetalles = JSON.stringify({ token: dto.token });
     return result;

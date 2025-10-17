@@ -86,7 +86,12 @@ export class AuthService {
   }
 
   // MARK: - acceptInvitation
-  async acceptInvitation(token: string, password: string, request: Request) {
+  async acceptInvitation(
+    token: string, 
+    password: string, 
+    profileData: { avatarUrl?: string; telefono?: string; fechaNacimiento?: string; biografia?: string },
+    request: Request
+  ) {
     const invitacion = await this.prisma.invitacion.findUnique({ where: { token } });
     if (!invitacion) {
       throw new BadRequestException('Invitación inválida');
@@ -114,6 +119,10 @@ export class AuthService {
           data: {
             passwordHash,
             estado: 'ACTIVO',
+            // Actualizar campos opcionales del perfil
+            avatarUrl: profileData.avatarUrl || null,
+            fechaNacimiento: profileData.fechaNacimiento ? new Date(profileData.fechaNacimiento) : null,
+            biografia: profileData.biografia || null,
           },
         });
         userId = updated.id;
@@ -126,9 +135,24 @@ export class AuthService {
             puestoTrabajoId: null,
             passwordHash,
             estado: 'ACTIVO',
+            // Campos opcionales del perfil
+            avatarUrl: profileData.avatarUrl || null,
+            fechaNacimiento: profileData.fechaNacimiento ? new Date(profileData.fechaNacimiento) : null,
+            biografia: profileData.biografia || null,
           },
         });
         userId = created.id;
+      }
+
+      // Si se proporciona teléfono, crear registro de contacto
+      if (profileData.telefono) {
+        await tx.usuarioContacto.create({
+          data: {
+            usuarioId: userId,
+            tipo: 'TELEFONO',
+            valor: profileData.telefono,
+          },
+        });
       }
 
       await tx.invitacion.update({
