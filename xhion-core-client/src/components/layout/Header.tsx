@@ -153,7 +153,7 @@ export function Header() {
                 <User className="mr-2 h-4 w-4" />
                 Perfil
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/ajustes')}>
+              <DropdownMenuItem onClick={() => navigate('/configuraciones')}>
                 Configuración
               </DropdownMenuItem>
               <DropdownMenuSeparator />
