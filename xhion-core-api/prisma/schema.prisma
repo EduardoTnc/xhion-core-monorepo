@@ -65,6 +65,25 @@ enum EstadoTarea {
   Bloqueado
 }
 
+enum EstadoEtapa {
+  Pendiente
+  En_Progreso
+  Completada
+}
+
+enum PrioridadTarea {
+  Baja
+  Media
+  Alta
+  Urgente
+}
+
+enum RolProyecto {
+  Responsable
+  Miembro
+  Observador
+}
+
 enum TipoContacto {
   telefono_principal
   telefono_secundario
@@ -193,6 +212,7 @@ model Usuario {
   enlacesProfesionales      UsuarioEnlaceProfesional[]
   habilidades               UsuarioHabilidad[]
   proyectosResponsable      Proyecto[]
+  proyectosComoMiembro      ProyectoMiembro[]
   tareasAsignadas           Tarea[]                    @relation("TareasAsignadas")
   tareasCreadas             Tarea[]                    @relation("TareasCreadas")
   comentarios               Comentario[]
@@ -291,31 +311,42 @@ model Proyecto {
   fechaActualizacion DateTime       @updatedAt
   fechaEliminacion   DateTime?
 
-  responsable  Usuario       @relation(fields: [responsableId], references: [id])
-  departamento Departamento? @relation(fields: [departamentoId], references: [id])
+  responsable  Usuario            @relation(fields: [responsableId], references: [id])
+  departamento Departamento?      @relation(fields: [departamentoId], references: [id])
   tareas       Tarea[]
+  miembros     ProyectoMiembro[]
+  etapas       Etapa[]
 }
 
 /// Registro de todas las tareas.
 model Tarea {
-  id                 String      @id @default(uuid()) @db.Uuid
-  titulo             String      @db.VarChar(255)
+  id                 String         @id @default(uuid()) @db.Uuid
+  titulo             String         @db.VarChar(255)
   descripcion        String?
-  estado             EstadoTarea @default(Por_Hacer)
-  fechaVencimiento   DateTime?   @db.Date
-  proyectoId         String      @db.Uuid
-  asignadoId         String?     @db.Uuid
-  creadorId          String      @db.Uuid
+  estado             EstadoTarea    @default(Por_Hacer)
+  prioridad          PrioridadTarea @default(Media)
+  fechaVencimiento   DateTime?      @db.Date
+  proyectoId         String         @db.Uuid
+  etapaId            String?        @db.Uuid
+  asignadoId         String?        @db.Uuid
+  creadorId          String         @db.Uuid
   resumenIa          String?
-  fechaCreacion      DateTime    @default(now())
-  fechaActualizacion DateTime    @updatedAt
+  fechaCreacion      DateTime       @default(now())
+  fechaActualizacion DateTime       @updatedAt
   fechaCompletado    DateTime?
   fechaEliminacion   DateTime?
 
   proyecto    Proyecto     @relation(fields: [proyectoId], references: [id])
+  etapa       Etapa?       @relation(fields: [etapaId], references: [id])
   asignado    Usuario?     @relation("TareasAsignadas", fields: [asignadoId], references: [id])
   creador     Usuario      @relation("TareasCreadas", fields: [creadorId], references: [id])
   comentarios Comentario[]
+
+  @@index([proyectoId])
+  @@index([etapaId])
+  @@index([asignadoId])
+  @@index([estado])
+  @@index([prioridad])
 }
 
 /// Comunicación contextual dentro de cada tarea.
@@ -328,6 +359,42 @@ model Comentario {
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   tarea   Tarea   @relation(fields: [tareaId], references: [id])
+}
+
+/// Etapas de un proyecto (fases o hitos).
+model Etapa {
+  id                 String      @id @default(uuid()) @db.Uuid
+  nombre             String      @db.VarChar(100)
+  descripcion        String?
+  orden              Int
+  proyectoId         String      @db.Uuid
+  fechaInicio        DateTime?   @db.Date
+  fechaFin           DateTime?   @db.Date
+  estado             EstadoEtapa @default(Pendiente)
+  fechaCreacion      DateTime    @default(now())
+  fechaActualizacion DateTime    @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  tareas   Tarea[]
+
+  @@unique([proyectoId, orden])
+  @@index([proyectoId])
+  @@index([estado])
+}
+
+/// Tabla pivote para gestionar miembros de proyectos.
+model ProyectoMiembro {
+  proyectoId String      @db.Uuid
+  usuarioId  String      @db.Uuid
+  rol        RolProyecto @default(Miembro)
+  fechaUnion DateTime    @default(now())
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([proyectoId, usuarioId])
+  @@index([proyectoId])
+  @@index([usuarioId])
 }
 
 // --- MODULO: IA PARA ACELERACION DE PROCESOS ---

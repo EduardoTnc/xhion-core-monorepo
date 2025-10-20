@@ -10,6 +10,7 @@ import { AuditInterceptor } from './auditoria/audit.interceptor';
 import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 import { RolesModule } from './roles/roles.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { ProyectosModule } from './proyectos/proyectos.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     AuditoriaModule,
     RolesModule,
     UsuariosModule,
+    ProyectosModule,
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)
