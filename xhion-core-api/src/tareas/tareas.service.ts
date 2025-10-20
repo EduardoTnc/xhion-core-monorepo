@@ -271,8 +271,8 @@ export class TareasService {
     });
 
     const tieneAcceso =
-      proyecto.responsableId === usuarioId ||
-      proyecto.miembros.some((m) => m.usuarioId === usuarioId);
+      proyecto?.responsableId === usuarioId ||
+      proyecto?.miembros.some((m) => m.usuarioId === usuarioId);
 
     if (!tieneAcceso) {
       throw new ForbiddenException('No tienes acceso a esta tarea');
@@ -444,7 +444,7 @@ export class TareasService {
       where: { id: tarea.proyectoId },
     });
 
-    if (tarea.creadorId !== usuarioId && proyecto.responsableId !== usuarioId) {
+    if (tarea.creadorId !== usuarioId && proyecto?.responsableId !== usuarioId) {
       throw new ForbiddenException(
         'Solo el creador de la tarea o el responsable del proyecto pueden eliminarla',
       );
