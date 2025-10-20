@@ -11,6 +11,7 @@ import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 import { RolesModule } from './roles/roles.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { ProyectosModule } from './proyectos/proyectos.module';
+import { TareasModule } from './tareas/tareas.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ProyectosModule } from './proyectos/proyectos.module';
     RolesModule,
     UsuariosModule,
     ProyectosModule,
+    TareasModule,
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)

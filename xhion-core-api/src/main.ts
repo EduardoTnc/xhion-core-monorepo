@@ -45,6 +45,7 @@ async function bootstrap() {
     .addTag('Usuarios', 'Gestión de usuarios')
     .addTag('Roles', 'Gestión de roles y permisos')
     .addTag('Proyectos', 'Gestión de proyectos, etapas y miembros')
+    .addTag('Tareas', 'Gestión de tareas y comentarios')
     .addTag('Invitaciones', 'Sistema de invitaciones')
     .addTag('Sesiones', 'Gestión de sesiones de usuario')
     .addTag('Auditoría', 'Registros de auditoría')
