@@ -445,7 +445,11 @@ export class ProyectosService {
 
     const etapa = await this.prisma.etapa.create({
       data: {
-        ...createEtapaDto,
+        nombre: createEtapaDto.nombre,
+        descripcion: createEtapaDto.descripcion,
+        orden: createEtapaDto.orden,
+        fechaInicio: createEtapaDto.fechaInicio ? new Date(createEtapaDto.fechaInicio) : undefined,
+        fechaFin: createEtapaDto.fechaFin ? new Date(createEtapaDto.fechaFin) : undefined,
         proyectoId,
       },
       include: {
@@ -523,7 +527,14 @@ export class ProyectosService {
 
     const updated = await this.prisma.etapa.update({
       where: { id: etapaId },
-      data: updateEtapaDto,
+      data: {
+        nombre: updateEtapaDto.nombre,
+        descripcion: updateEtapaDto.descripcion,
+        orden: updateEtapaDto.orden,
+        fechaInicio: updateEtapaDto.fechaInicio ? new Date(updateEtapaDto.fechaInicio) : undefined,
+        fechaFin: updateEtapaDto.fechaFin ? new Date(updateEtapaDto.fechaFin) : undefined,
+        estado: updateEtapaDto.estado,
+      },
       include: {
         _count: {
           select: {

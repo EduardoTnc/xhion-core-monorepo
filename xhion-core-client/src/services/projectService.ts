@@ -7,6 +7,8 @@ export interface Proyecto {
   estado: 'Activo' | 'Completado' | 'En_Pausa' | 'Archivado';
   responsableId: string;
   departamentoId?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
   fechaCreacion: string;
   fechaActualizacion: string;
   responsable: {

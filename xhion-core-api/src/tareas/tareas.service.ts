@@ -61,7 +61,13 @@ export class TareasService {
     // Crear tarea
     const tarea = await this.prisma.tarea.create({
       data: {
-        ...createTareaDto,
+        titulo: createTareaDto.titulo,
+        descripcion: createTareaDto.descripcion,
+        proyectoId: createTareaDto.proyectoId,
+        etapaId: createTareaDto.etapaId,
+        asignadoId: createTareaDto.asignadoId,
+        prioridad: createTareaDto.prioridad,
+        fechaVencimiento: createTareaDto.fechaVencimiento ? new Date(createTareaDto.fechaVencimiento) : undefined,
         creadorId: usuarioId,
       },
       include: {
@@ -310,7 +316,17 @@ export class TareasService {
     }
 
     // Si se marca como completada, establecer fecha de completado
-    const dataToUpdate: any = { ...updateTareaDto };
+    const dataToUpdate: any = {
+      titulo: updateTareaDto.titulo,
+      descripcion: updateTareaDto.descripcion,
+      proyectoId: updateTareaDto.proyectoId,
+      etapaId: updateTareaDto.etapaId,
+      asignadoId: updateTareaDto.asignadoId,
+      estado: updateTareaDto.estado,
+      prioridad: updateTareaDto.prioridad,
+      fechaVencimiento: updateTareaDto.fechaVencimiento ? new Date(updateTareaDto.fechaVencimiento) : undefined,
+    };
+    
     if (updateTareaDto.estado === 'Hecho' && tarea.estado !== 'Hecho') {
       dataToUpdate.fechaCompletado = new Date();
     } else if (updateTareaDto.estado && updateTareaDto.estado !== 'Hecho') {

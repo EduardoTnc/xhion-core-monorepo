@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useProjectStore } from "@/store/projectStore";
 import { ProjectCard } from "./ProjectCard";
 import { CreateProjectModal } from "./CreateProjectModal";
+import { EditProjectModal } from "./EditProjectModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +22,8 @@ export function ProjectsListView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [estadoFilter, setEstadoFilter] = useState<string>("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [proyectoToEdit, setProyectoToEdit] = useState<any>(null);
 
   useEffect(() => {
     loadProyectos();
@@ -32,6 +35,11 @@ export function ProjectsListView() {
     } catch (error: any) {
       toast.error(error.message || "Error al cargar proyectos");
     }
+  };
+
+  const handleEditProyecto = (proyecto: any) => {
+    setProyectoToEdit(proyecto);
+    setShowEditModal(true);
   };
 
   const handleDeleteProyecto = async (id: string, nombre: string) => {
@@ -137,14 +145,27 @@ export function ProjectsListView() {
               key={proyecto.id}
               proyecto={proyecto}
               onClick={() => navigate(`/proyectos/${proyecto.id}`)}
+              onEdit={() => handleEditProyecto(proyecto)}
               onDelete={() => handleDeleteProyecto(proyecto.id, proyecto.nombre)}
             />
           ))}
         </div>
       )}
 
-      {/* Modal de Crear Proyecto */}
+      {/* Modales */}
       <CreateProjectModal open={showCreateModal} onOpenChange={setShowCreateModal} />
+      
+      <EditProjectModal
+        open={showEditModal}
+        onOpenChange={(open) => {
+          setShowEditModal(open);
+          if (!open) {
+            setProyectoToEdit(null);
+            loadProyectos();
+          }
+        }}
+        proyecto={proyectoToEdit}
+      />
     </div>
   );
 }
