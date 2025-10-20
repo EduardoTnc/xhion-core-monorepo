@@ -149,7 +149,7 @@ export class AuthService {
         await tx.usuarioContacto.create({
           data: {
             usuarioId: userId,
-            tipo: 'TELEFONO',
+            tipo: 'telefono_principal',
             valor: profileData.telefono,
           },
         });

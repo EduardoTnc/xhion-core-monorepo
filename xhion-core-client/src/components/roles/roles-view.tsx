@@ -167,8 +167,8 @@ export function RolesView() {
           <div className="border-t border-border p-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Total Roles</p>
                 <p className="text-2xl font-semibold text-foreground mt-1">{rolesCompletos.length}</p>
+                <p className="text-xs text-muted-foreground">Total Roles</p>
               </div>
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-2xl font-semibold text-foreground">{totalUsers}</p>

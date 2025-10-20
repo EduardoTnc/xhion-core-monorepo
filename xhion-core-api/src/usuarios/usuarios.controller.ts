@@ -18,10 +18,10 @@ export class UsuariosController {
   /**
    * GET /api/v1/usuarios
    * Obtiene todos los usuarios del sistema con sus roles
-   * Requiere rol: Admin o ProjectManager
+   * Requiere rol: Admin o Gerente
    */
   @Get()
-  @Roles('Admin', 'ProjectManager')
+  @Roles('Admin', 'Gerente')
   async obtenerTodosLosUsuarios() {
     return this.usuariosService.obtenerTodosLosUsuarios();
   }
@@ -29,10 +29,10 @@ export class UsuariosController {
   /**
    * GET /api/v1/usuarios/:id
    * Obtiene un usuario específico por ID
-   * Requiere rol: Admin o ProjectManager
+   * Requiere rol: Admin o Gerente
    */
   @Get(':id')
-  @Roles('Admin', 'ProjectManager')
+  @Roles('Admin', 'Gerente')
   async obtenerUsuarioPorId(@Param('id') id: string) {
     const usuario = await this.usuariosService.obtenerUsuarioPorId(id);
     

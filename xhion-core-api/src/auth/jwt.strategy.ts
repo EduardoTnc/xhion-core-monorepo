@@ -33,6 +33,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         nombreCompleto: true,
         rolId: true,
+        rol: {
+          select: {
+            nombre: true,
+          },
+        },
       },
     });
 
@@ -43,6 +48,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     return {
       ...user,
+      rol: user.rol?.nombre,
       sessionId: payload.sid,
     }; // se asigna a req.user
   }

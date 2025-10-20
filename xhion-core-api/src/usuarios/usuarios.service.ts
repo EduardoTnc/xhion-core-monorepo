@@ -33,7 +33,7 @@ export class UsuariosService {
         },
         contactos: {
           where: {
-            tipo: 'TELEFONO',
+            tipo: 'telefono_principal',
           },
           select: {
             valor: true,
@@ -93,10 +93,8 @@ export class UsuariosService {
                 permiso: {
                   select: {
                     id: true,
-                    nombre: true,
+                    nombreAccion: true,
                     descripcion: true,
-                    recurso: true,
-                    accion: true,
                   },
                 },
               },
@@ -125,7 +123,7 @@ export class UsuariosService {
 
     return {
       ...usuario,
-      telefono: usuario.contactos.find((c) => c.tipo === 'TELEFONO')?.valor || null,
+      telefono: usuario.contactos.find((c) => c.tipo === 'telefono_principal')?.valor || null,
       rol: {
         ...usuario.rol,
         permisos: usuario.rol.permisos.map((rp) => rp.permiso),
