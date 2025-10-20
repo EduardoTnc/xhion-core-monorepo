@@ -1,0 +1,137 @@
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Send, Trash2 } from "lucide-react";
+import { type Comentario } from "@/services/taskService";
+import { useTaskStore } from "@/store/taskStore";
+import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+
+interface TaskCommentsProps {
+  tareaId: string;
+  comentarios: Comentario[];
+}
+
+export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
+  const { user } = useAuthStore();
+  const { addComentario, deleteComentario, isLoading } = useTaskStore();
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    try {
+      setIsSubmitting(true);
+      await addComentario(tareaId, newComment);
+      setNewComment("");
+      toast.success("Comentario agregado");
+    } catch (error: any) {
+      toast.error(error.message || "Error al agregar comentario");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (comentarioId: string) => {
+    if (!confirm("¿Estás seguro de eliminar este comentario?")) return;
+
+    try {
+      await deleteComentario(tareaId, comentarioId);
+      toast.success("Comentario eliminado");
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar comentario");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-semibold">Comentarios ({comentarios.length})</h3>
+
+      {/* Lista de comentarios */}
+      <ScrollArea className="h-[300px] pr-4">
+        {comentarios.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay comentarios aún. Sé el primero en comentar.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {comentarios.map((comentario) => (
+              <div key={comentario.id} className="flex gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={comentario.usuario.avatarUrl} />
+                  <AvatarFallback className="text-xs">
+                    {getInitials(comentario.usuario.nombreCompleto)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {comentario.usuario.nombreCompleto}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(comentario.fechaCreacion), {
+                          addSuffix: true,
+                          locale: es,
+                        })}
+                      </span>
+                    </div>
+                    {user?.id === comentario.usuarioId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleDelete(comentario.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {comentario.contenido}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+
+      {/* Formulario de nuevo comentario */}
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <Textarea
+          placeholder="Escribe un comentario..."
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          rows={3}
+          disabled={isSubmitting}
+        />
+        <div className="flex justify-end">
+          <Button type="submit" size="sm" disabled={isSubmitting || !newComment.trim()}>
+            {isSubmitting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            Comentar
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
