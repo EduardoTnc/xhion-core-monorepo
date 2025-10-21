@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { MainLayout } from './components/layout/MainLayout'
 import { ThemeProvider } from './components/providers/ThemeProvider'
 import { useThemeStore } from './store/themeStore'
+import { useServiceWorker } from './hooks/useServiceWorker'
 import LoginPage from './pages/LoginPage'
 import AcceptInvitationPage from './pages/AcceptInvitationPage'
 import DashboardPage from './pages/DashboardPage'
@@ -22,6 +23,7 @@ import UsuariosPage from './pages/UsuariosPage'
 
 function App() {
   const { theme } = useThemeStore();
+  const { isOnline } = useServiceWorker();
 
   // Aplicar el tema al elemento HTML
   useEffect(() => {

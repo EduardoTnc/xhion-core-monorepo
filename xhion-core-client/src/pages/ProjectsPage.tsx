@@ -1,9 +1,5 @@
-import { ProjectsListView } from "@/components/projects/ProjectsListView"
+import { ProjectWorkspaceEnhanced } from "@/components/projects/ProjectWorkspaceEnhanced"
 
 export default function ProjectsPage() {
-  return (
-    <div className="container mx-auto p-6">
-      <ProjectsListView />
-    </div>
-  )
+  return <ProjectWorkspaceEnhanced />
 }

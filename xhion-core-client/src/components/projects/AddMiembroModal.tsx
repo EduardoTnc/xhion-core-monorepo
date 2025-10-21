@@ -68,7 +68,7 @@ export function AddMiembroModal({ open, onOpenChange, proyectoId }: AddMiembroMo
       setLoadingUsuarios(true);
       const allUsuarios = await userService.obtenerTodosLosUsuarios();
       // Filtrar usuarios que ya son miembros
-      const miembrosIds = miembros.map((m) => m.usuarioId);
+      const miembrosIds = miembros.map((m) => m.usuarioId)
       const usuariosDisponibles = allUsuarios.filter((u) => !miembrosIds.includes(u.id));
       setUsuarios(usuariosDisponibles);
     } catch (error: any) {

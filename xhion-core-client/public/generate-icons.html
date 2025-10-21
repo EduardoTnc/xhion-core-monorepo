@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <h1>Generando iconos PWA...</h1>
+    <p>Los iconos se generarán automáticamente.</p>
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        
+        sizes.forEach(size => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#3b82f6');
+            gradient.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add text "X"
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('X', size / 2, size / 2);
+            
+            // Download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${size}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        });
+        
+        // Badge icon
+        const badgeCanvas = document.createElement('canvas');
+        badgeCanvas.width = 72;
+        badgeCanvas.height = 72;
+        const badgeCtx = badgeCanvas.getContext('2d');
+        const badgeGradient = badgeCtx.createLinearGradient(0, 0, 72, 72);
+        badgeGradient.addColorStop(0, '#3b82f6');
+        badgeGradient.addColorStop(1, '#1d4ed8');
+        badgeCtx.fillStyle = badgeGradient;
+        badgeCtx.fillRect(0, 0, 72, 72);
+        badgeCtx.fillStyle = 'white';
+        badgeCtx.font = 'bold 42px Arial';
+        badgeCtx.textAlign = 'center';
+        badgeCtx.textBaseline = 'middle';
+        badgeCtx.fillText('X', 36, 36);
+        badgeCanvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'badge-72.png';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+        
+        setTimeout(() => {
+            document.body.innerHTML = '<h1>✅ Iconos generados!</h1><p>Revisa tu carpeta de descargas y muévelos a la carpeta public/</p>';
+        }, 1000);
+    </script>
+</body>
+</html>
