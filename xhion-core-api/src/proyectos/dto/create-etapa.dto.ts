@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, Min, IsDateString, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, IsDateString, MaxLength, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEtapaDto {
@@ -18,6 +18,16 @@ export class CreateEtapaDto {
   @IsOptional()
   @IsString()
   descripcion?: string;
+
+  @ApiPropertyOptional({
+    description: 'Color de la etapa en formato hexadecimal',
+    example: '#3B82F6',
+    pattern: '^#[0-9A-Fa-f]{6}$',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'El color debe estar en formato hexadecimal (#RRGGBB)' })
+  color?: string;
 
   @ApiProperty({
     description: 'Orden de la etapa en el proyecto (debe ser único)',

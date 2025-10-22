@@ -366,6 +366,7 @@ model Etapa {
   id                 String      @id @default(uuid()) @db.Uuid
   nombre             String      @db.VarChar(100)
   descripcion        String?
+  color              String?     @db.VarChar(7) // Formato hex: #RRGGBB
   orden              Int
   proyectoId         String      @db.Uuid
   fechaInicio        DateTime?   @db.Date
