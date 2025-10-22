@@ -8,7 +8,7 @@ import { TaskViewSwitcher } from "./TaskViewSwitcher";
 import { TaskKanbanViewDnD } from "./TaskKanbanViewDnD";
 import { TaskListView } from "./TaskListView";
 import { TaskTableView } from "./TaskTableView";
-import { TaskTimelineView } from "./TaskTimelineView";
+import { TaskTimelineViewEnhanced } from "./TaskTimelineViewEnhanced";
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "./TaskFilters";
 import { ExportMenu } from "./ExportMenu";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
@@ -285,7 +285,7 @@ export function ProjectWorkspaceEnhanced() {
                 <TaskTableView tareas={filteredTareas} onTaskClick={handleTaskClick} />
               )}
               {viewMode === "timeline" && (
-                <TaskTimelineView tareas={filteredTareas} etapas={etapas} />
+                <TaskTimelineViewEnhanced tareas={filteredTareas} etapas={etapas} onTaskClick={handleTaskClick} />
               )}
             </div>
           </>

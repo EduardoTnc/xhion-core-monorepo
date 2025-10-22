@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -13,7 +14,6 @@ import { useTaskStore } from "@/store/taskStore";
 import { Loader2, Calendar, User, FolderKanban, Flag } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 
 interface TaskDetailModalProps {
   tareaId: string | null;
@@ -62,6 +62,9 @@ export function TaskDetailModal({ tareaId, open, onOpenChange }: TaskDetailModal
           <DialogTitle className="text-2xl">
             {tareaActual?.titulo || "Detalles de la Tarea"}
           </DialogTitle>
+          <DialogDescription>
+            Información completa de la tarea, incluyendo detalles, asignaciones y comentarios.
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading && !tareaActual ? (

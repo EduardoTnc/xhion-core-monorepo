@@ -9,7 +9,6 @@ import LoginPage from './pages/LoginPage'
 import AcceptInvitationPage from './pages/AcceptInvitationPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
-import ProjectDetailPage from './pages/ProjectDetailPage'
 import RolesPage from './pages/RolesPage'
 import SessionsPage from './pages/SessionsPage'
 import DepartmentsPage from './pages/DepartmentsPage'
@@ -52,7 +51,6 @@ function App() {
               <Route path="departamentos" element={<DepartmentsPage />} />
               <Route path='ideas' element={<IdeasPage />} />
               <Route path="proyectos" element={<ProjectsPage />} />
-              <Route path="proyectos/:id" element={<ProjectDetailPage />} />
               <Route path="usuarios" element={<UsuariosPage />} />
               <Route path="roles" element={<RolesPage />} />
               <Route path="perfil/sesiones" element={<SessionsPage />} />

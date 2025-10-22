@@ -3,6 +3,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import { type Comentario } from "@/services/taskService";
 import { useTaskStore } from "@/store/taskStore";
@@ -18,9 +28,10 @@ interface TaskCommentsProps {
 
 export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
   const { user } = useAuthStore();
-  const { addComentario, deleteComentario, isLoading } = useTaskStore();
+  const { addComentario, deleteComentario } = useTaskStore();
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [comentarioToDelete, setComentarioToDelete] = useState<string | null>(null);
 
   const getInitials = (name: string) => {
     return name
@@ -47,12 +58,17 @@ export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
     }
   };
 
-  const handleDelete = async (comentarioId: string) => {
-    if (!confirm("¿Estás seguro de eliminar este comentario?")) return;
+  const handleDeleteClick = (comentarioId: string) => {
+    setComentarioToDelete(comentarioId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!comentarioToDelete) return;
 
     try {
-      await deleteComentario(tareaId, comentarioId);
+      await deleteComentario(tareaId, comentarioToDelete);
       toast.success("Comentario eliminado");
+      setComentarioToDelete(null);
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar comentario");
     }
@@ -95,8 +111,8 @@ export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleDelete(comentario.id)}
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteClick(comentario.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -132,6 +148,27 @@ export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
           </Button>
         </div>
       </form>
+
+      {/* Modal de confirmación para eliminar */}
+      <AlertDialog open={!!comentarioToDelete} onOpenChange={() => setComentarioToDelete(null)}>
+        <AlertDialogContent className="z-[100]" overlayClassName="z-[99]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar comentario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El comentario será eliminado permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

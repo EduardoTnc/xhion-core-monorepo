@@ -156,7 +156,7 @@ export function ProjectWorkspace() {
                 <TaskTableView tareas={tareas} onTaskClick={handleTaskClick} />
               )}
               {viewMode === "timeline" && (
-                <TaskTimelineView tareas={tareas} etapas={etapas} />
+                <TaskTimelineView tareas={tareas} etapas={etapas} onTaskClick={handleTaskClick} />
               )}
             </div>
           </>

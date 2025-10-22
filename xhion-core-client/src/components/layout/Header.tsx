@@ -53,7 +53,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-14 md:h-16 items-center gap-2 md:gap-4 border-b border-border bg-card/50 px-4 md:px-6 backdrop-blur-sm">
+      <header className="sticky top-0 z-1 flex h-14 md:h-16 items-center gap-2 md:gap-4 border-b border-border bg-card/95 px-4 md:px-6 backdrop-blur-sm shadow-sm">
         <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="lg:hidden h-9 w-9 shrink-0">
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
