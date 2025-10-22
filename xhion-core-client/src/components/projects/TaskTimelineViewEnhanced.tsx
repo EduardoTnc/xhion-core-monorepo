@@ -18,6 +18,8 @@ interface TaskTimelineViewEnhancedProps {
   tareas: Tarea[];
   etapas: Etapa[];
   onTaskClick?: (taskId: string) => void;
+  onEditTask?: (taskId: string) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 const prioridadColors = {
@@ -34,7 +36,7 @@ const estadoProgress = {
   Bloqueado: 25,
 };
 
-export function TaskTimelineViewEnhanced({ tareas, etapas, onTaskClick }: TaskTimelineViewEnhancedProps) {
+export function TaskTimelineViewEnhanced({ tareas, etapas, onTaskClick, onEditTask, onDeleteTask }: TaskTimelineViewEnhancedProps) {
   // ===== ALL HOOKS MUST BE AT THE TOP (Rules of Hooks) =====
   
   // Zoom levels: pixels per day
@@ -59,8 +61,8 @@ export function TaskTimelineViewEnhanced({ tareas, etapas, onTaskClick }: TaskTi
   ].map((d) => new Date(d!));
 
   // Extend timeline when scrolling near edges
-  const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
+  const handleScroll = useCallback((e: Event) => {
+    const container = e.target as HTMLElement;
     if (!container) return;
 
     const scrollPosition = container.scrollLeft;
@@ -402,12 +404,8 @@ export function TaskTimelineViewEnhanced({ tareas, etapas, onTaskClick }: TaskTi
             <div className="w-80 shrink-0 border-r p-3 font-semibold bg-card flex items-center">
               Tareas
             </div>
-            <div 
-              ref={scrollContainerRef}
-              className="flex-1 overflow-x-auto overflow-y-hidden"
-              style={{ scrollBehavior: 'smooth' }}
-            >
-              <div style={{ width: timelineWidth, minWidth: '100%' }}>
+            <div className="flex-1 overflow-hidden">
+              <div style={{ width: timelineWidth, minWidth: '100%', marginLeft: -scrollLeft }}>
                 {/* Months */}
                 <div className="flex border-b h-10">
                   {months.map((month, idx) => (
@@ -457,7 +455,11 @@ export function TaskTimelineViewEnhanced({ tareas, etapas, onTaskClick }: TaskTi
         </div>
 
         {/* Timeline Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-auto"
+          style={{ scrollBehavior: 'smooth' }}
+        >
           <div className="min-h-full">
             {groupedTareas.map(({ etapa, tareas: etapaTareas }) => (
               <div key={etapa.id} className="border-b">

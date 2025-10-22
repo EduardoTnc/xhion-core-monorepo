@@ -1,14 +1,23 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MessageSquare, Calendar, Flag, Circle, CheckCircle2, Clock, XCircle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageSquare, Calendar, Flag, Circle, CheckCircle2, Clock, XCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { cn } from "@/lib/utils";
 
 interface TaskListViewProps {
   tareas: Tarea[];
   onTaskClick: (taskId: string) => void;
+  onEditTask?: (tareaId: string) => void;
+  onDeleteTask?: (tareaId: string) => void;
 }
 
 const prioridadConfig = {
@@ -25,7 +34,7 @@ const estadoConfig = {
   Bloqueado: { icon: XCircle, color: "text-red-500" },
 };
 
-export function TaskListView({ tareas, onTaskClick }: TaskListViewProps) {
+export function TaskListView({ tareas, onTaskClick, onEditTask, onDeleteTask }: TaskListViewProps) {
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -118,7 +127,7 @@ export function TaskListView({ tareas, onTaskClick }: TaskListViewProps) {
                       </div>
 
                       {/* Meta Info */}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-shrink-0">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
                         {/* Comments */}
                         {tarea._count && tarea._count.comentarios > 0 && (
                           <div className="flex items-center gap-1">
@@ -154,6 +163,42 @@ export function TaskListView({ tareas, onTaskClick }: TaskListViewProps) {
                           <div className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
                             <span className="text-xs text-muted-foreground">?</span>
                           </div>
+                        )}
+
+                        {/* Actions Menu */}
+                        {(onEditTask || onDeleteTask) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {onEditTask && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditTask(tarea.id);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                              )}
+                              {onDeleteTask && (
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteTask(tarea.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     </div>

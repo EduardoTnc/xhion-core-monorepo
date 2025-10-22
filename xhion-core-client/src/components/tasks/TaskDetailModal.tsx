@@ -7,11 +7,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { TaskComments } from "./TaskComments";
 import { useTaskStore } from "@/store/taskStore";
-import { Loader2, Calendar, User, FolderKanban, Flag } from "lucide-react";
+import { Loader2, Calendar, User, FolderKanban, Flag, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -19,6 +20,8 @@ interface TaskDetailModalProps {
   tareaId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (tarea: any) => void;
+  onDelete?: (tareaId: string) => void;
 }
 
 const prioridadColors = {
@@ -35,7 +38,7 @@ const estadoColors = {
   Bloqueado: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
 };
 
-export function TaskDetailModal({ tareaId, open, onOpenChange }: TaskDetailModalProps) {
+export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete }: TaskDetailModalProps) {
   const { tareaActual, fetchTareaById, isLoading } = useTaskStore();
 
   useEffect(() => {
@@ -59,12 +62,41 @@ export function TaskDetailModal({ tareaId, open, onOpenChange }: TaskDetailModal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">
-            {tareaActual?.titulo || "Detalles de la Tarea"}
-          </DialogTitle>
-          <DialogDescription>
-            Información completa de la tarea, incluyendo detalles, asignaciones y comentarios.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <DialogTitle className="text-2xl">
+                {tareaActual?.titulo || "Detalles de la Tarea"}
+              </DialogTitle>
+              <DialogDescription>
+                Información completa de la tarea, incluyendo detalles, asignaciones y comentarios.
+              </DialogDescription>
+            </div>
+            {tareaActual && (onEdit || onDelete) && (
+              <div className="flex gap-2">
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(tareaActual)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onDelete(tareaActual.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         {isLoading && !tareaActual ? (

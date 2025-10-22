@@ -1,9 +1,16 @@
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical, Edit, Trash2 } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { useTaskStore } from "@/store/taskStore";
@@ -14,6 +21,8 @@ interface TaskKanbanViewDnDProps {
   tareas: Tarea[];
   etapas: Etapa[];
   onTaskClick: (taskId: string) => void;
+  onEditTask?: (tareaId: string) => void;
+  onDeleteTask?: (tareaId: string) => void;
   proyectoId: string;
 }
 
@@ -31,7 +40,7 @@ const estadoConfig = {
   Bloqueado: { label: "Bloqueado", color: "bg-red-500" },
 };
 
-export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, proyectoId }: TaskKanbanViewDnDProps) {
+export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onDeleteTask, proyectoId }: TaskKanbanViewDnDProps) {
   const { updateTarea, fetchTareas } = useTaskStore();
 
   const getInitials = (name: string) => {
@@ -151,13 +160,45 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, proyectoId }: T
                                           : "hover:shadow-md"
                                       )}
                                     >
-                                      {/* Drag Handle */}
-                                      <div
-                                        {...provided.dragHandleProps}
-                                        className="flex items-center justify-between mb-2"
-                                      >
-                                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                      {/* Drag Handle and Menu */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div {...provided.dragHandleProps}>
+                                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                        {(onEditTask || onDeleteTask) && (
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                <MoreVertical className="h-3 w-3" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              {onEditTask && (
+                                                <DropdownMenuItem
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onEditTask(tarea.id);
+                                                  }}
+                                                >
+                                                  <Edit className="h-4 w-4 mr-2" />
+                                                  Editar
+                                                </DropdownMenuItem>
+                                              )}
+                                              {onDeleteTask && (
+                                                <DropdownMenuItem
+                                                  className="text-destructive"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onDeleteTask(tarea.id);
+                                                  }}
+                                                >
+                                                  <Trash2 className="h-4 w-4 mr-2" />
+                                                  Eliminar
+                                                </DropdownMenuItem>
+                                              )}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        )}
                                       </div>
 
                                       {/* Task Title */}

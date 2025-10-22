@@ -41,9 +41,9 @@ export function ProjectSidebar({
   };
 
   return (
-    <div className="w-80 border-r bg-card flex flex-col">
+    <div className="bg-card flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b space-y-4">
+      <div className="p-4 border-b space-y-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Proyectos</h2>
           <Button size="icon" variant="ghost" className="h-8 w-8">
@@ -70,7 +70,7 @@ export function ProjectSidebar({
       </div>
 
       {/* Projects List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-1">
           {filteredProyectos.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ export function ProjectSidebar({
       </ScrollArea>
 
       {/* Footer Stats */}
-      <div className="p-4 border-t bg-muted/30">
+      <div className="p-4 border-t bg-muted/30 flex-shrink-0">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="text-2xl font-bold">{proyectos.length}</div>

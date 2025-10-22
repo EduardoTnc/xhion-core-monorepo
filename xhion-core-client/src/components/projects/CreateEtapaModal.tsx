@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ColorPicker } from "@/components/ui/color-picker";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ interface CreateEtapaModalProps {
 interface EtapaFormData {
   nombre: string;
   descripcion: string;
+  color: string;
   orden: number;
   fechaInicio: string;
   fechaFin: string;
@@ -58,6 +60,7 @@ export function CreateEtapaModal({
     formState: { errors },
   } = useForm<EtapaFormData>({
     defaultValues: {
+      color: "#3B82F6",
       orden: etapas.length + 1,
       estado: "Pendiente",
     },
@@ -67,12 +70,14 @@ export function CreateEtapaModal({
     if (etapaToEdit) {
       setValue("nombre", etapaToEdit.nombre);
       setValue("descripcion", etapaToEdit.descripcion || "");
+      setValue("color", etapaToEdit.color || "#3B82F6");
       setValue("orden", etapaToEdit.orden);
       setValue("fechaInicio", etapaToEdit.fechaInicio?.split("T")[0] || "");
       setValue("fechaFin", etapaToEdit.fechaFin?.split("T")[0] || "");
       setValue("estado", etapaToEdit.estado);
     } else {
       reset({
+        color: "#3B82F6",
         orden: etapas.length + 1,
         estado: "Pendiente",
       });
@@ -88,6 +93,7 @@ export function CreateEtapaModal({
         const etapaData = {
           nombre: data.nombre,
           descripcion: data.descripcion || undefined,
+          color: data.color || undefined,
           orden: Number(data.orden),
           fechaInicio: data.fechaInicio || undefined,
           fechaFin: data.fechaFin || undefined,
@@ -100,6 +106,7 @@ export function CreateEtapaModal({
         const etapaData = {
           nombre: data.nombre,
           descripcion: data.descripcion || undefined,
+          color: data.color || undefined,
           orden: Number(data.orden),
           fechaInicio: data.fechaInicio || undefined,
           fechaFin: data.fechaFin || undefined,
@@ -118,6 +125,7 @@ export function CreateEtapaModal({
   };
 
   const selectedEstado = watch("estado");
+  const selectedColor = watch("color");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,6 +169,12 @@ export function CreateEtapaModal({
               {...register("descripcion")}
             />
           </div>
+
+          <ColorPicker
+            label="Color de la Etapa (Opcional)"
+            value={selectedColor}
+            onChange={(color) => setValue("color", color)}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

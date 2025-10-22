@@ -51,22 +51,22 @@ export function TaskCard({ tarea, onClick, onEdit, onDelete, draggable }: TaskCa
       )}
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        <div className="space-y-3">
+      <CardContent className="p-3">
+        <div className="space-y-2">
           {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 space-y-1">
-              <h4 className="font-medium leading-none">{tarea.titulo}</h4>
+          <div className="flex items-start justify-between gap-1.5">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-sm leading-tight line-clamp-1">{tarea.titulo}</h4>
               {tarea.descripcion && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                   {tarea.descripcion}
                 </p>
               )}
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <MoreVertical className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                  <MoreVertical className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -96,47 +96,47 @@ export function TaskCard({ tarea, onClick, onEdit, onDelete, draggable }: TaskCa
           </div>
 
           {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className={prioridadColors[tarea.prioridad]}>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5", prioridadColors[tarea.prioridad])}>
               {tarea.prioridad}
             </Badge>
             {tarea.etapa && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
                 {tarea.etapa.nombre}
               </Badge>
             )}
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between text-[11px]">
+            <div className="flex items-center gap-2">
               {tarea.fechaVencimiento && (
                 <div
                   className={cn(
-                    "flex items-center gap-1",
+                    "flex items-center gap-0.5",
                     isOverdue && "text-destructive",
                     isDueToday && "text-orange-600 dark:text-orange-400"
                   )}
                 >
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>
+                  <Calendar className="h-3 w-3" />
+                  <span className="text-[10px]">
                     {format(new Date(tarea.fechaVencimiento), "dd MMM", { locale: es })}
                   </span>
-                  {isOverdue && <AlertCircle className="h-3.5 w-3.5" />}
+                  {isOverdue && <AlertCircle className="h-3 w-3" />}
                 </div>
               )}
               {tarea._count && tarea._count.comentarios > 0 && (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  <span>{tarea._count.comentarios}</span>
+                <div className="flex items-center gap-0.5 text-muted-foreground">
+                  <MessageSquare className="h-3 w-3" />
+                  <span className="text-[10px]">{tarea._count.comentarios}</span>
                 </div>
               )}
             </div>
 
             {tarea.asignado && (
-              <Avatar className="h-6 w-6">
+              <Avatar className="h-5 w-5">
                 <AvatarImage src={tarea.asignado.avatarUrl} />
-                <AvatarFallback className="text-[10px]">
+                <AvatarFallback className="text-[9px]">
                   {getInitials(tarea.asignado.nombreCompleto)}
                 </AvatarFallback>
               </Avatar>

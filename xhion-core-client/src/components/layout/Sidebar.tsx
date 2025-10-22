@@ -12,93 +12,138 @@ import {
   Users,
   Building2,
   UserCog,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import {
+  Sidebar as SidebarContainer,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { CreateProjectModal } from "@/components/modals/create-project-modal"
-import { useSidebar } from "@/components/providers/SidebarProvider"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavMain, type NavItem } from "./nav-main"
+import { NavUser } from "./nav-user"
 
-const navigation = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { name: "Departamentos", icon: Building2, href: "/departamentos" },
-  { name: "Proyectos", icon: FolderKanban, href: "/proyectos" },
-  { name: "Tareas", icon: CheckSquare, href: "/tareas" },
-  { name: "Calendario", icon: Calendar, href: "/calendario" },
-  { name: "IA Insights", icon: Sparkles, href: "/ai-insights" },
-  { name: "Ideas", icon: Lightbulb, href: "/ideas" },
-  { name: "Usuarios", icon: UserCog, href: "/usuarios" },
-  { name: "Roles y Permisos", icon: Users, href: "/roles" },
-  { name: "Seguridad / Auditoría", icon: Shield, href: "/auditoria" },
-  { name: "Configuración", icon: Settings, href: "/configuraciones" },
+// Navegación principal organizada por grupos
+const navigationMain: NavItem[] = [
+  {
+    title: "Dashboard",
+    url: "/",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Proyectos",
+    url: "/proyectos",
+    icon: FolderKanban,
+  },
+  {
+    title: "Tareas",
+    url: "/tareas",
+    icon: CheckSquare,
+  },
+  {
+    title: "Calendario",
+    url: "/calendario",
+    icon: Calendar,
+  },
+]
+
+// Herramientas y funcionalidades avanzadas
+const navigationTools: NavItem[] = [
+  {
+    title: "IA Insights",
+    url: "/ai-insights",
+    icon: Sparkles,
+  },
+  {
+    title: "Ideas",
+    url: "/ideas",
+    icon: Lightbulb,
+  },
+]
+
+// Administración y configuración
+const navigationAdmin: NavItem[] = [
+  {
+    title: "Organización",
+    url: "#",
+    icon: Building2,
+    items: [
+      { title: "Departamentos", url: "/departamentos" },
+      { title: "Usuarios", url: "/usuarios" },
+      { title: "Roles y Permisos", url: "/roles" },
+    ],
+  },
+  {
+    title: "Sistema",
+    url: "#",
+    icon: Settings,
+    items: [
+      { title: "Configuración", url: "/configuraciones" },
+      { title: "Seguridad", url: "/auditoria" },
+    ],
+  },
 ]
 
 export function Sidebar() {
-  const location = useLocation()
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false)
-  const { isMobileMenuOpen, setIsMobileMenuOpen } = useSidebar()
+  const { setOpenMobile } = useSidebar()
 
   return (
     <>
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      <SidebarContainer collapsible="icon" variant="sidebar">
+        {/* Header with Logo */}
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Zap className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">Xhion Core</span>
+                  <span className="truncate text-xs text-muted-foreground">Enterprise</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-sidebar transition-transform duration-300 lg:static lg:translate-x-0",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-        )}
-      >
-        {/* Logo */}
-        <div className="flex h-14 md:h-16 items-center border-b border-sidebar-border px-6">
-          <h1 className="text-xl font-bold text-sidebar-foreground">
-            Xhion <span className="text-primary">Core</span>
-          </h1>
-        </div>
+        {/* Navigation Menu */}
+        <SidebarContent>
+          <NavMain items={navigationMain} label="Principal" />
+          <NavMain items={navigationTools} label="Herramientas" />
+          <NavMain items={navigationAdmin} label="Administración" />
+          
+          {/* Quick Action Button */}
+          <div className="mt-auto px-3 py-2">
+            <Button
+              className="w-full gap-2"
+              size="sm"
+              onClick={() => {
+                setIsCreateProjectOpen(true)
+                setOpenMobile(false)
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              <span className="group-data-[collapsible=icon]:hidden">Nuevo Proyecto</span>
+            </Button>
+          </div>
+        </SidebarContent>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-          {navigation.map((item) => {
-            const Icon = item.icon
-            const isActive = location.pathname === item.href
-            return (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                {item.name}
-              </NavLink>
-            )
-          })}
-        </nav>
-
-        {/* New Project Button */}
-        <div className="border-t border-sidebar-border p-4">
-          <Button
-            className="w-full gap-2"
-            size="lg"
-            onClick={() => {
-              setIsCreateProjectOpen(true)
-              setIsMobileMenuOpen(false)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuevo Proyecto
-          </Button>
-        </div>
-      </aside>
+        {/* Footer with User Info */}
+        <SidebarFooter>
+          <NavUser />
+        </SidebarFooter>
+        
+        <SidebarRail />
+      </SidebarContainer>
 
       {/* Create Project Modal */}
       <CreateProjectModal open={isCreateProjectOpen} onOpenChange={setIsCreateProjectOpen} />

@@ -52,6 +52,7 @@ export interface Etapa {
   id: string;
   nombre: string;
   descripcion?: string;
+  color?: string;
   orden: number;
   proyectoId: string;
   fechaInicio?: string;
@@ -87,6 +88,7 @@ export interface AddMiembroDto {
 export interface CreateEtapaDto {
   nombre: string;
   descripcion?: string;
+  color?: string;
   orden: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -95,6 +97,7 @@ export interface CreateEtapaDto {
 export interface UpdateEtapaDto {
   nombre?: string;
   descripcion?: string;
+  color?: string;
   orden?: number;
   fechaInicio?: string;
   fechaFin?: string;

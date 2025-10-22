@@ -11,13 +11,21 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Flag, ArrowUpDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageSquare, Flag, ArrowUpDown, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { cn } from "@/lib/utils";
 
 interface TaskTableViewProps {
   tareas: Tarea[];
   onTaskClick: (taskId: string) => void;
+  onEditTask?: (tareaId: string) => void;
+  onDeleteTask?: (tareaId: string) => void;
 }
 
 const prioridadColors = {
@@ -37,7 +45,7 @@ const estadoColors = {
 type SortField = "titulo" | "prioridad" | "estado" | "fechaVencimiento";
 type SortOrder = "asc" | "desc";
 
-export function TaskTableView({ tareas, onTaskClick }: TaskTableViewProps) {
+export function TaskTableView({ tareas, onTaskClick, onEditTask, onDeleteTask }: TaskTableViewProps) {
   const [sortField, setSortField] = useState<SortField>("titulo");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
@@ -128,6 +136,9 @@ export function TaskTableView({ tareas, onTaskClick }: TaskTableViewProps) {
                 <SortButton field="fechaVencimiento">Vencimiento</SortButton>
               </TableHead>
               <TableHead className="w-20 text-center">Comentarios</TableHead>
+              {(onEditTask || onDeleteTask) && (
+                <TableHead className="w-16">Acciones</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -221,6 +232,42 @@ export function TaskTableView({ tareas, onTaskClick }: TaskTableViewProps) {
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </TableCell>
+                    {(onEditTask || onDeleteTask) && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {onEditTask && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditTask(tarea.id);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+                            {onDeleteTask && (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteTask(tarea.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })

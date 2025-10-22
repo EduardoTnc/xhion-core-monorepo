@@ -18,6 +18,7 @@ import { CreateEtapaModal } from "./CreateEtapaModal";
 import { AddMiembroModal } from "./AddMiembroModal";
 import { CreateTaskModal } from "../tasks/CreateTaskModal";
 import { TaskDetailModal } from "../tasks/TaskDetailModal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, PanelLeftClose, PanelLeftOpen, Keyboard } from "lucide-react";
 import { toast } from "sonner";
@@ -64,10 +65,14 @@ export function ProjectWorkspaceEnhanced() {
   const [showCreateEtapaModal, setShowCreateEtapaModal] = useState(false);
   const [showAddMiembroModal, setShowAddMiembroModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [etapaToEdit, setEtapaToEdit] = useState<any>(null);
+  const [tareaToEdit, setTareaToEdit] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tareaToDelete, setTareaToDelete] = useState<string | null>(null);
 
   // Refs for keyboard shortcuts
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -122,6 +127,41 @@ export function ProjectWorkspaceEnhanced() {
     setShowTaskDetailModal(true);
   };
 
+  const handleEditTask = (task: any) => {
+    setTareaToEdit(task);
+    setShowEditTaskModal(true);
+    setShowTaskDetailModal(false);
+  };
+
+  const handleEditTaskDirect = (tareaId: string) => {
+    const tarea = tareas.find(t => t.id === tareaId);
+    if (tarea) {
+      setTareaToEdit(tarea);
+      setShowEditTaskModal(true);
+    }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTareaToDelete(taskId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!tareaToDelete) return;
+    
+    try {
+      await useTaskStore.getState().deleteTarea(tareaToDelete);
+      toast.success('Tarea eliminada exitosamente');
+      if (selectedProjectId) {
+        fetchTareas({ proyectoId: selectedProjectId });
+      }
+      setShowTaskDetailModal(false);
+      setTareaToDelete(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar tarea');
+    }
+  };
+
   // Apply filters to tasks
   const filteredTareas = applyTaskFilters(tareas, filters);
 
@@ -148,11 +188,11 @@ export function ProjectWorkspaceEnhanced() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-full bg-background overflow-hidden">
       {/* Sidebar */}
       <div
         className={cn(
-          "border-r bg-card transition-all duration-300 ease-in-out",
+          "border-r bg-card transition-all duration-300 ease-in-out h-full overflow-hidden",
           "hidden lg:block",
           isSidebarCollapsed ? "w-0" : "w-80"
         )}
@@ -178,7 +218,7 @@ export function ProjectWorkspaceEnhanced() {
       {/* Mobile Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r transition-transform duration-300 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r transition-transform duration-300 lg:hidden h-full overflow-hidden",
           isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -275,17 +315,35 @@ export function ProjectWorkspaceEnhanced() {
                   tareas={filteredTareas}
                   etapas={etapas}
                   onTaskClick={handleTaskClick}
+                  onEditTask={handleEditTaskDirect}
+                  onDeleteTask={handleDeleteTask}
                   proyectoId={selectedProjectId || ""}
                 />
               )}
               {viewMode === "list" && (
-                <TaskListView tareas={filteredTareas} onTaskClick={handleTaskClick} />
+                <TaskListView 
+                  tareas={filteredTareas} 
+                  onTaskClick={handleTaskClick}
+                  onEditTask={handleEditTaskDirect}
+                  onDeleteTask={handleDeleteTask}
+                />
               )}
               {viewMode === "table" && (
-                <TaskTableView tareas={filteredTareas} onTaskClick={handleTaskClick} />
+                <TaskTableView 
+                  tareas={filteredTareas} 
+                  onTaskClick={handleTaskClick}
+                  onEditTask={handleEditTaskDirect}
+                  onDeleteTask={handleDeleteTask}
+                />
               )}
               {viewMode === "timeline" && (
-                <TaskTimelineViewEnhanced tareas={filteredTareas} etapas={etapas} onTaskClick={handleTaskClick} />
+                <TaskTimelineViewEnhanced 
+                  tareas={filteredTareas} 
+                  etapas={etapas} 
+                  onTaskClick={handleTaskClick}
+                  onEditTask={handleEditTaskDirect}
+                  onDeleteTask={handleDeleteTask}
+                />
               )}
             </div>
           </>
@@ -349,18 +407,46 @@ export function ProjectWorkspaceEnhanced() {
             fetchTareas({ proyectoId: selectedProjectId });
           }
         }}
-        proyectoId={selectedProjectId}
+        proyectoId={selectedProjectId || ""}
+      />
+
+      <CreateTaskModal
+        open={showEditTaskModal}
+        onOpenChange={(open) => {
+          setShowEditTaskModal(open);
+          if (!open) {
+            setTareaToEdit(null);
+            if (selectedProjectId) {
+              fetchTareas({ proyectoId: selectedProjectId });
+            }
+          }
+        }}
+        proyectoId={selectedProjectId || ""}
+        tareaToEdit={tareaToEdit}
       />
 
       <TaskDetailModal
         tareaId={selectedTaskId}
         open={showTaskDetailModal}
         onOpenChange={setShowTaskDetailModal}
+        onEdit={handleEditTask}
+        onDelete={handleDeleteTask}
       />
 
       <KeyboardShortcutsDialog
         open={showKeyboardShortcuts}
         onOpenChange={setShowKeyboardShortcuts}
+      />
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={confirmDeleteTask}
+        title="¿Eliminar tarea?"
+        description="Esta acción no se puede deshacer. La tarea será eliminada permanentemente."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="destructive"
       />
     </div>
   );
