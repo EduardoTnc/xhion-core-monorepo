@@ -116,7 +116,7 @@ export const taskService = {
       if (filters?.estado) params.append('estado', filters.estado);
       if (filters?.prioridad) params.append('prioridad', filters.prioridad);
 
-      const response = await apiClient.get<Tarea[]>(`/api/v1/tareas?${params.toString()}`);
+      const response = await apiClient.get<Tarea[]>(`/tareas?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener tareas';
@@ -129,7 +129,7 @@ export const taskService = {
    */
   async getMisTareas(): Promise<Tarea[]> {
     try {
-      const response = await apiClient.get<Tarea[]>('/api/v1/tareas/mis-tareas');
+      const response = await apiClient.get<Tarea[]>('/tareas/mis-tareas');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener mis tareas';
@@ -142,7 +142,7 @@ export const taskService = {
    */
   async getById(id: string): Promise<Tarea> {
     try {
-      const response = await apiClient.get<Tarea>(`/api/v1/tareas/${id}`);
+      const response = await apiClient.get<Tarea>(`/tareas/${id}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener tarea';
@@ -155,7 +155,7 @@ export const taskService = {
    */
   async create(data: CreateTareaDto): Promise<Tarea> {
     try {
-      const response = await apiClient.post<Tarea>('/api/v1/tareas', data);
+      const response = await apiClient.post<Tarea>('/tareas', data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al crear tarea';
@@ -168,7 +168,7 @@ export const taskService = {
    */
   async update(id: string, data: UpdateTareaDto): Promise<Tarea> {
     try {
-      const response = await apiClient.patch<Tarea>(`/api/v1/tareas/${id}`, data);
+      const response = await apiClient.patch<Tarea>(`/tareas/${id}`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al actualizar tarea';
@@ -181,7 +181,7 @@ export const taskService = {
    */
   async move(id: string, data: MoveTareaDto): Promise<Tarea> {
     try {
-      const response = await apiClient.patch<Tarea>(`/api/v1/tareas/${id}/move`, data);
+      const response = await apiClient.patch<Tarea>(`/tareas/${id}/move`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al mover tarea';
@@ -194,7 +194,7 @@ export const taskService = {
    */
   async delete(id: string): Promise<{ message: string }> {
     try {
-      const response = await apiClient.delete<{ message: string }>(`/api/v1/tareas/${id}`);
+      const response = await apiClient.delete<{ message: string }>(`/tareas/${id}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al eliminar tarea';
@@ -209,7 +209,7 @@ export const taskService = {
    */
   async getComentarios(tareaId: string): Promise<Comentario[]> {
     try {
-      const response = await apiClient.get<Comentario[]>(`/api/v1/tareas/${tareaId}/comentarios`);
+      const response = await apiClient.get<Comentario[]>(`/tareas/${tareaId}/comentarios`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener comentarios';
@@ -222,7 +222,7 @@ export const taskService = {
    */
   async addComentario(tareaId: string, data: CreateComentarioDto): Promise<Comentario> {
     try {
-      const response = await apiClient.post<Comentario>(`/api/v1/tareas/${tareaId}/comentarios`, data);
+      const response = await apiClient.post<Comentario>(`/tareas/${tareaId}/comentarios`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al agregar comentario';
@@ -236,7 +236,7 @@ export const taskService = {
   async deleteComentario(tareaId: string, comentarioId: string): Promise<{ message: string }> {
     try {
       const response = await apiClient.delete<{ message: string }>(
-        `/api/v1/tareas/${tareaId}/comentarios/${comentarioId}`
+        `/tareas/${tareaId}/comentarios/${comentarioId}`
       );
       return response.data;
     } catch (error: any) {

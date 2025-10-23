@@ -7,7 +7,7 @@ import {
   FolderKanban,
   CheckSquare,
   TrendingUp,
-  DollarSign,
+  Coins,
   Sparkles,
   Calendar,
   MoreVertical,
@@ -33,6 +33,10 @@ import { useConocimientoStore } from "@/store/conocimientoStore"
 import { CreateDepartmentModal } from "./CreateDepartmentModal"
 import { DepartmentContextModal } from "./DepartmentContextModal"
 import { BudgetView } from "@/components/budgets/BudgetView"
+import { DepartmentProjectsView } from "./DepartmentProjectsView"
+import { DepartmentTeamView } from "./DepartmentTeamView"
+import { DepartmentContextView } from "./DepartmentContextView"
+import { ProjectWorkspaceEnhanced } from "@/components/projects/ProjectWorkspaceEnhanced"
 
 interface DepartmentDetailProps {
   departamentoId: string
@@ -42,6 +46,8 @@ interface DepartmentDetailProps {
 export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailProps) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showContextModal, setShowContextModal] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("overview")
 
   const {
     departamentoActual,
@@ -94,6 +100,34 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
   const totalTareas = estadisticas?.estadisticas.tareas.total || 0
   const tareasCompletadas = estadisticas?.estadisticas.tareas.completadas || 0
   const completionRate = totalTareas > 0 ? Math.round((tareasCompletadas / totalTareas) * 100) : 0
+
+  // Si hay un proyecto seleccionado, mostrar el workspace del proyecto
+  if (selectedProjectId) {
+    return (
+      <div className="space-y-4 p-8">
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedProjectId(null)}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver a {departamentoActual.nombre}
+          </Button>
+          <span>/</span>
+          <span className="text-foreground font-medium">Proyecto</span>
+        </div>
+
+        {/* Project Workspace */}
+        <ProjectWorkspaceEnhanced 
+          proyectoId={selectedProjectId} 
+          hideSidebar={true}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 p-8">
@@ -220,7 +254,7 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Details */}
         <div className="space-y-6 lg:col-span-2">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList>
               <TabsTrigger value="overview">Resumen</TabsTrigger>
               <TabsTrigger value="budget">Presupuesto</TabsTrigger>
@@ -298,98 +332,33 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
             </TabsContent>
 
             <TabsContent value="projects">
-              <Card className="border-border bg-card p-6">
-                <h3 className="font-semibold text-foreground mb-4">Proyectos del Departamento</h3>
-                <div className="space-y-3">
-                  {departamentoActual.proyectos?.map((proyecto) => (
-                    <div
-                      key={proyecto.id}
-                      className="flex items-center justify-between rounded-lg bg-muted/50 p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <FolderKanban className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{proyecto.nombre}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {proyecto._count.tareas} tareas • {proyecto._count.miembros} miembros
-                          </p>
-                        </div>
-                      </div>
-                      <Badge>{proyecto.estado}</Badge>
-                    </div>
-                  ))}
-                  {(!departamentoActual.proyectos ||
-                    departamentoActual.proyectos.length === 0) && (
-                    <p className="text-sm text-muted-foreground">No hay proyectos asignados</p>
-                  )}
-                </div>
-              </Card>
+              <DepartmentProjectsView
+                proyectos={departamentoActual.proyectos}
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
+                onProjectClick={(projectId) => setSelectedProjectId(projectId)}
+              />
             </TabsContent>
 
             <TabsContent value="team">
-              <Card className="border-border bg-card p-6">
-                <h3 className="font-semibold text-foreground mb-4">Miembros del Equipo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Total de empleados: {estadisticas?.estadisticas.totalEmpleados || 0}
-                </p>
-              </Card>
+              <DepartmentTeamView
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
+                jefe={departamentoActual.jefe}
+                empleados={departamentoActual.usuarios}
+                puestosTrabajo={departamentoActual.puestosTrabajo}
+                totalEmpleados={estadisticas?.estadisticas.totalEmpleados || 0}
+              />
             </TabsContent>
 
             <TabsContent value="context">
-              <Card className="border-border bg-card p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-foreground">Base de Conocimiento</h3>
-                  <Button size="sm" onClick={() => setShowContextModal(true)}>
-                    {contexto ? "Editar" : "Agregar"} Contexto
-                  </Button>
-                </div>
-                {contexto ? (
-                  <div className="space-y-4">
-                    {contexto.funciones && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-1">Funciones</h4>
-                        <p className="text-sm text-muted-foreground">{contexto.funciones}</p>
-                      </div>
-                    )}
-                    {contexto.responsabilidades && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-1">
-                          Responsabilidades
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {contexto.responsabilidades}
-                        </p>
-                      </div>
-                    )}
-                    {contexto.procesosClave && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-1">
-                          Procesos Clave
-                        </h4>
-                        <p className="text-sm text-muted-foreground">{contexto.procesosClave}</p>
-                      </div>
-                    )}
-                    {contexto.objetivos && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-1">Objetivos</h4>
-                        <p className="text-sm text-muted-foreground">{contexto.objetivos}</p>
-                      </div>
-                    )}
-                    {contexto.kpis && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-1">KPIs</h4>
-                        <p className="text-sm text-muted-foreground">{contexto.kpis}</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No hay contexto definido para este departamento
-                  </p>
-                )}
-              </Card>
+              <DepartmentContextView
+                contexto={contexto}
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
+                onEdit={() => setShowContextModal(true)}
+                onCreate={() => setShowContextModal(true)}
+              />
             </TabsContent>
           </Tabs>
         </div>

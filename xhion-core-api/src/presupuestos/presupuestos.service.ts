@@ -24,6 +24,10 @@ export class PresupuestosService {
     dto: CreatePresupuestoDepartamentoDto,
     usuarioId: string,
   ) {
+    if (!usuarioId) {
+      throw new BadRequestException('Usuario no autenticado');
+    }
+
     // Verificar que el departamento existe
     const departamento = await this.prisma.departamento.findUnique({
       where: { id: dto.departamentoId },
@@ -51,7 +55,12 @@ export class PresupuestosService {
 
     return this.prisma.presupuestoDepartamento.create({
       data: {
-        departamentoId: dto.departamentoId,
+        departamento: {
+          connect: { id: dto.departamentoId },
+        },
+        creadoPor: {
+          connect: { id: usuarioId },
+        },
         montoTotal: new Decimal(dto.montoTotal),
         montoGastado: new Decimal(0),
         montoDisponible: new Decimal(montoDisponible),
@@ -60,7 +69,6 @@ export class PresupuestosService {
         fechaFin: new Date(dto.fechaFin),
         estado: dto.estado || EstadoPresupuesto.Activo,
         descripcion: dto.descripcion,
-        creadoPorId: usuarioId,
       },
       include: {
         departamento: {
@@ -193,6 +201,10 @@ export class PresupuestosService {
     dto: CreateMovimientoDepartamentoDto,
     usuarioId: string,
   ) {
+    if (!usuarioId) {
+      throw new BadRequestException('Usuario no autenticado');
+    }
+
     const presupuesto = await this.prisma.presupuestoDepartamento.findUnique({
       where: { id: dto.presupuestoDepartamentoId },
     });
@@ -217,15 +229,23 @@ export class PresupuestosService {
     // Crear el movimiento
     const movimiento = await this.prisma.movimientoPresupuestoDepartamento.create({
       data: {
-        presupuestoDepartamentoId: dto.presupuestoDepartamentoId,
+        presupuestoDepartamento: {
+          connect: { id: dto.presupuestoDepartamentoId },
+        },
+        registradoPor: {
+          connect: { id: usuarioId },
+        },
+        ...(dto.archivoId && {
+          archivo: {
+            connect: { id: dto.archivoId },
+          },
+        }),
         tipo: dto.tipo,
         monto,
         descripcion: dto.descripcion,
         categoria: dto.categoria,
         comprobante: dto.comprobante,
-        archivoId: dto.archivoId,
         fechaMovimiento: dto.fechaMovimiento ? new Date(dto.fechaMovimiento) : new Date(),
-        registradoPorId: usuarioId,
       },
       include: {
         registradoPor: {
@@ -344,6 +364,10 @@ export class PresupuestosService {
   // ==================== PRESUPUESTOS DE PROYECTO ====================
 
   async createPresupuestoProyecto(dto: CreatePresupuestoProyectoDto, usuarioId: string) {
+    if (!usuarioId) {
+      throw new BadRequestException('Usuario no autenticado');
+    }
+
     // Verificar que el proyecto existe
     const proyecto = await this.prisma.proyecto.findUnique({
       where: { id: dto.proyectoId },
@@ -366,13 +390,17 @@ export class PresupuestosService {
 
     return this.prisma.presupuestoProyecto.create({
       data: {
-        proyectoId: dto.proyectoId,
+        proyecto: {
+          connect: { id: dto.proyectoId },
+        },
+        creadoPor: {
+          connect: { id: usuarioId },
+        },
         montoTotal: new Decimal(dto.montoTotal),
         montoGastado: new Decimal(0),
         montoDisponible: new Decimal(montoDisponible),
         estado: dto.estado || EstadoPresupuesto.Activo,
         descripcion: dto.descripcion,
-        creadoPorId: usuarioId,
       },
       include: {
         proyecto: {
@@ -498,6 +526,10 @@ export class PresupuestosService {
   // ==================== MOVIMIENTOS DE PROYECTO ====================
 
   async createMovimientoProyecto(dto: CreateMovimientoProyectoDto, usuarioId: string) {
+    if (!usuarioId) {
+      throw new BadRequestException('Usuario no autenticado');
+    }
+
     const presupuesto = await this.prisma.presupuestoProyecto.findUnique({
       where: { id: dto.presupuestoProyectoId },
     });
@@ -522,15 +554,23 @@ export class PresupuestosService {
     // Crear el movimiento
     const movimiento = await this.prisma.movimientoPresupuestoProyecto.create({
       data: {
-        presupuestoProyectoId: dto.presupuestoProyectoId,
+        presupuestoProyecto: {
+          connect: { id: dto.presupuestoProyectoId },
+        },
+        registradoPor: {
+          connect: { id: usuarioId },
+        },
+        ...(dto.archivoId && {
+          archivo: {
+            connect: { id: dto.archivoId },
+          },
+        }),
         tipo: dto.tipo,
         monto,
         descripcion: dto.descripcion,
         categoria: dto.categoria,
         comprobante: dto.comprobante,
-        archivoId: dto.archivoId,
         fechaMovimiento: dto.fechaMovimiento ? new Date(dto.fechaMovimiento) : new Date(),
-        registradoPorId: usuarioId,
       },
       include: {
         registradoPor: {

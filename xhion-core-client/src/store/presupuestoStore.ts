@@ -164,13 +164,38 @@ export const usePresupuestoStore = create<PresupuestoState>((set, get) => ({
   createMovimientoDepartamento: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      await presupuestoService.createMovimientoDepartamento(data);
+      const movimiento = await presupuestoService.createMovimientoDepartamento(data);
+      
+      // Buscar el departamentoId del presupuesto en el Map
+      let departamentoId = '';
+      for (const [deptId, presupuesto] of get().presupuestosDepartamento.entries()) {
+        if (presupuesto.id === data.presupuestoDepartamentoId) {
+          departamentoId = deptId;
+          break;
+        }
+      }
+      
+      // Si no se encuentra en el Map, obtener el presupuesto directamente
+      if (!departamentoId) {
+        // Obtener movimientos primero para refrescar
+        const movimientos = await presupuestoService.getMovimientosDepartamento(
+          data.presupuestoDepartamentoId
+        );
+        const movimientosMap = new Map(get().movimientosDepartamento);
+        movimientosMap.set(data.presupuestoDepartamentoId, movimientos);
+        
+        set({
+          movimientosDepartamento: movimientosMap,
+          isLoading: false,
+        });
+        toast.success('Movimiento registrado exitosamente');
+        return;
+      }
+      
       // Refrescar presupuesto y movimientos
-      const presupuesto = await presupuestoService.getPresupuestoDepartamento(
-        get().presupuestosDepartamento.get(data.presupuestoDepartamentoId)?.departamentoId || ''
-      );
+      const presupuesto = await presupuestoService.getPresupuestoDepartamento(departamentoId);
       const presupuestos = new Map(get().presupuestosDepartamento);
-      presupuestos.set(presupuesto.departamentoId, presupuesto);
+      presupuestos.set(departamentoId, presupuesto);
       
       const movimientos = await presupuestoService.getMovimientosDepartamento(
         data.presupuestoDepartamentoId

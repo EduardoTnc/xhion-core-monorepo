@@ -1,10 +1,8 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { X, DollarSign, Calendar } from "lucide-react"
+import { X, Coins, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -111,8 +109,10 @@ export function CreateBudgetDepartmentModal({
       }
       onOpenChange(false)
       reset()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al guardar presupuesto:", error)
+      console.error("Detalles del error:", error.response?.data)
+      alert(`Error: ${error.response?.data?.message || error.message}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -123,7 +123,7 @@ export function CreateBudgetDepartmentModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            <DollarSign className="h-6 w-6 text-primary" />
+            <Coins className="h-6 w-6 text-primary" />
             {presupuestoExistente ? "Editar" : "Crear"} Presupuesto
           </DialogTitle>
           <DialogDescription>
@@ -139,7 +139,7 @@ export function CreateBudgetDepartmentModal({
               Monto Total <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Coins className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="montoTotal"
                 type="number"
@@ -149,6 +149,9 @@ export function CreateBudgetDepartmentModal({
                 {...register("montoTotal", { valueAsNumber: true })}
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Monto en Soles Peruanos (S/.)
+            </p>
             {errors.montoTotal && (
               <p className="text-sm text-destructive">{errors.montoTotal.message}</p>
             )}

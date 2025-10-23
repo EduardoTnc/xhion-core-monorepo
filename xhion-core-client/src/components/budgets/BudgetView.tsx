@@ -1,8 +1,6 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import {
-  DollarSign,
+  Coins,
   TrendingUp,
   TrendingDown,
   Plus,
@@ -31,6 +29,7 @@ import { CreateMovementModal } from "./CreateMovementModal"
 import { EstadoPresupuesto, TipoMovimientoPresupuesto } from "@/services/presupuestoService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { formatCurrency } from "@/lib/formatCurrency"
 
 interface BudgetViewProps {
   entityId: string
@@ -105,7 +104,7 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-              <DollarSign className="h-8 w-8 text-muted-foreground" />
+              <Coins className="h-8 w-8 text-muted-foreground" />
             </div>
           </div>
           <div>
@@ -175,10 +174,10 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Monto Total</p>
-              <p className="text-2xl font-bold text-foreground">${montoTotal.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(montoTotal)}</p>
             </div>
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-primary" />
+              <Coins className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>
@@ -187,7 +186,7 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Gastado</p>
-              <p className="text-2xl font-bold text-foreground">${montoGastado.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(montoGastado)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {porcentajeGastado.toFixed(1)}% del total
               </p>
@@ -202,7 +201,7 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Disponible</p>
-              <p className="text-2xl font-bold text-foreground">${montoDisponible.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(montoDisponible)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {(100 - porcentajeGastado).toFixed(1)}% restante
               </p>
@@ -279,8 +278,8 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
                           : "text-green-500"
                       }`}
                     >
-                      {movimiento.tipo === TipoMovimientoPresupuesto.Gasto ? "-" : "+"}$
-                      {Number(movimiento.monto).toFixed(2)}
+                      {movimiento.tipo === TipoMovimientoPresupuesto.Gasto ? "-" : "+"}
+                      {formatCurrency(Number(movimiento.monto))}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {movimiento.registradoPor.nombreCompleto}

@@ -47,6 +47,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     return {
+      sub: user.id, // Mantener compatibilidad con controllers que usan req.user.sub
       ...user,
       rol: user.rol?.nombre,
       sessionId: payload.sid,

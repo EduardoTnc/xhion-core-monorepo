@@ -1,10 +1,8 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowRightLeft, Calendar } from "lucide-react"
+import { ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowRightLeft, Calendar, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { usePresupuestoStore } from "@/store/presupuestoStore"
 import { TipoMovimientoPresupuesto } from "@/services/presupuestoService"
+import { formatCurrency } from "@/lib/formatCurrency"
 
 const movimientoSchema = z.object({
   tipo: z.nativeEnum(TipoMovimientoPresupuesto),
@@ -32,6 +31,7 @@ const movimientoSchema = z.object({
   descripcion: z.string().min(1, "La descripción es requerida"),
   categoria: z.string().optional(),
   fechaMovimiento: z.string().optional(),
+  horaMovimiento: z.string().optional(),
 })
 
 type MovimientoFormData = z.infer<typeof movimientoSchema>
@@ -83,6 +83,7 @@ export function CreateMovementModal({
       descripcion: "",
       categoria: "",
       fechaMovimiento: new Date().toISOString().split("T")[0],
+      horaMovimiento: new Date().toTimeString().slice(0, 5),
     },
   })
 
@@ -97,6 +98,7 @@ export function CreateMovementModal({
         descripcion: "",
         categoria: "",
         fechaMovimiento: new Date().toISOString().split("T")[0],
+        horaMovimiento: new Date().toTimeString().slice(0, 5),
       })
     }
   }, [open, reset])
@@ -104,8 +106,18 @@ export function CreateMovementModal({
   const onSubmit = async (data: MovimientoFormData) => {
     setIsSubmitting(true)
     try {
+      // Combinar fecha y hora en formato ISO
+      let fechaMovimientoISO = data.fechaMovimiento
+      if (data.fechaMovimiento && data.horaMovimiento) {
+        fechaMovimientoISO = `${data.fechaMovimiento}T${data.horaMovimiento}:00.000Z`
+      }
+
       const movimientoData = {
-        ...data,
+        tipo: data.tipo,
+        monto: data.monto,
+        descripcion: data.descripcion,
+        categoria: data.categoria,
+        fechaMovimiento: fechaMovimientoISO,
         [tipo === "departamento" ? "presupuestoDepartamentoId" : "presupuestoProyectoId"]:
           presupuestoId,
       }
@@ -137,7 +149,7 @@ export function CreateMovementModal({
             Registra un nuevo movimiento en el presupuesto
             {selectedTipo === TipoMovimientoPresupuesto.Gasto && (
               <span className="block mt-1 text-sm">
-                Disponible: <span className="font-semibold">${montoDisponible.toFixed(2)}</span>
+                Disponible: <span className="font-semibold">{formatCurrency(montoDisponible)}</span>
               </span>
             )}
           </DialogDescription>
@@ -226,17 +238,31 @@ export function CreateMovementModal({
             />
           </div>
 
-          {/* Fecha */}
-          <div className="space-y-2">
-            <Label htmlFor="fechaMovimiento">Fecha del Movimiento</Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="fechaMovimiento"
-                type="date"
-                className="pl-10"
-                {...register("fechaMovimiento")}
-              />
+          {/* Fecha y Hora */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fechaMovimiento">Fecha del Movimiento</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="fechaMovimiento"
+                  type="date"
+                  className="pl-10"
+                  {...register("fechaMovimiento")}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="horaMovimiento">Hora del Movimiento</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="horaMovimiento"
+                  type="time"
+                  className="pl-10"
+                  {...register("horaMovimiento")}
+                />
+              </div>
             </div>
           </div>
 

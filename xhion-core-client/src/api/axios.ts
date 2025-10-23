@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // Ej: http://localhost:3000/api
+  baseURL: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/v1`,
 });
 
 // Interceptor para añadir el token a cada petición

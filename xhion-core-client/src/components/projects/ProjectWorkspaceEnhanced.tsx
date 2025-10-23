@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
-import { ProjectSidebar } from "./ProjectSidebar";
+import { ProjectSidebarShadcn } from "./ProjectSidebarShadcn";
 import { ProjectHeader } from "./ProjectHeader";
 import { StageTimeline } from "./StageTimeline";
 import { TaskViewSwitcher } from "./TaskViewSwitcher";
@@ -37,7 +37,15 @@ const initialFilters: TaskFiltersType = {
   fechaHasta: "",
 };
 
-export function ProjectWorkspaceEnhanced() {
+interface ProjectWorkspaceEnhancedProps {
+  proyectoId?: string;
+  hideSidebar?: boolean;
+}
+
+export function ProjectWorkspaceEnhanced({ 
+  proyectoId: proyectoIdProp,
+  hideSidebar = false 
+}: ProjectWorkspaceEnhancedProps = {}) {
   const {
     proyectos,
     proyectoActual,
@@ -89,12 +97,14 @@ export function ProjectWorkspaceEnhanced() {
     }
   }, [selectedProjectId]);
 
-  // Auto-select first project
+  // Auto-select first project or use provided proyectoId
   useEffect(() => {
-    if (!selectedProjectId && proyectos.length > 0) {
+    if (proyectoIdProp) {
+      setSelectedProjectId(proyectoIdProp);
+    } else if (!selectedProjectId && proyectos.length > 0) {
       setSelectedProjectId(proyectos[0].id);
     }
-  }, [proyectos, selectedProjectId]);
+  }, [proyectos, selectedProjectId, proyectoIdProp]);
 
   const loadProyectos = async () => {
     try {
@@ -189,46 +199,50 @@ export function ProjectWorkspaceEnhanced() {
 
   return (
     <div className="flex h-full bg-background overflow-hidden">
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "border-r bg-card transition-all duration-300 ease-in-out h-full overflow-hidden",
-          "hidden lg:block",
-          isSidebarCollapsed ? "w-0" : "w-80"
-        )}
-      >
-        {!isSidebarCollapsed && (
-          <ProjectSidebar
-            proyectos={proyectos}
-            selectedProjectId={selectedProjectId}
-            onProjectSelect={handleProjectSelect}
-            onCreateProject={() => setShowCreateProjectModal(true)}
-          />
-        )}
-      </div>
+      {/* Sidebar - Oculto cuando hideSidebar es true */}
+      {!hideSidebar && (
+        <>
+          <div
+            className={cn(
+              "border-r bg-card transition-all duration-300 ease-in-out h-full overflow-hidden",
+              "hidden lg:block",
+              isSidebarCollapsed ? "w-0" : "w-80"
+            )}
+          >
+            {!isSidebarCollapsed && (
+              <ProjectSidebarShadcn
+                proyectos={proyectos}
+                selectedProjectId={selectedProjectId}
+                onProjectSelect={handleProjectSelect}
+                onCreateProject={() => setShowCreateProjectModal(true)}
+              />
+            )}
+          </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
+          {/* Mobile Sidebar Overlay */}
+          {isMobileSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            />
+          )}
+
+          {/* Mobile Sidebar */}
+          <div
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r transition-transform duration-300 lg:hidden h-full overflow-hidden",
+              isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            )}
+          >
+            <ProjectSidebarShadcn
+              proyectos={proyectos}
+              selectedProjectId={selectedProjectId}
+              onProjectSelect={handleProjectSelect}
+              onCreateProject={() => setShowCreateProjectModal(true)}
+            />
+          </div>
+        </>
       )}
-
-      {/* Mobile Sidebar */}
-      <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r transition-transform duration-300 lg:hidden h-full overflow-hidden",
-          isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <ProjectSidebar
-          proyectos={proyectos}
-          selectedProjectId={selectedProjectId}
-          onProjectSelect={handleProjectSelect}
-          onCreateProject={() => setShowCreateProjectModal(true)}
-        />
-      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -236,30 +250,32 @@ export function ProjectWorkspaceEnhanced() {
           <>
             {/* Header with Toggle Button */}
             <div className="relative">
-              {/* Sidebar Toggle Button */}
-              <div className="absolute top-4 left-4 z-10 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                  className="hidden lg:flex shadow-md bg-background"
-                >
-                  {isSidebarCollapsed ? (
-                    <PanelLeftOpen className="h-4 w-4" />
-                  ) : (
-                    <PanelLeftClose className="h-4 w-4" />
-                  )}
-                </Button>
+              {/* Sidebar Toggle Button - Oculto cuando hideSidebar es true */}
+              {!hideSidebar && (
+                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    className="hidden lg:flex shadow-md bg-background"
+                  >
+                    {isSidebarCollapsed ? (
+                      <PanelLeftOpen className="h-4 w-4" />
+                    ) : (
+                      <PanelLeftClose className="h-4 w-4" />
+                    )}
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                  className="lg:hidden shadow-md bg-background"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                </Button>
-              </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                    className="lg:hidden shadow-md bg-background"
+                  >
+                    <PanelLeftOpen className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
 
               <ProjectHeader
                 proyecto={proyectoActual}

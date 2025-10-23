@@ -1,12 +1,10 @@
-"use client"
-
 import {
   ArrowLeft,
   Users,
   FolderKanban,
   CheckSquare,
   TrendingUp,
-  DollarSign,
+  Coins,
   Sparkles,
   Calendar,
   MoreVertical,
@@ -252,13 +250,13 @@ export function DepartmentDetail({ department, onBack }: DepartmentDetailProps) 
           {/* Budget Overview */}
           <Card className="border-border bg-card p-6">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
+              <Coins className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-foreground">Presupuesto</h3>
             </div>
             <div className="mt-4">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-foreground">${department.budgetUsed.toLocaleString()}</span>
-                <span className="text-sm text-muted-foreground">/ ${department.budget.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-foreground">S/. {department.budgetUsed.toLocaleString()}</span>
+                <span className="text-sm text-muted-foreground">/ S/. {department.budget.toLocaleString()}</span>
               </div>
               <Progress value={budgetPercentage} className="mt-3" />
               <p className="mt-2 text-xs text-muted-foreground">{budgetPercentage.toFixed(1)}% utilizado</p>

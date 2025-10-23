@@ -134,7 +134,7 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onD
                       )}
                     >
                       <ScrollArea className="h-full">
-                        <div className="space-y-3 pr-2 min-h-[200px]">
+                        <div className="space-y-2 pr-2 min-h-[200px]">
                           {columnTareas.length === 0 ? (
                             <div className="text-center py-8 text-sm text-muted-foreground">
                               Arrastra tareas aquí
@@ -152,8 +152,8 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onD
                                       {...provided.draggableProps}
                                       onClick={() => !snapshot.isDragging && onTaskClick(tarea.id)}
                                       className={cn(
-                                        "p-4 cursor-pointer transition-all",
-                                        "border-l-4",
+                                        "p-2.5 cursor-pointer transition-all",
+                                        "border-l-2",
                                         prioridad.bg.replace("bg-", "border-l-"),
                                         snapshot.isDragging
                                           ? "shadow-2xl rotate-2 scale-105 ring-2 ring-primary"
@@ -161,14 +161,14 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onD
                                       )}
                                     >
                                       {/* Drag Handle and Menu */}
-                                      <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center justify-between mb-1.5">
                                         <div {...provided.dragHandleProps}>
-                                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                                         </div>
                                         {(onEditTask || onDeleteTask) && (
                                           <DropdownMenu>
                                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                              <Button variant="ghost" size="icon" className="h-5 w-5">
                                                 <MoreVertical className="h-3 w-3" />
                                               </Button>
                                             </DropdownMenuTrigger>
@@ -202,36 +202,36 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onD
                                       </div>
 
                                       {/* Task Title */}
-                                      <h4 className="font-medium text-sm mb-2 line-clamp-2">
+                                      <h4 className="font-medium text-sm mb-1.5 line-clamp-2 leading-tight">
                                         {tarea.titulo}
                                       </h4>
 
                                       {/* Task Description */}
                                       {tarea.descripcion && (
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+                                        <p className="text-xs text-muted-foreground line-clamp-1 mb-2 leading-tight">
                                           {tarea.descripcion}
                                         </p>
                                       )}
 
-                                      {/* Priority Badge */}
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <Badge variant="outline" className={cn("text-xs", prioridad.bg)}>
-                                          <Flag className={cn("h-3 w-3 mr-1", prioridad.color)} />
+                                      {/* Priority and Stage - Compact */}
+                                      <div className="flex items-center gap-1.5 mb-2">
+                                        <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5", prioridad.bg)}>
+                                          <Flag className={cn("h-2.5 w-2.5 mr-0.5", prioridad.color)} />
                                           {tarea.prioridad}
                                         </Badge>
                                         {tarea.etapa && (
-                                          <Badge variant="secondary" className="text-xs">
+                                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 truncate max-w-[100px]">
                                             {tarea.etapa.nombre}
                                           </Badge>
                                         )}
                                       </div>
 
-                                      {/* Footer */}
-                                      <div className="flex items-center justify-between">
+                                      {/* Footer - Compact */}
+                                      <div className="flex items-center justify-between text-[10px]">
                                         {/* Meta Info */}
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-muted-foreground">
                                           {tarea._count && tarea._count.comentarios > 0 && (
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-0.5">
                                               <MessageSquare className="h-3 w-3" />
                                               <span>{tarea._count.comentarios}</span>
                                             </div>
@@ -239,7 +239,7 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onD
                                           {dueDate && (
                                             <div
                                               className={cn(
-                                                "flex items-center gap-1",
+                                                "flex items-center gap-0.5",
                                                 dueDate.isOverdue && "text-red-500"
                                               )}
                                             >
@@ -251,9 +251,9 @@ export function TaskKanbanViewDnD({ tareas, etapas, onTaskClick, onEditTask, onD
 
                                         {/* Assignee Avatar */}
                                         {tarea.asignado && (
-                                          <Avatar className="h-6 w-6 border-2 border-background">
+                                          <Avatar className="h-5 w-5 border border-background">
                                             <AvatarImage src={tarea.asignado.avatarUrl} />
-                                            <AvatarFallback className="text-xs">
+                                            <AvatarFallback className="text-[9px]">
                                               {getInitials(tarea.asignado.nombreCompleto)}
                                             </AvatarFallback>
                                           </Avatar>

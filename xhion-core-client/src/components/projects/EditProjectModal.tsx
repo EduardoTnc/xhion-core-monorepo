@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useProjectStore } from "@/store/projectStore";
+import { useDepartmentStore } from "@/store/departmentStore";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2 } from "lucide-react";
 import { type Proyecto } from "@/services/projectService";
 
 interface EditProjectModalProps {
@@ -36,11 +37,20 @@ interface ProjectFormData {
   fechaInicio: string;
   fechaFin: string;
   estado: string;
+  departamentoId?: string;
 }
 
 export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectModalProps) {
   const { updateProyecto, isLoading } = useProjectStore();
+  const { departamentos, fetchDepartamentos } = useDepartmentStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDepartamento, setSelectedDepartamento] = useState<string>("");
+
+  useEffect(() => {
+    if (open) {
+      fetchDepartamentos();
+    }
+  }, [open, fetchDepartamentos]);
 
   const {
     register,
@@ -58,6 +68,7 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
       setValue("fechaInicio", proyecto.fechaInicio?.split("T")[0] || "");
       setValue("fechaFin", proyecto.fechaFin?.split("T")[0] || "");
       setValue("estado", proyecto.estado);
+      setSelectedDepartamento(proyecto.departamentoId || "none");
     }
   }, [proyecto, setValue]);
 
@@ -73,6 +84,7 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
         fechaInicio: data.fechaInicio || undefined,
         fechaFin: data.fechaFin || undefined,
         estado: data.estado as any,
+        departamentoId: selectedDepartamento === "none" ? undefined : selectedDepartamento,
       };
 
       await updateProyecto(proyecto.id, projectData);
@@ -142,19 +154,41 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="estado">Estado</Label>
-            <Select value={selectedEstado} onValueChange={(value) => setValue("estado", value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Activo">Activo</SelectItem>
-                <SelectItem value="En_Pausa">En Pausa</SelectItem>
-                <SelectItem value="Completado">Completado</SelectItem>
-                <SelectItem value="Archivado">Archivado</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <Select value={selectedEstado} onValueChange={(value) => setValue("estado", value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Activo">Activo</SelectItem>
+                  <SelectItem value="En_Pausa">En Pausa</SelectItem>
+                  <SelectItem value="Completado">Completado</SelectItem>
+                  <SelectItem value="Archivado">Archivado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="departamentoId">
+                <Building2 className="inline h-4 w-4 mr-1" />
+                Departamento
+              </Label>
+              <Select value={selectedDepartamento} onValueChange={setSelectedDepartamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin departamento</SelectItem>
+                  {departamentos?.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.nombre}
+                    </SelectItem>
+                  )) || null}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <DialogFooter>

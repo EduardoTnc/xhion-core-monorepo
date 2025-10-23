@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/select";
 import { useProjectStore } from "@/store/projectStore";
 import { useAuthStore } from "@/store/authStore";
+import { useDepartmentStore } from "@/store/departmentStore";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2 } from "lucide-react";
 
 interface CreateProjectModalProps {
   open: boolean;
@@ -39,7 +40,15 @@ interface ProjectFormData {
 export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalProps) {
   const { createProyecto, isLoading } = useProjectStore();
   const { user } = useAuthStore();
+  const { departamentos, fetchDepartamentos } = useDepartmentStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDepartamento, setSelectedDepartamento] = useState<string>("");
+
+  useEffect(() => {
+    if (open) {
+      fetchDepartamentos();
+    }
+  }, [open, fetchDepartamentos]);
 
   const {
     register,
@@ -59,11 +68,12 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
         nombre: data.nombre,
         descripcion: data.descripcion || undefined,
         responsableId: data.responsableId,
-        departamentoId: data.departamentoId || undefined,
+        departamentoId: selectedDepartamento || undefined,
       });
 
       toast.success("Proyecto creado exitosamente");
       reset();
+      setSelectedDepartamento("");
       onOpenChange(false);
     } catch (error: any) {
       toast.error(error.message || "Error al crear proyecto");
@@ -129,19 +139,28 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
             </p>
           </div>
 
-          {/* TODO: Agregar selector de departamento cuando esté disponible */}
-          {/* <div className="space-y-2">
-            <Label htmlFor="departamentoId">Departamento (Opcional)</Label>
-            <Select>
+          <div className="space-y-2">
+            <Label htmlFor="departamentoId">
+              <Building2 className="inline h-4 w-4 mr-1" />
+              Departamento (Opcional)
+            </Label>
+            <Select value={selectedDepartamento} onValueChange={setSelectedDepartamento}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un departamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">Desarrollo</SelectItem>
-                <SelectItem value="2">Diseño</SelectItem>
+                <SelectItem value="none">Sin departamento</SelectItem>
+                {departamentos?.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.nombre}
+                  </SelectItem>
+                )) || null}
               </SelectContent>
             </Select>
-          </div> */}
+            <p className="text-xs text-muted-foreground">
+              Asigna el proyecto a un departamento específico
+            </p>
+          </div>
 
           <DialogFooter>
             <Button

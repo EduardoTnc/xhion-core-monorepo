@@ -43,6 +43,8 @@ export interface DepartamentoDetalle extends Departamento {
     nombre: string;
     estado: string;
     fechaCreacion: string;
+    fechaInicio?: string;
+    fechaFin?: string;
     responsable: {
       id: string;
       nombreCompleto: string;
@@ -51,6 +53,17 @@ export interface DepartamentoDetalle extends Departamento {
     _count: {
       tareas: number;
       miembros: number;
+      etapas: number;
+    };
+  }>;
+  usuarios?: Array<{
+    id: string;
+    nombreCompleto: string;
+    email: string;
+    avatarUrl?: string;
+    puestoTrabajo?: {
+      id: string;
+      titulo: string;
     };
   }>;
 }

@@ -10,7 +10,7 @@ export const roleService = {
    */
   async obtenerRoles(): Promise<RolConConteo[]> {
     try {
-      const response = await apiClient.get<RolConConteo[]>('/api/v1/roles');
+      const response = await apiClient.get<RolConConteo[]>('/roles');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener los roles';
@@ -24,7 +24,7 @@ export const roleService = {
    */
   async obtenerRolesConDetalles(): Promise<RolCompleto[]> {
     try {
-      const response = await apiClient.get<RolCompleto[]>('/api/v1/roles/with-details');
+      const response = await apiClient.get<RolCompleto[]>('/roles/with-details');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener los roles';
@@ -37,7 +37,7 @@ export const roleService = {
    */
   async obtenerRolPorId(id: string): Promise<RolCompleto> {
     try {
-      const response = await apiClient.get<RolCompleto>(`/api/v1/roles/${id}`);
+      const response = await apiClient.get<RolCompleto>(`/roles/${id}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener el rol';
@@ -51,7 +51,7 @@ export const roleService = {
    */
   async obtenerTodosLosUsuarios(): Promise<UsuarioEnRol[]> {
     try {
-      const response = await apiClient.get<UsuarioEnRol[]>('/api/v1/roles/usuarios/all');
+      const response = await apiClient.get<UsuarioEnRol[]>('/roles/usuarios/all');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener los usuarios';
@@ -65,7 +65,7 @@ export const roleService = {
   async actualizarPermisos(id: string, permisosIds: string[]): Promise<RolCompleto> {
     try {
       const response = await apiClient.patch<RolCompleto>(
-        `/api/v1/roles/${id}/permisos`,
+        `/roles/${id}/permisos`,
         { permisosIds }
       );
       return response.data;
@@ -80,7 +80,7 @@ export const roleService = {
    */
   async obtenerTodosLosPermisos(): Promise<Permiso[]> {
     try {
-      const response = await apiClient.get<Permiso[]>('/api/v1/roles/permisos/all');
+      const response = await apiClient.get<Permiso[]>('/roles/permisos/all');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener los permisos';
@@ -93,7 +93,7 @@ export const roleService = {
    */
   async crearRol(data: { nombre: string; descripcion?: string; color?: string }): Promise<RolConConteo> {
     try {
-      const response = await apiClient.post<RolConConteo>('/api/v1/roles', data);
+      const response = await apiClient.post<RolConConteo>('/roles', data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al crear el rol';
@@ -109,7 +109,7 @@ export const roleService = {
     data: { nombre?: string; descripcion?: string; color?: string }
   ): Promise<RolCompleto> {
     try {
-      const response = await apiClient.patch<RolCompleto>(`/api/v1/roles/${id}`, data);
+      const response = await apiClient.patch<RolCompleto>(`/roles/${id}`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al actualizar el rol';
@@ -122,7 +122,7 @@ export const roleService = {
    */
   async eliminarRol(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/api/v1/roles/${id}`);
+      await apiClient.delete(`/roles/${id}`);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al eliminar el rol';
       throw new Error(errorMessage);

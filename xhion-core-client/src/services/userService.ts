@@ -10,7 +10,7 @@ export const userService = {
    */
   async obtenerTodosLosUsuarios(): Promise<Usuario[]> {
     try {
-      const response = await apiClient.get<Usuario[]>('/api/v1/usuarios');
+      const response = await apiClient.get<Usuario[]>('/usuarios');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener los usuarios';
@@ -23,7 +23,7 @@ export const userService = {
    */
   async obtenerUsuarioPorId(id: string): Promise<Usuario> {
     try {
-      const response = await apiClient.get<Usuario>(`/api/v1/usuarios/${id}`);
+      const response = await apiClient.get<Usuario>(`/usuarios/${id}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener el usuario';

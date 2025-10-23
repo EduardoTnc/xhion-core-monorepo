@@ -25,11 +25,11 @@ export const authService = {
    */
   async login(credentials: LoginDTO): Promise<{ accessToken: string; refreshToken: string; user: AuthUser }> {
     try {
-      const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', credentials);
+      const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
       const { accessToken, refreshToken } = response.data;
 
       // Obtener información del usuario después del login
-      const userResponse = await apiClient.get<AuthUser>('/api/v1/auth/me', {
+      const userResponse = await apiClient.get<AuthUser>('/auth/me', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
 
@@ -56,7 +56,7 @@ export const authService = {
       }
 
       // Enviar el refresh token en el cuerpo de la petición
-      const response = await apiClient.post<RefreshTokenResponse>('/api/v1/auth/refresh', {
+      const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh', {
         refreshToken: currentRefreshToken
       });
 
@@ -76,7 +76,7 @@ export const authService = {
    */
   async validarTokenInvitacion(token: string): Promise<Invitacion> {
     try {
-      const response = await apiClient.get<Invitacion>(`/api/v1/invitaciones/${token}`);
+      const response = await apiClient.get<Invitacion>(`/invitaciones/${token}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Token de invitación inválido o expirado';
@@ -89,11 +89,11 @@ export const authService = {
    */
   async completarRegistro(payload: CompletarRegistroDTO): Promise<{ accessToken: string; refreshToken: string; user: AuthUser }> {
     try {
-      const response = await apiClient.post<AcceptInvitationResponse>('/api/v1/auth/accept-invitation', payload);
+      const response = await apiClient.post<AcceptInvitationResponse>('/auth/accept-invitation', payload);
       const { accessToken, refreshToken } = response.data;
 
       // Obtener información del usuario después del registro
-      const userResponse = await apiClient.get<AuthUser>('/api/v1/auth/me', {
+      const userResponse = await apiClient.get<AuthUser>('/auth/me', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
 
@@ -113,7 +113,7 @@ export const authService = {
    */
   async obtenerSesionesActivas(): Promise<Sesion[]> {
     try {
-      const response = await apiClient.get<Sesion[]>('/api/v1/sesiones');
+      const response = await apiClient.get<Sesion[]>('/sesiones');
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener las sesiones';
@@ -126,7 +126,7 @@ export const authService = {
    */
   async revocarSesion(sesionId: string): Promise<void> {
     try {
-      await apiClient.delete(`/api/v1/sesiones/${sesionId}`);
+      await apiClient.delete(`/sesiones/${sesionId}`);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al revocar la sesión';
       throw new Error(errorMessage);
@@ -138,7 +138,7 @@ export const authService = {
    */
   async logout(): Promise<void> {
     try {
-      await apiClient.post('/api/v1/auth/logout');
+      await apiClient.post('/auth/logout');
     } catch (error: any) {
       // Aunque falle la petición, permitimos cerrar sesión localmente
       console.error('Error al cerrar sesión:', error);

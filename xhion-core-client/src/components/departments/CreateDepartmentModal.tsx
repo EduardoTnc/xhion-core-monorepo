@@ -90,10 +90,20 @@ export function CreateDepartmentModal({
 
   const onSubmit = async (data: DepartmentFormData) => {
     try {
-      const payload = {
-        ...data,
+      // Limpiar campos vacíos para evitar errores de validación
+      const payload: any = {
+        nombre: data.nombre,
         color: selectedColor,
       };
+
+      // Solo agregar campos opcionales si tienen valor
+      if (data.descripcion && data.descripcion.trim()) {
+        payload.descripcion = data.descripcion.trim();
+      }
+      
+      if (data.jefeId && data.jefeId.trim()) {
+        payload.jefeId = data.jefeId.trim();
+      }
 
       if (departamento) {
         await updateDepartamento(departamento.id, payload);

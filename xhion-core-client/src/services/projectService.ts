@@ -124,7 +124,7 @@ export const projectService = {
       if (filters?.estado) params.append('estado', filters.estado);
       if (filters?.departamentoId) params.append('departamentoId', filters.departamentoId);
 
-      const response = await apiClient.get<Proyecto[]>(`/api/v1/proyectos?${params.toString()}`);
+      const response = await apiClient.get<Proyecto[]>(`/proyectos?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener proyectos';
@@ -137,7 +137,7 @@ export const projectService = {
    */
   async getById(id: string): Promise<Proyecto> {
     try {
-      const response = await apiClient.get<Proyecto>(`/api/v1/proyectos/${id}`);
+      const response = await apiClient.get<Proyecto>(`/proyectos/${id}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener proyecto';
@@ -150,7 +150,7 @@ export const projectService = {
    */
   async create(data: CreateProyectoDto): Promise<Proyecto> {
     try {
-      const response = await apiClient.post<Proyecto>('/api/v1/proyectos', data);
+      const response = await apiClient.post<Proyecto>('/proyectos', data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al crear proyecto';
@@ -163,7 +163,7 @@ export const projectService = {
    */
   async update(id: string, data: UpdateProyectoDto): Promise<Proyecto> {
     try {
-      const response = await apiClient.patch<Proyecto>(`/api/v1/proyectos/${id}`, data);
+      const response = await apiClient.patch<Proyecto>(`/proyectos/${id}`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al actualizar proyecto';
@@ -176,7 +176,7 @@ export const projectService = {
    */
   async delete(id: string): Promise<{ message: string }> {
     try {
-      const response = await apiClient.delete<{ message: string }>(`/api/v1/proyectos/${id}`);
+      const response = await apiClient.delete<{ message: string }>(`/proyectos/${id}`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al eliminar proyecto';
@@ -191,7 +191,7 @@ export const projectService = {
    */
   async getMiembros(proyectoId: string): Promise<ProyectoMiembro[]> {
     try {
-      const response = await apiClient.get<ProyectoMiembro[]>(`/api/v1/proyectos/${proyectoId}/miembros`);
+      const response = await apiClient.get<ProyectoMiembro[]>(`/proyectos/${proyectoId}/miembros`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener miembros';
@@ -204,7 +204,7 @@ export const projectService = {
    */
   async addMiembro(proyectoId: string, data: AddMiembroDto): Promise<ProyectoMiembro> {
     try {
-      const response = await apiClient.post<ProyectoMiembro>(`/api/v1/proyectos/${proyectoId}/miembros`, data);
+      const response = await apiClient.post<ProyectoMiembro>(`/proyectos/${proyectoId}/miembros`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al agregar miembro';
@@ -218,7 +218,7 @@ export const projectService = {
   async removeMiembro(proyectoId: string, usuarioId: string): Promise<{ message: string }> {
     try {
       const response = await apiClient.delete<{ message: string }>(
-        `/api/v1/proyectos/${proyectoId}/miembros/${usuarioId}`
+        `/proyectos/${proyectoId}/miembros/${usuarioId}`
       );
       return response.data;
     } catch (error: any) {
@@ -234,7 +234,7 @@ export const projectService = {
    */
   async getEtapas(proyectoId: string): Promise<Etapa[]> {
     try {
-      const response = await apiClient.get<Etapa[]>(`/api/v1/proyectos/${proyectoId}/etapas`);
+      const response = await apiClient.get<Etapa[]>(`/proyectos/${proyectoId}/etapas`);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al obtener etapas';
@@ -247,7 +247,7 @@ export const projectService = {
    */
   async createEtapa(proyectoId: string, data: CreateEtapaDto): Promise<Etapa> {
     try {
-      const response = await apiClient.post<Etapa>(`/api/v1/proyectos/${proyectoId}/etapas`, data);
+      const response = await apiClient.post<Etapa>(`/proyectos/${proyectoId}/etapas`, data);
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al crear etapa';
@@ -261,7 +261,7 @@ export const projectService = {
   async updateEtapa(proyectoId: string, etapaId: string, data: UpdateEtapaDto): Promise<Etapa> {
     try {
       const response = await apiClient.patch<Etapa>(
-        `/api/v1/proyectos/${proyectoId}/etapas/${etapaId}`,
+        `/proyectos/${proyectoId}/etapas/${etapaId}`,
         data
       );
       return response.data;
@@ -277,7 +277,7 @@ export const projectService = {
   async deleteEtapa(proyectoId: string, etapaId: string): Promise<{ message: string }> {
     try {
       const response = await apiClient.delete<{ message: string }>(
-        `/api/v1/proyectos/${proyectoId}/etapas/${etapaId}`
+        `/proyectos/${proyectoId}/etapas/${etapaId}`
       );
       return response.data;
     } catch (error: any) {
@@ -292,7 +292,7 @@ export const projectService = {
   async reorderEtapas(proyectoId: string, data: ReorderEtapasDto): Promise<{ message: string }> {
     try {
       const response = await apiClient.patch<{ message: string }>(
-        `/api/v1/proyectos/${proyectoId}/etapas/reorder`,
+        `/proyectos/${proyectoId}/etapas/reorder`,
         data
       );
       return response.data;
