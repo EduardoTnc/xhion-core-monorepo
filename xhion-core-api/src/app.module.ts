@@ -12,6 +12,9 @@ import { RolesModule } from './roles/roles.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { ProyectosModule } from './proyectos/proyectos.module';
 import { TareasModule } from './tareas/tareas.module';
+import { ConocimientoModule } from './conocimiento/conocimiento.module';
+import { DepartamentosModule } from './departamentos/departamentos.module';
+import { PresupuestosModule } from './presupuestos/presupuestos.module';
 
 @Module({
   imports: [
@@ -29,8 +32,11 @@ import { TareasModule } from './tareas/tareas.module';
     AuditoriaModule,
     RolesModule,
     UsuariosModule,
+    DepartamentosModule,
     ProyectosModule,
     TareasModule,
+    ConocimientoModule,
+    PresupuestosModule,
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)

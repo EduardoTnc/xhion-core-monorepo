@@ -20,7 +20,8 @@ import SettingsPage from './pages/SettingsPage'
 import TasksPage from './pages/TasksPage'
 import UsuariosPage from './pages/UsuariosPage'
 
-function App() {
+// Componente interno que usa los hooks
+function AppContent() {
   const { theme } = useThemeStore();
   const { isOnline } = useServiceWorker();
 
@@ -35,33 +36,39 @@ function App() {
   }, [theme]);
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/aceptar-invitacion" element={<AcceptInvitationPage />} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/aceptar-invitacion" element={<AcceptInvitationPage />} />
 
-          {/* Rutas Protegidas */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path='ai-insights' element={<AiInsightsPage />} />
-              <Route path='auditoria' element={<AuditPage />} />
-              <Route path='calendario' element={<CalendarPage />} />
-              <Route path="departamentos" element={<DepartmentsPage />} />
-              <Route path='ideas' element={<IdeasPage />} />
-              <Route path="proyectos" element={<ProjectsPage />} />
-              <Route path="usuarios" element={<UsuariosPage />} />
-              <Route path="roles" element={<RolesPage />} />
-              <Route path="perfil/sesiones" element={<SessionsPage />} />
-              <Route path="configuraciones" element={<SettingsPage />} />
-              <Route path="tareas" element={<TasksPage />} />
-              
-              {/* ... otras rutas protegidas */}
-            </Route>
+        {/* Rutas Protegidas */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path='ai-insights' element={<AiInsightsPage />} />
+            <Route path='auditoria' element={<AuditPage />} />
+            <Route path='calendario' element={<CalendarPage />} />
+            <Route path="departamentos" element={<DepartmentsPage />} />
+            <Route path='ideas' element={<IdeasPage />} />
+            <Route path="proyectos" element={<ProjectsPage />} />
+            <Route path="usuarios" element={<UsuariosPage />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="perfil/sesiones" element={<SessionsPage />} />
+            <Route path="configuraciones" element={<SettingsPage />} />
+            <Route path="tareas" element={<TasksPage />} />
+            
+            {/* ... otras rutas protegidas */}
           </Route>
-        </Routes>
-      </BrowserRouter>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
     </ThemeProvider>
   )
 }

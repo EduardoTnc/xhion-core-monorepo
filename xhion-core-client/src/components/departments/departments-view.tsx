@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { Building2, Users, FolderKanban, TrendingUp, Search, Filter, Plus, Sparkles } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Building2, Users, FolderKanban, TrendingUp, Search, Filter, Plus, Sparkles, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { DepartmentCard } from "./department-card"
-import { DepartmentDetail } from "./department-detail"
+import { DepartmentDetail } from "./department-detail-enhanced"
+import { CreateDepartmentModal } from "./CreateDepartmentModal"
+import { useDepartmentStore } from "@/store/departmentStore"
 
 const departments = [
   {
@@ -182,24 +184,35 @@ const departments = [
 
 export function DepartmentsView() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null)
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  
+  const { departamentos, isLoading, fetchDepartamentos } = useDepartmentStore()
 
-  const filteredDepartments = departments.filter(
+  useEffect(() => {
+    fetchDepartamentos()
+  }, [])
+
+  const filteredDepartments = departamentos.filter(
     (dept) =>
-      dept.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dept.description.toLowerCase().includes(searchQuery.toLowerCase()),
+      dept.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (dept.descripcion && dept.descripcion.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
-  const totalMembers = departments.reduce((sum, dept) => sum + dept.members, 0)
-  const totalProjects = departments.reduce((sum, dept) => sum + dept.activeProjects, 0)
-  const totalTasks = departments.reduce((sum, dept) => sum + dept.pendingTasks, 0)
-  const avgPerformance = Math.round(departments.reduce((sum, dept) => sum + dept.performance, 0) / departments.length)
+  const totalMembers = departamentos.reduce((sum, dept) => sum + (dept._count?.puestosTrabajo || 0), 0)
+  const totalProjects = departamentos.reduce((sum, dept) => sum + (dept._count?.proyectos || 0), 0)
+  const avgPerformance = 85 // Placeholder - calcular con estadísticas reales
 
   if (selectedDepartment) {
-    const department = departments.find((d) => d.id === selectedDepartment)
-    if (department) {
-      return <DepartmentDetail department={department} onBack={() => setSelectedDepartment(null)} />
-    }
+    return <DepartmentDetail departamentoId={selectedDepartment} onBack={() => setSelectedDepartment(null)} />
+  }
+
+  if (isLoading && departamentos.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -210,7 +223,7 @@ export function DepartmentsView() {
           <h1 className="text-3xl font-bold text-foreground">Departamentos</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gestión organizacional y recursos por departamento</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4" />
           Nuevo Departamento
         </Button>
@@ -225,7 +238,7 @@ export function DepartmentsView() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Departamentos</p>
-              <p className="text-2xl font-bold text-foreground">{departments.length}</p>
+              <p className="text-2xl font-bold text-foreground">{departamentos.length}</p>
             </div>
           </div>
         </Card>
@@ -311,6 +324,12 @@ export function DepartmentsView() {
           />
         ))}
       </div>
+
+      {/* Create Department Modal */}
+      <CreateDepartmentModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+      />
     </div>
   )
 }

@@ -84,6 +84,15 @@ enum RolProyecto {
   Observador
 }
 
+enum TipoDocumentoProyecto {
+  Resumen
+  Objetivos
+  Especificaciones
+  LeccionesAprendidas
+  Documentacion
+  Notas
+}
+
 enum TipoContacto {
   telefono_principal
   telefono_secundario
@@ -145,12 +154,18 @@ enum PeriodoClasificacion {
 model Departamento {
   id               String    @id @default(uuid()) @db.Uuid
   nombre           String    @unique @db.VarChar(100)
+  descripcion      String?
+  color            String?   @db.VarChar(50)
+  jefeId           String?   @db.Uuid
   fechaCreacion    DateTime  @default(now())
   fechaEliminacion DateTime? // Para eliminación lógica.
 
-  puestosTrabajo PuestoTrabajo[]
-  proyectos      Proyecto[]
-  Invitacion     Invitacion[]
+  jefe                 Usuario?                   @relation("JefeDepartamento", fields: [jefeId], references: [id])
+  puestosTrabajo       PuestoTrabajo[]
+  proyectos            Proyecto[]
+  invitaciones         Invitacion[]
+  contextoDepartamento ContextoDepartamento?
+  presupuesto          PresupuestoDepartamento?
 }
 
 /// Catálogo centralizado de puestos de trabajo.
@@ -202,34 +217,42 @@ model Usuario {
   fechaActualizacion    DateTime      @updatedAt
   fechaEliminacion      DateTime? // Para eliminación lógica.
 
-  invitaciones_enviadas     Invitacion[]               @relation("InvitadoPor")
-  rol                       Rol                        @relation(fields: [rolId], references: [id])
-  puestoTrabajo             PuestoTrabajo?             @relation(fields: [puestoTrabajoId], references: [id])
-  supervisor                Usuario?                   @relation("Supervision", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subordinados              Usuario[]                  @relation("Supervision")
-  archivoCv                 Archivo?                   @relation("CVDelUsuario", fields: [archivoCvId], references: [id])
-  contactos                 UsuarioContacto[]
-  enlacesProfesionales      UsuarioEnlaceProfesional[]
-  habilidades               UsuarioHabilidad[]
-  proyectosResponsable      Proyecto[]
-  proyectosComoMiembro      ProyectoMiembro[]
-  tareasAsignadas           Tarea[]                    @relation("TareasAsignadas")
-  tareasCreadas             Tarea[]                    @relation("TareasCreadas")
-  comentarios               Comentario[]
-  plantillasProyectoCreadas PlantillaProyectoIA[]
-  logsQueriesIA             AiQueryLog[]
-  archivosSubidos           Archivo[]                  @relation("ArchivosSubidosPorUsuario")
-  canalesCreados            Canal[]
-  miembroDeCanales          CanalMiembro[]
-  mensajesEnviados          Mensaje[]
-  estadosLecturaMensajes    MensajeEstadoLectura[]
-  configuraciones           ConfiguracionUsuario[]
-  dashboardsPropios         DashboardUsuario[]
-  logros                    UsuarioLogro[]
-  registrosPuntos           RegistroPuntos[]
-  entradasClasificacion     ClasificacionEntrada[]
-  registrosAuditoria        RegistroAuditoria[]
-  sesiones                  Sesion[]
+  invitaciones_enviadas         Invitacion[]               @relation("InvitadoPor")
+  rol                           Rol                        @relation(fields: [rolId], references: [id])
+  puestoTrabajo                 PuestoTrabajo?             @relation(fields: [puestoTrabajoId], references: [id])
+  supervisor                    Usuario?                   @relation("Supervision", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subordinados                  Usuario[]                  @relation("Supervision")
+  archivoCv                     Archivo?                   @relation("CVDelUsuario", fields: [archivoCvId], references: [id])
+  contactos                     UsuarioContacto[]
+  enlacesProfesionales          UsuarioEnlaceProfesional[]
+  habilidades                   UsuarioHabilidad[]
+  departamentosACargo           Departamento[]             @relation("JefeDepartamento")
+  proyectosResponsable          Proyecto[]
+  proyectosComoMiembro          ProyectoMiembro[]
+  tareasAsignadas               Tarea[]                    @relation("TareasAsignadas")
+  tareasCreadas                 Tarea[]                    @relation("TareasCreadas")
+  comentarios                   Comentario[]
+  plantillasProyectoCreadas     PlantillaProyectoIA[]
+  logsQueriesIA                 AiQueryLog[]
+  archivosSubidos               Archivo[]                  @relation("ArchivosSubidosPorUsuario")
+  canalesCreados                Canal[]
+  miembroDeCanales              CanalMiembro[]
+  mensajesEnviados              Mensaje[]
+  estadosLecturaMensajes        MensajeEstadoLectura[]
+  configuraciones               ConfiguracionUsuario[]
+  dashboardsPropios             DashboardUsuario[]
+  logros                        UsuarioLogro[]
+  registrosPuntos               RegistroPuntos[]
+  entradasClasificacion         ClasificacionEntrada[]
+  registrosAuditoria            RegistroAuditoria[]
+  sesiones                      Sesion[]
+  contextosOrganizacionales     ContextoOrganizacional[]
+  contextosDepartamento         ContextoDepartamento[]
+  documentosProyecto            DocumentoProyecto[]
+  presupuestosDepartamentoCreados PresupuestoDepartamento[] @relation("PresupuestosDepartamentoCreados")
+  presupuestosProyectoCreados   PresupuestoProyecto[]     @relation("PresupuestosProyectoCreados")
+  movimientosPresupuestoDepartamento MovimientoPresupuestoDepartamento[] @relation("MovimientosPresupuestoDepartamento")
+  movimientosPresupuestoProyecto MovimientoPresupuestoProyecto[] @relation("MovimientosPresupuestoProyecto")
 }
 
 /// Invitaciones para nuevos usuarios.
@@ -311,11 +334,13 @@ model Proyecto {
   fechaActualizacion DateTime       @updatedAt
   fechaEliminacion   DateTime?
 
-  responsable  Usuario            @relation(fields: [responsableId], references: [id])
-  departamento Departamento?      @relation(fields: [departamentoId], references: [id])
+  responsable  Usuario              @relation(fields: [responsableId], references: [id])
+  departamento Departamento?        @relation(fields: [departamentoId], references: [id])
   tareas       Tarea[]
   miembros     ProyectoMiembro[]
   etapas       Etapa[]
+  documentos   DocumentoProyecto[]
+  presupuesto  PresupuestoProyecto?
 }
 
 /// Registro de todas las tareas.
@@ -439,9 +464,12 @@ model Archivo {
   fechaCreacion    DateTime  @default(now())
   fechaEliminacion DateTime?
 
-  subidoPor   Usuario          @relation("ArchivosSubidosPorUsuario", fields: [subidoPorId], references: [id])
-  cvDeUsuario Usuario?         @relation("CVDelUsuario")
-  adjuntos    ArchivoAdjunto[]
+  subidoPor          Usuario                             @relation("ArchivosSubidosPorUsuario", fields: [subidoPorId], references: [id])
+  cvDeUsuario        Usuario?                            @relation("CVDelUsuario")
+  adjuntos           ArchivoAdjunto[]
+  documentosProyecto DocumentoProyecto[]
+  comprobantesMovimientoDepartamento MovimientoPresupuestoDepartamento[] @relation("ComprobanteMovimientoDepartamento")
+  comprobantesMovimientoProyecto     MovimientoPresupuestoProyecto[]     @relation("ComprobanteMovimientoProyecto")
 }
 
 /// Tabla pivote polimórfica para adjuntar archivos a diferentes entidades (p. ej., Tareas, Proyectos).
@@ -664,6 +692,60 @@ model ClasificacionEntrada {
   @@index([clasificacionId, posicion])
 }
 
+// --- MODULO: BASE DE CONOCIMIENTO (SPRINT 2) ---
+
+/// Contexto organizacional global de la empresa.
+model ContextoOrganizacional {
+  id                    String   @id @default(uuid()) @db.Uuid
+  mision                String?
+  vision                String?
+  objetivosEstrategicos String?
+  descripcionGeneral    String?
+  industria             String?  @db.VarChar(100)
+  tamanoEmpresa         String?  @db.VarChar(50)
+  valoresEmpresariales  String?
+  fechaActualizacion    DateTime @updatedAt
+  actualizadoPorId      String   @db.Uuid
+
+  actualizadoPor Usuario @relation(fields: [actualizadoPorId], references: [id])
+}
+
+/// Contexto específico de cada departamento.
+model ContextoDepartamento {
+  id                 String   @id @default(uuid()) @db.Uuid
+  departamentoId     String   @unique @db.Uuid
+  funciones          String?
+  responsabilidades  String?
+  procesosClave      String?
+  objetivos          String?
+  kpis               String?
+  fechaActualizacion DateTime @updatedAt
+  actualizadoPorId   String   @db.Uuid
+
+  departamento   Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  actualizadoPor Usuario      @relation(fields: [actualizadoPorId], references: [id])
+}
+
+/// Documentos asociados a proyectos (resúmenes, objetivos, etc.).
+model DocumentoProyecto {
+  id                 String                @id @default(uuid()) @db.Uuid
+  proyectoId         String                @db.Uuid
+  tipo               TipoDocumentoProyecto
+  titulo             String                @db.VarChar(255)
+  contenido          String
+  archivoId          String?               @db.Uuid
+  fechaCreacion      DateTime              @default(now())
+  fechaActualizacion DateTime              @updatedAt
+  creadoPorId        String                @db.Uuid
+
+  proyecto  Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  archivo   Archivo? @relation(fields: [archivoId], references: [id])
+  creadoPor Usuario  @relation(fields: [creadoPorId], references: [id])
+
+  @@index([proyectoId])
+  @@index([tipo])
+}
+
 // --- MODULO: SEGURIDAD Y AUDITORIA ---
 
 /// Catálogo de todas las acciones posibles en el sistema.
@@ -696,4 +778,109 @@ model RegistroAuditoria {
   timestamp   DateTime @default(now())
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
+}
+
+// --- MODULO: GESTION DE PRESUPUESTOS (SPRINT 2) ---
+
+enum TipoMovimientoPresupuesto {
+  Asignacion
+  Gasto
+  Ajuste
+  Transferencia
+}
+
+enum EstadoPresupuesto {
+  Activo
+  Agotado
+  Cerrado
+  Suspendido
+}
+
+/// Presupuesto asignado a un departamento.
+model PresupuestoDepartamento {
+  id                   String             @id @default(uuid()) @db.Uuid
+  departamentoId       String             @unique @db.Uuid
+  montoTotal           Decimal            @db.Decimal(15, 2)
+  montoGastado         Decimal            @default(0) @db.Decimal(15, 2)
+  montoDisponible      Decimal            @db.Decimal(15, 2)
+  periodo              String             @db.VarChar(50) // Ej: "2025-Q1", "2025", "Enero 2025"
+  fechaInicio          DateTime
+  fechaFin             DateTime
+  estado               EstadoPresupuesto  @default(Activo)
+  descripcion          String?
+  fechaCreacion        DateTime           @default(now())
+  fechaActualizacion   DateTime           @updatedAt
+  creadoPorId          String             @db.Uuid
+  
+  departamento         Departamento       @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  creadoPor            Usuario            @relation("PresupuestosDepartamentoCreados", fields: [creadoPorId], references: [id])
+  movimientos          MovimientoPresupuestoDepartamento[]
+  
+  @@index([departamentoId, periodo])
+  @@index([estado])
+}
+
+/// Movimientos del presupuesto de un departamento.
+model MovimientoPresupuestoDepartamento {
+  id                        String                    @id @default(uuid()) @db.Uuid
+  presupuestoDepartamentoId String                    @db.Uuid
+  tipo                      TipoMovimientoPresupuesto
+  monto                     Decimal                   @db.Decimal(15, 2)
+  descripcion               String
+  categoria                 String?                   @db.VarChar(100) // Ej: "Salarios", "Equipamiento", "Marketing"
+  comprobante               String?                   // URL o referencia al comprobante
+  archivoId                 String?                   @db.Uuid
+  fechaMovimiento           DateTime                  @default(now())
+  registradoPorId           String                    @db.Uuid
+  
+  presupuestoDepartamento   PresupuestoDepartamento   @relation(fields: [presupuestoDepartamentoId], references: [id], onDelete: Cascade)
+  archivo                   Archivo?                  @relation("ComprobanteMovimientoDepartamento", fields: [archivoId], references: [id])
+  registradoPor             Usuario                   @relation("MovimientosPresupuestoDepartamento", fields: [registradoPorId], references: [id])
+  
+  @@index([presupuestoDepartamentoId])
+  @@index([tipo])
+  @@index([fechaMovimiento])
+}
+
+/// Presupuesto asignado a un proyecto.
+model PresupuestoProyecto {
+  id                   String             @id @default(uuid()) @db.Uuid
+  proyectoId           String             @unique @db.Uuid
+  montoTotal           Decimal            @db.Decimal(15, 2)
+  montoGastado         Decimal            @default(0) @db.Decimal(15, 2)
+  montoDisponible      Decimal            @db.Decimal(15, 2)
+  estado               EstadoPresupuesto  @default(Activo)
+  descripcion          String?
+  fechaCreacion        DateTime           @default(now())
+  fechaActualizacion   DateTime           @updatedAt
+  creadoPorId          String             @db.Uuid
+  
+  proyecto             Proyecto           @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  creadoPor            Usuario            @relation("PresupuestosProyectoCreados", fields: [creadoPorId], references: [id])
+  movimientos          MovimientoPresupuestoProyecto[]
+  
+  @@index([proyectoId])
+  @@index([estado])
+}
+
+/// Movimientos del presupuesto de un proyecto.
+model MovimientoPresupuestoProyecto {
+  id                     String                    @id @default(uuid()) @db.Uuid
+  presupuestoProyectoId  String                    @db.Uuid
+  tipo                   TipoMovimientoPresupuesto
+  monto                  Decimal                   @db.Decimal(15, 2)
+  descripcion            String
+  categoria              String?                   @db.VarChar(100) // Ej: "Desarrollo", "Infraestructura", "Licencias"
+  comprobante            String?                   // URL o referencia al comprobante
+  archivoId              String?                   @db.Uuid
+  fechaMovimiento        DateTime                  @default(now())
+  registradoPorId        String                    @db.Uuid
+  
+  presupuestoProyecto    PresupuestoProyecto       @relation(fields: [presupuestoProyectoId], references: [id], onDelete: Cascade)
+  archivo                Archivo?                  @relation("ComprobanteMovimientoProyecto", fields: [archivoId], references: [id])
+  registradoPor          Usuario                   @relation("MovimientosPresupuestoProyecto", fields: [registradoPorId], references: [id])
+  
+  @@index([presupuestoProyectoId])
+  @@index([tipo])
+  @@index([fechaMovimiento])
 }
