@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -10,7 +8,6 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Download,
   Search,
   Filter,
   Target,
@@ -58,9 +55,9 @@ const documentoSchema = z.object({
 
 type DocumentoFormData = z.infer<typeof documentoSchema>
 
-interface ProjectDocumentsManagerProps {
-  proyectoId: string
-  proyectoNombre: string
+interface DepartmentDocumentsManagerProps {
+  departamentoId: string
+  departamentoNombre: string
 }
 
 const tipoIcons = {
@@ -94,16 +91,18 @@ const tipoLabels = {
   [TipoDocumentoProyecto.Notas]: "Notas",
 }
 
-export function ProjectDocumentsManager({
-  proyectoId,
-  proyectoNombre,
-}: ProjectDocumentsManagerProps) {
+export function DepartmentDocumentsManager({
+  departamentoId,
+  departamentoNombre,
+}: DepartmentDocumentsManagerProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedDocumento, setSelectedDocumento] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterTipo, setFilterTipo] = useState<string>("all")
 
+  // NOTA: Por ahora usamos el mismo store de documentos de proyecto
+  // El backend necesitará soportar documentos de departamento
   const {
     documentosProyecto,
     isLoading,
@@ -131,9 +130,12 @@ export function ProjectDocumentsManager({
 
   const selectedTipo = watch("tipo")
 
+  // NOTA: Temporalmente usamos departamentoId como proyectoId
+  // Esto requerirá cambios en el backend para soportar documentos de departamento
   useEffect(() => {
-    fetchDocumentosProyecto(proyectoId)
-  }, [proyectoId])
+    // fetchDocumentosProyecto(departamentoId)
+    // Por ahora, dejamos vacío hasta que el backend soporte departamentos
+  }, [departamentoId])
 
   useEffect(() => {
     if (selectedDocumento && showEditModal) {
@@ -153,10 +155,12 @@ export function ProjectDocumentsManager({
 
   const onSubmitCreate = async (data: DocumentoFormData) => {
     try {
-      await createDocumentoProyecto({
-        ...data,
-        proyectoId,
-      })
+      // NOTA: Esto necesitará adaptarse cuando el backend soporte departamentos
+      // await createDocumentoProyecto({
+      //   ...data,
+      //   departamentoId,  // En lugar de proyectoId
+      // })
+      console.warn("Documentos de departamento aún no soportados en backend")
       setShowCreateModal(false)
       reset()
     } catch (error) {
@@ -190,7 +194,7 @@ export function ProjectDocumentsManager({
     setShowEditModal(true)
   }
 
-  // Filtrar documentos
+  // Filtrar documentos (temporalmente vacío)
   const filteredDocumentos = documentosProyecto.filter((doc) => {
     const matchesSearch =
       doc.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -204,8 +208,8 @@ export function ProjectDocumentsManager({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Documentos del Proyecto</h2>
-          <p className="text-sm text-muted-foreground mt-1">{proyectoNombre}</p>
+          <h2 className="text-2xl font-bold text-foreground">Documentos del Departamento</h2>
+          <p className="text-sm text-muted-foreground mt-1">{departamentoNombre}</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -247,13 +251,17 @@ export function ProjectDocumentsManager({
         <Card className="border-border bg-card p-12">
           <div className="text-center space-y-3">
             <FileText className="h-12 w-12 text-muted-foreground mx-auto" />
+            <h3 className="text-lg font-semibold">Documentos de Departamento</h3>
             <p className="text-muted-foreground">
               {searchQuery || filterTipo !== "all"
                 ? "No se encontraron documentos con los filtros aplicados"
-                : "No hay documentos en este proyecto"}
+                : "Esta funcionalidad estará disponible próximamente"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              El backend necesita soportar documentos de departamento
             </p>
             {!searchQuery && filterTipo === "all" && (
-              <Button onClick={() => setShowCreateModal(true)} variant="outline" className="gap-2">
+              <Button onClick={() => setShowCreateModal(true)} variant="outline" className="gap-2" disabled>
                 <Plus className="h-4 w-4" />
                 Crear primer documento
               </Button>
@@ -323,7 +331,7 @@ export function ProjectDocumentsManager({
           <DialogHeader>
             <DialogTitle>Crear Nuevo Documento</DialogTitle>
             <DialogDescription>
-              Agrega documentación importante para el proyecto
+              Agrega documentación importante para el departamento
             </DialogDescription>
           </DialogHeader>
 
@@ -383,6 +391,14 @@ export function ProjectDocumentsManager({
               )}
             </div>
 
+            {/* Warning */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <strong>Nota:</strong> Esta funcionalidad requiere que el backend soporte documentos de departamento.
+                Por ahora, el botón está deshabilitado.
+              </p>
+            </div>
+
             {/* Buttons */}
             <div className="flex justify-end gap-3 pt-4">
               <Button
@@ -392,7 +408,7 @@ export function ProjectDocumentsManager({
               >
                 Cancelar
               </Button>
-              <Button type="submit">Crear Documento</Button>
+              <Button type="submit" disabled>Crear Documento (Próximamente)</Button>
             </div>
           </form>
         </DialogContent>

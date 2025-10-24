@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Badge } from "@/components/ui/badge";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Calendar } from "lucide-react";
 import { type ProyectoMiembro } from "@/services/projectService";
 
 export interface TaskFiltersType {
@@ -49,6 +51,11 @@ const initialFilters: TaskFiltersType = {
 };
 
 export function TaskFilters({ filters, onFiltersChange, miembros, etapas }: TaskFiltersProps) {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    filters.fechaDesde && filters.fechaHasta
+      ? { from: new Date(filters.fechaDesde), to: new Date(filters.fechaHasta) }
+      : undefined
+  );
   const [isOpen, setIsOpen] = useState(false);
 
   const handleReset = () => {
@@ -180,26 +187,28 @@ export function TaskFilters({ filters, onFiltersChange, miembros, etapas }: Task
             </Select>
           </div>
 
-          {/* Fecha Desde */}
+          {/* Fechas */}
           <div className="space-y-2">
-            <Label htmlFor="fechaDesde">Fecha de vencimiento desde</Label>
-            <Input
-              id="fechaDesde"
-              type="date"
-              value={filters.fechaDesde}
-              onChange={(e) => onFiltersChange({ ...filters, fechaDesde: e.target.value })}
+            <Label htmlFor="fechas">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Rango de Fecha de Vencimiento
+            </Label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                onFiltersChange({
+                  ...filters,
+                  fechaDesde: range?.from?.toISOString().split("T")[0] || "",
+                  fechaHasta: range?.to?.toISOString().split("T")[0] || "",
+                });
+              }}
+              placeholder="Selecciona rango de fechas"
+              numberOfMonths={2}
             />
-          </div>
-
-          {/* Fecha Hasta */}
-          <div className="space-y-2">
-            <Label htmlFor="fechaHasta">Fecha de vencimiento hasta</Label>
-            <Input
-              id="fechaHasta"
-              type="date"
-              value={filters.fechaHasta}
-              onChange={(e) => onFiltersChange({ ...filters, fechaHasta: e.target.value })}
-            />
+            <p className="text-xs text-muted-foreground">
+              Filtra tareas por rango de fecha de vencimiento
+            </p>
           </div>
 
           {/* Actions */}

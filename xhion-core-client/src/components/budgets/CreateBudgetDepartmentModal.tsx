@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import { type DateRange } from "react-day-picker"
 import { X, Coins, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,14 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { usePresupuestoStore } from "@/store/presupuestoStore"
 import { EstadoPresupuesto, type PresupuestoDepartamento } from "@/services/presupuestoService"
+import { toast } from "sonner"
 
 const presupuestoSchema = z.object({
   montoTotal: z.number().min(0, "El monto debe ser mayor a 0"),
   periodo: z.string().min(1, "El periodo es requerido"),
-  fechaInicio: z.string().min(1, "La fecha de inicio es requerida"),
-  fechaFin: z.string().min(1, "La fecha de fin es requerida"),
+  fechaInicio: z.date().optional(),
+  fechaFin: z.date().optional(),
   estado: z.nativeEnum(EstadoPresupuesto).optional(),
   descripcion: z.string().optional(),
 })
@@ -51,6 +54,7 @@ export function CreateBudgetDepartmentModal({
   presupuestoExistente,
 }: CreateBudgetDepartmentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const { createPresupuestoDepartamento, updatePresupuestoDepartamento } = usePresupuestoStore()
 
   const {
@@ -65,8 +69,8 @@ export function CreateBudgetDepartmentModal({
     defaultValues: {
       montoTotal: 0,
       periodo: "",
-      fechaInicio: "",
-      fechaFin: "",
+      fechaInicio: undefined,
+      fechaFin: undefined,
       estado: EstadoPresupuesto.Activo,
       descripcion: "",
     },
@@ -76,20 +80,24 @@ export function CreateBudgetDepartmentModal({
 
   useEffect(() => {
     if (presupuestoExistente) {
+      const from = new Date(presupuestoExistente.fechaInicio)
+      const to = new Date(presupuestoExistente.fechaFin)
+      setDateRange({ from, to })
       reset({
         montoTotal: Number(presupuestoExistente.montoTotal),
         periodo: presupuestoExistente.periodo,
-        fechaInicio: presupuestoExistente.fechaInicio.split("T")[0],
-        fechaFin: presupuestoExistente.fechaFin.split("T")[0],
+        fechaInicio: from,
+        fechaFin: to,
         estado: presupuestoExistente.estado,
         descripcion: presupuestoExistente.descripcion || "",
       })
     } else {
+      setDateRange(undefined)
       reset({
         montoTotal: 0,
         periodo: "",
-        fechaInicio: "",
-        fechaFin: "",
+        fechaInicio: undefined,
+        fechaFin: undefined,
         estado: EstadoPresupuesto.Activo,
         descripcion: "",
       })
@@ -99,20 +107,36 @@ export function CreateBudgetDepartmentModal({
   const onSubmit = async (data: PresupuestoFormData) => {
     setIsSubmitting(true)
     try {
+      // Validar que las fechas estén presentes
+      if (!dateRange?.from || !dateRange?.to) {
+        toast.error("Las fechas de inicio y fin son requeridas")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Convertir fechas Date a ISO string para la API
+      const presupuestoData = {
+        ...data,
+        fechaInicio: dateRange.from.toISOString(),
+        fechaFin: dateRange.to.toISOString(),
+      }
+
       if (presupuestoExistente) {
-        await updatePresupuestoDepartamento(departamentoId, data)
+        await updatePresupuestoDepartamento(departamentoId, presupuestoData)
+        toast.success("Presupuesto actualizado exitosamente")
       } else {
         await createPresupuestoDepartamento({
-          ...data,
+          ...presupuestoData,
           departamentoId,
         })
+        toast.success("Presupuesto creado exitosamente")
       }
       onOpenChange(false)
       reset()
+      setDateRange(undefined)
     } catch (error: any) {
       console.error("Error al guardar presupuesto:", error)
-      console.error("Detalles del error:", error.response?.data)
-      alert(`Error: ${error.response?.data?.message || error.message}`)
+      toast.error(error.response?.data?.message || error.message || "Error al guardar presupuesto")
     } finally {
       setIsSubmitting(false)
     }
@@ -176,37 +200,30 @@ export function CreateBudgetDepartmentModal({
           </div>
 
           {/* Fechas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">
-                Fecha de Inicio <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="fechaInicio"
-                  type="date"
-                  className="pl-10"
-                  {...register("fechaInicio")}
-                />
-              </div>
-              {errors.fechaInicio && (
-                <p className="text-sm text-destructive">{errors.fechaInicio.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">
-                Fecha de Fin <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="fechaFin" type="date" className="pl-10" {...register("fechaFin")} />
-              </div>
-              {errors.fechaFin && (
-                <p className="text-sm text-destructive">{errors.fechaFin.message}</p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="fechas">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Fechas del Presupuesto <span className="text-destructive">*</span>
+            </Label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range)
+                setValue("fechaInicio", range?.from)
+                setValue("fechaFin", range?.to)
+              }}
+              placeholder="Selecciona inicio y fin"
+              minDate={new Date()}
+              numberOfMonths={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Define el período de vigencia del presupuesto
+            </p>
+            {(errors.fechaInicio || errors.fechaFin) && (
+              <p className="text-sm text-destructive">
+                {errors.fechaInicio?.message || errors.fechaFin?.message}
+              </p>
+            )}
           </div>
 
           {/* Estado */}

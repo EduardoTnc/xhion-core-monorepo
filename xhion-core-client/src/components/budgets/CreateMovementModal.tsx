@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowRightLeft, Calendar, Clock } from "lucide-react"
+import { ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowRightLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { usePresupuestoStore } from "@/store/presupuestoStore"
 import { TipoMovimientoPresupuesto } from "@/services/presupuestoService"
 import { formatCurrency } from "@/lib/formatCurrency"
@@ -30,8 +31,7 @@ const movimientoSchema = z.object({
   monto: z.number().min(0.01, "El monto debe ser mayor a 0"),
   descripcion: z.string().min(1, "La descripción es requerida"),
   categoria: z.string().optional(),
-  fechaMovimiento: z.string().optional(),
-  horaMovimiento: z.string().optional(),
+  fechaMovimiento: z.date().optional(),
 })
 
 type MovimientoFormData = z.infer<typeof movimientoSchema>
@@ -66,6 +66,7 @@ export function CreateMovementModal({
   montoDisponible,
 }: CreateMovementModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [fechaMovimiento, setFechaMovimiento] = useState<Date | undefined>(new Date())
   const { createMovimientoDepartamento, createMovimientoProyecto } = usePresupuestoStore()
 
   const {
@@ -82,8 +83,7 @@ export function CreateMovementModal({
       monto: 0,
       descripcion: "",
       categoria: "",
-      fechaMovimiento: new Date().toISOString().split("T")[0],
-      horaMovimiento: new Date().toTimeString().slice(0, 5),
+      fechaMovimiento: new Date(),
     },
   })
 
@@ -92,13 +92,14 @@ export function CreateMovementModal({
 
   useEffect(() => {
     if (open) {
+      const now = new Date()
+      setFechaMovimiento(now)
       reset({
         tipo: TipoMovimientoPresupuesto.Gasto,
         monto: 0,
         descripcion: "",
         categoria: "",
-        fechaMovimiento: new Date().toISOString().split("T")[0],
-        horaMovimiento: new Date().toTimeString().slice(0, 5),
+        fechaMovimiento: now,
       })
     }
   }, [open, reset])
@@ -106,18 +107,12 @@ export function CreateMovementModal({
   const onSubmit = async (data: MovimientoFormData) => {
     setIsSubmitting(true)
     try {
-      // Combinar fecha y hora en formato ISO
-      let fechaMovimientoISO = data.fechaMovimiento
-      if (data.fechaMovimiento && data.horaMovimiento) {
-        fechaMovimientoISO = `${data.fechaMovimiento}T${data.horaMovimiento}:00.000Z`
-      }
-
       const movimientoData = {
         tipo: data.tipo,
         monto: data.monto,
         descripcion: data.descripcion,
         categoria: data.categoria,
-        fechaMovimiento: fechaMovimientoISO,
+        fechaMovimiento: fechaMovimiento?.toISOString(),
         [tipo === "departamento" ? "presupuestoDepartamentoId" : "presupuestoProyectoId"]:
           presupuestoId,
       }
@@ -239,31 +234,19 @@ export function CreateMovementModal({
           </div>
 
           {/* Fecha y Hora */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaMovimiento">Fecha del Movimiento</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="fechaMovimiento"
-                  type="date"
-                  className="pl-10"
-                  {...register("fechaMovimiento")}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="horaMovimiento">Hora del Movimiento</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="horaMovimiento"
-                  type="time"
-                  className="pl-10"
-                  {...register("horaMovimiento")}
-                />
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="fechaMovimiento">Fecha y Hora del Movimiento</Label>
+            <DateTimePicker
+              date={fechaMovimiento}
+              onDateTimeChange={(date) => {
+                setFechaMovimiento(date)
+                setValue("fechaMovimiento", date)
+              }}
+              placeholder="Selecciona fecha y hora"
+              startHour={8}
+              endHour={20}
+              minuteInterval={15}
+            />
           </div>
 
           {/* Botones */}

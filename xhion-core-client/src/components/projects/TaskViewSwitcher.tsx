@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { LayoutGrid, List, Table2, GanttChart, Plus, Filter, SortAsc } from "lucide-react";
+import { LayoutGrid, List, Table2, GanttChart, Plus, Filter, SortAsc, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ViewMode = "kanban" | "list" | "table" | "timeline";
+type ViewMode = "kanban" | "list" | "table" | "timeline" | "docs";
 
 interface TaskViewSwitcherProps {
   viewMode: ViewMode;
@@ -16,6 +16,7 @@ const views = [
   { value: "list" as ViewMode, icon: List, label: "Lista" },
   { value: "table" as ViewMode, icon: Table2, label: "Tabla" },
   { value: "timeline" as ViewMode, icon: GanttChart, label: "Timeline" },
+  { value: "docs" as ViewMode, icon: FileText, label: "Documentos" },
 ];
 
 export function TaskViewSwitcher({

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useTaskStore } from "@/store/taskStore";
 import { useProjectStore } from "@/store/projectStore";
 import { toast } from "sonner";
@@ -39,13 +40,14 @@ interface TaskFormData {
   etapaId: string;
   asignadoId: string;
   prioridad: string;
-  fechaVencimiento: string;
+  fechaVencimiento?: Date;
 }
 
 export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit }: CreateTaskModalProps) {
   const { createTarea, updateTarea, isLoading } = useTaskStore();
   const { etapas, miembros, fetchEtapas, fetchMiembros } = useProjectStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fechaVencimiento, setFechaVencimiento] = useState<Date | undefined>();
 
   const {
     register,
@@ -75,9 +77,12 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit }:
       setValue("etapaId", tareaToEdit.etapaId || "");
       setValue("asignadoId", tareaToEdit.asignadoId || "");
       setValue("prioridad", tareaToEdit.prioridad);
-      setValue("fechaVencimiento", tareaToEdit.fechaVencimiento?.split("T")[0] || "");
+      const fecha = tareaToEdit.fechaVencimiento ? new Date(tareaToEdit.fechaVencimiento) : undefined;
+      setFechaVencimiento(fecha);
+      setValue("fechaVencimiento", fecha);
     } else {
       reset({ proyectoId, prioridad: "Media" });
+      setFechaVencimiento(undefined);
     }
   }, [tareaToEdit, reset, setValue, proyectoId]);
 
@@ -92,7 +97,7 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit }:
         etapaId: data.etapaId || undefined,
         asignadoId: data.asignadoId || undefined,
         prioridad: data.prioridad as any,
-        fechaVencimiento: data.fechaVencimiento || undefined,
+        fechaVencimiento: fechaVencimiento?.toISOString() || undefined,
       };
 
       if (tareaToEdit) {
@@ -231,10 +236,14 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit }:
 
             <div className="space-y-2">
               <Label htmlFor="fechaVencimiento">Fecha de Vencimiento</Label>
-              <Input
-                id="fechaVencimiento"
-                type="date"
-                {...register("fechaVencimiento")}
+              <DatePicker
+                date={fechaVencimiento}
+                onDateChange={(date) => {
+                  setFechaVencimiento(date);
+                  setValue("fechaVencimiento", date);
+                }}
+                placeholder="Selecciona fecha"
+                minDate={new Date()}
               />
             </div>
           </div>

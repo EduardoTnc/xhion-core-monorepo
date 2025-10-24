@@ -9,6 +9,7 @@ import { TaskKanbanViewDnD } from "./TaskKanbanViewDnD";
 import { TaskListView } from "./TaskListView";
 import { TaskTableView } from "./TaskTableView";
 import { TaskTimelineViewEnhanced } from "./TaskTimelineViewEnhanced";
+import { ProjectDocumentsManager } from "./ProjectDocumentsManager";
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "./TaskFilters";
 import { ExportMenu } from "./ExportMenu";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
@@ -25,7 +26,7 @@ import { toast } from "sonner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
 
-type ViewMode = "kanban" | "list" | "table" | "timeline";
+type ViewMode = "kanban" | "list" | "table" | "timeline" | "docs";
 
 const initialFilters: TaskFiltersType = {
   search: "",
@@ -360,6 +361,14 @@ export function ProjectWorkspaceEnhanced({
                   onEditTask={handleEditTaskDirect}
                   onDeleteTask={handleDeleteTask}
                 />
+              )}
+              {viewMode === "docs" && proyectoActual && (
+                <div className="h-full overflow-auto p-6">
+                  <ProjectDocumentsManager
+                    proyectoId={proyectoActual.id}
+                    proyectoNombre={proyectoActual.nombre}
+                  />
+                </div>
               )}
             </div>
           </>

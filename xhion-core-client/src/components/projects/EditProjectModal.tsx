@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { type DateRange } from "react-day-picker";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useProjectStore } from "@/store/projectStore";
 import { useDepartmentStore } from "@/store/departmentStore";
 import { toast } from "sonner";
-import { Loader2, Building2 } from "lucide-react";
+import { Loader2, Building2, Calendar } from "lucide-react";
 import { type Proyecto } from "@/services/projectService";
 
 interface EditProjectModalProps {
@@ -34,8 +36,8 @@ interface EditProjectModalProps {
 interface ProjectFormData {
   nombre: string;
   descripcion: string;
-  fechaInicio: string;
-  fechaFin: string;
+  fechaInicio?: Date;
+  fechaFin?: Date;
   estado: string;
   departamentoId?: string;
 }
@@ -45,6 +47,7 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
   const { departamentos, fetchDepartamentos } = useDepartmentStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDepartamento, setSelectedDepartamento] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (open) {
@@ -65,8 +68,17 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
     if (proyecto) {
       setValue("nombre", proyecto.nombre);
       setValue("descripcion", proyecto.descripcion || "");
-      setValue("fechaInicio", proyecto.fechaInicio?.split("T")[0] || "");
-      setValue("fechaFin", proyecto.fechaFin?.split("T")[0] || "");
+      
+      // Convertir fechas ISO string a Date para el DateRangePicker
+      const from = proyecto.fechaInicio ? new Date(proyecto.fechaInicio) : undefined;
+      const to = proyecto.fechaFin ? new Date(proyecto.fechaFin) : undefined;
+      
+      if (from || to) {
+        setDateRange({ from, to });
+      }
+      
+      setValue("fechaInicio", from);
+      setValue("fechaFin", to);
       setValue("estado", proyecto.estado);
       setSelectedDepartamento(proyecto.departamentoId || "none");
     }
@@ -81,8 +93,8 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
       const projectData = {
         nombre: data.nombre,
         descripcion: data.descripcion || undefined,
-        fechaInicio: data.fechaInicio || undefined,
-        fechaFin: data.fechaFin || undefined,
+        fechaInicio: dateRange?.from?.toISOString() || undefined,
+        fechaFin: dateRange?.to?.toISOString() || undefined,
         estado: data.estado as any,
         departamentoId: selectedDepartamento === "none" ? undefined : selectedDepartamento,
       };
@@ -142,16 +154,24 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">Fecha de Inicio</Label>
-              <Input id="fechaInicio" type="date" {...register("fechaInicio")} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">Fecha de Fin</Label>
-              <Input id="fechaFin" type="date" {...register("fechaFin")} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="fechas">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Fechas del Proyecto
+            </Label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                setValue("fechaInicio", range?.from);
+                setValue("fechaFin", range?.to);
+              }}
+              placeholder="Selecciona inicio y fin"
+              numberOfMonths={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Define el período de duración del proyecto
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -12,11 +12,15 @@ import {
   RefreshCw,
   ArrowRightLeft,
   AlertCircle,
+  BarChart3,
+  TrendingUpIcon,
+  ListIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +30,8 @@ import {
 import { usePresupuestoStore } from "@/store/presupuestoStore"
 import { CreateBudgetDepartmentModal } from "./CreateBudgetDepartmentModal"
 import { CreateMovementModal } from "./CreateMovementModal"
+import { BudgetAnalyticsView } from "./BudgetAnalyticsView"
+import { BudgetComparison } from "./BudgetComparison"
 import { EstadoPresupuesto, TipoMovimientoPresupuesto } from "@/services/presupuestoService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -230,71 +236,141 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
         </div>
       </Card>
 
-      {/* Movimientos */}
-      <Card className="border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Movimientos Recientes</h3>
-          <Button onClick={() => setShowMovementModal(true)} size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nuevo Movimiento
-          </Button>
-        </div>
+      {/* Tabs con diferentes vistas */}
+      <Tabs defaultValue="resumen" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="resumen">
+            <ListIcon className="h-4 w-4 mr-2" />
+            Resumen
+          </TabsTrigger>
+          <TabsTrigger value="analisis">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Análisis
+          </TabsTrigger>
+          <TabsTrigger value="comparativas">
+            <TrendingUpIcon className="h-4 w-4 mr-2" />
+            Comparativas
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="space-y-3">
-          {presupuesto.movimientos && presupuesto.movimientos.length > 0 ? (
-            presupuesto.movimientos.slice(0, 5).map((movimiento) => {
-              const TipoIcon = tipoIcons[movimiento.tipo]
-              return (
-                <div
-                  key={movimiento.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <TipoIcon className={`h-5 w-5 ${tipoColors[movimiento.tipo]}`} />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {movimiento.descripcion}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <span>
-                          {format(new Date(movimiento.fechaMovimiento), "dd MMM yyyy", {
-                            locale: es,
-                          })}
-                        </span>
-                        {movimiento.categoria && (
-                          <>
-                            <span>•</span>
-                            <span>{movimiento.categoria}</span>
-                          </>
-                        )}
+        {/* Tab: Resumen (Movimientos) */}
+        <TabsContent value="resumen" className="space-y-4">
+          <Card className="border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-foreground">Movimientos Recientes</h3>
+              <Button onClick={() => setShowMovementModal(true)} size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nuevo Movimiento
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {presupuesto.movimientos && presupuesto.movimientos.length > 0 ? (
+                presupuesto.movimientos.slice(0, 10).map((movimiento) => {
+                  const TipoIcon = tipoIcons[movimiento.tipo]
+                  return (
+                    <div
+                      key={movimiento.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <TipoIcon className={`h-5 w-5 ${tipoColors[movimiento.tipo]}`} />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {movimiento.descripcion}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                            <span>
+                              {format(new Date(movimiento.fechaMovimiento), "dd MMM yyyy", {
+                                locale: es,
+                              })}
+                            </span>
+                            {movimiento.categoria && (
+                              <>
+                                <span>•</span>
+                                <span>{movimiento.categoria}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`text-sm font-semibold ${
+                            movimiento.tipo === TipoMovimientoPresupuesto.Gasto
+                              ? "text-red-500"
+                              : "text-green-500"
+                          }`}
+                        >
+                          {movimiento.tipo === TipoMovimientoPresupuesto.Gasto ? "-" : "+"}
+                          {formatCurrency(Number(movimiento.monto))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {movimiento.registradoPor.nombreCompleto}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`text-sm font-semibold ${
-                        movimiento.tipo === TipoMovimientoPresupuesto.Gasto
-                          ? "text-red-500"
-                          : "text-green-500"
-                      }`}
-                    >
-                      {movimiento.tipo === TipoMovimientoPresupuesto.Gasto ? "-" : "+"}
-                      {formatCurrency(Number(movimiento.monto))}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {movimiento.registradoPor.nombreCompleto}
-                    </p>
-                  </div>
-                </div>
-              )
-            })
+                  )
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No hay movimientos registrados
+                </p>
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Análisis */}
+        <TabsContent value="analisis">
+          {presupuesto.movimientos && presupuesto.movimientos.length > 0 ? (
+            <BudgetAnalyticsView
+              presupuesto={presupuesto as any}
+              movimientos={presupuesto.movimientos}
+            />
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No hay movimientos registrados
-            </p>
+            <Card className="border-border bg-card p-8">
+              <div className="text-center space-y-2">
+                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto" />
+                <h3 className="text-lg font-semibold">Sin Datos para Análisis</h3>
+                <p className="text-sm text-muted-foreground">
+                  Registra movimientos para ver análisis detallados
+                </p>
+              </div>
+            </Card>
           )}
-        </div>
-      </Card>
+        </TabsContent>
+
+        {/* Tab: Comparativas */}
+        <TabsContent value="comparativas">
+          {presupuesto.movimientos && 
+           presupuesto.movimientos.length > 0 && 
+           'fechaInicio' in presupuesto && 
+           'fechaFin' in presupuesto ? (
+            <BudgetComparison
+              movimientos={presupuesto.movimientos}
+              fechaInicio={presupuesto.fechaInicio}
+              fechaFin={presupuesto.fechaFin}
+            />
+          ) : (
+            <Card className="border-border bg-card p-8">
+              <div className="text-center space-y-2">
+                <TrendingUpIcon className="h-12 w-12 text-muted-foreground mx-auto" />
+                <h3 className="text-lg font-semibold">
+                  {entityType === "proyecto" 
+                    ? "Comparativas no disponibles para proyectos" 
+                    : "Sin Datos para Comparar"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {entityType === "proyecto"
+                    ? "Las comparativas mensuales solo están disponibles para presupuestos de departamento"
+                    : "Registra movimientos para ver comparativas mensuales"}
+                </p>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Modales */}
       {entityType === "departamento" && (

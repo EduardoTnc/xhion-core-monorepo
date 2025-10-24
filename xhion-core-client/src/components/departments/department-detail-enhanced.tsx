@@ -36,6 +36,8 @@ import { BudgetView } from "@/components/budgets/BudgetView"
 import { DepartmentProjectsView } from "./DepartmentProjectsView"
 import { DepartmentTeamView } from "./DepartmentTeamView"
 import { DepartmentContextView } from "./DepartmentContextView"
+import { DepartmentOrgChart } from "./DepartmentOrgChart"
+import { DepartmentDocumentsManager } from "./DepartmentDocumentsManager"
 import { ProjectWorkspaceEnhanced } from "@/components/projects/ProjectWorkspaceEnhanced"
 
 interface DepartmentDetailProps {
@@ -261,6 +263,8 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
               <TabsTrigger value="projects">Proyectos</TabsTrigger>
               <TabsTrigger value="team">Equipo</TabsTrigger>
               <TabsTrigger value="context">Contexto</TabsTrigger>
+              <TabsTrigger value="organigrama">Organigrama</TabsTrigger>
+              <TabsTrigger value="documentos">Documentos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
@@ -358,6 +362,20 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
                 departamentoNombre={departamentoActual.nombre}
                 onEdit={() => setShowContextModal(true)}
                 onCreate={() => setShowContextModal(true)}
+              />
+            </TabsContent>
+
+            <TabsContent value="organigrama">
+              <DepartmentOrgChart
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
+              />
+            </TabsContent>
+
+            <TabsContent value="documentos">
+              <DepartmentDocumentsManager
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
               />
             </TabsContent>
           </Tabs>

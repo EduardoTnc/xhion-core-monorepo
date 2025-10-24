@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { type DateRange } from "react-day-picker";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useProjectStore } from "@/store/projectStore";
 import { useAuthStore } from "@/store/authStore";
 import { useDepartmentStore } from "@/store/departmentStore";
 import { toast } from "sonner";
-import { Loader2, Building2 } from "lucide-react";
+import { Loader2, Building2, Calendar } from "lucide-react";
 
 interface CreateProjectModalProps {
   open: boolean;
@@ -35,6 +37,8 @@ interface ProjectFormData {
   descripcion: string;
   responsableId: string;
   departamentoId?: string;
+  fechaInicio?: Date;
+  fechaFin?: Date;
 }
 
 export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalProps) {
@@ -43,6 +47,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
   const { departamentos, fetchDepartamentos } = useDepartmentStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDepartamento, setSelectedDepartamento] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (open) {
@@ -54,6 +59,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ProjectFormData>({
     defaultValues: {
@@ -69,11 +75,14 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
         descripcion: data.descripcion || undefined,
         responsableId: data.responsableId,
         departamentoId: selectedDepartamento || undefined,
+        fechaInicio: dateRange?.from?.toISOString(),
+        fechaFin: dateRange?.to?.toISOString(),
       });
 
       toast.success("Proyecto creado exitosamente");
       reset();
       setSelectedDepartamento("");
+      setDateRange(undefined);
       onOpenChange(false);
     } catch (error: any) {
       toast.error(error.message || "Error al crear proyecto");
@@ -159,6 +168,27 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
             </Select>
             <p className="text-xs text-muted-foreground">
               Asigna el proyecto a un departamento específico
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fechas">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Fechas del Proyecto (Opcional)
+            </Label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                setValue("fechaInicio", range?.from);
+                setValue("fechaFin", range?.to);
+              }}
+              placeholder="Selecciona inicio y fin"
+              minDate={new Date()}
+              numberOfMonths={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Define el período de duración del proyecto
             </p>
           </div>
 

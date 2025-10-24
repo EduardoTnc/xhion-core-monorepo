@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { type DateRange } from "react-day-picker";
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useProjectStore } from "@/store/projectStore";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar } from "lucide-react";
 import { type Etapa } from "@/services/projectService";
 
 interface CreateEtapaModalProps {
@@ -37,8 +39,8 @@ interface EtapaFormData {
   descripcion: string;
   color: string;
   orden: number;
-  fechaInicio: string;
-  fechaFin: string;
+  fechaInicio?: Date;
+  fechaFin?: Date;
   estado: string;
 }
 
@@ -48,6 +50,7 @@ export function CreateEtapaModal({
   proyectoId,
   etapaToEdit,
 }: CreateEtapaModalProps) {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { createEtapa, updateEtapa, etapas, isLoading } = useProjectStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -72,10 +75,20 @@ export function CreateEtapaModal({
       setValue("descripcion", etapaToEdit.descripcion || "");
       setValue("color", etapaToEdit.color || "#3B82F6");
       setValue("orden", etapaToEdit.orden);
-      setValue("fechaInicio", etapaToEdit.fechaInicio?.split("T")[0] || "");
-      setValue("fechaFin", etapaToEdit.fechaFin?.split("T")[0] || "");
+      
+      // Convertir fechas ISO string a Date para el DateRangePicker
+      const from = etapaToEdit.fechaInicio ? new Date(etapaToEdit.fechaInicio) : undefined;
+      const to = etapaToEdit.fechaFin ? new Date(etapaToEdit.fechaFin) : undefined;
+      
+      if (from || to) {
+        setDateRange({ from, to });
+      }
+      
+      setValue("fechaInicio", from);
+      setValue("fechaFin", to);
       setValue("estado", etapaToEdit.estado);
     } else {
+      setDateRange(undefined);
       reset({
         color: "#3B82F6",
         orden: etapas.length + 1,
@@ -95,8 +108,8 @@ export function CreateEtapaModal({
           descripcion: data.descripcion || undefined,
           color: data.color || undefined,
           orden: Number(data.orden),
-          fechaInicio: data.fechaInicio || undefined,
-          fechaFin: data.fechaFin || undefined,
+          fechaInicio: dateRange?.from?.toISOString() || undefined,
+          fechaFin: dateRange?.to?.toISOString() || undefined,
           estado: data.estado as any,
         };
         await updateEtapa(proyectoId, etapaToEdit.id, etapaData);
@@ -108,8 +121,8 @@ export function CreateEtapaModal({
           descripcion: data.descripcion || undefined,
           color: data.color || undefined,
           orden: Number(data.orden),
-          fechaInicio: data.fechaInicio || undefined,
-          fechaFin: data.fechaFin || undefined,
+          fechaInicio: dateRange?.from?.toISOString() || undefined,
+          fechaFin: dateRange?.to?.toISOString() || undefined,
         };
         await createEtapa(proyectoId, etapaData);
         toast.success("Etapa creada exitosamente");
@@ -212,16 +225,24 @@ export function CreateEtapaModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">Fecha de Inicio</Label>
-              <Input id="fechaInicio" type="date" {...register("fechaInicio")} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">Fecha de Fin</Label>
-              <Input id="fechaFin" type="date" {...register("fechaFin")} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="fechas">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Fechas de la Etapa (Opcional)
+            </Label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                setValue("fechaInicio", range?.from);
+                setValue("fechaFin", range?.to);
+              }}
+              placeholder="Selecciona inicio y fin"
+              numberOfMonths={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Define el período de duración de la etapa
+            </p>
           </div>
 
           <DialogFooter>
