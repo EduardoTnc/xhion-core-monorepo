@@ -261,7 +261,7 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
               <TabsTrigger value="overview">Resumen</TabsTrigger>
               <TabsTrigger value="budget">Presupuesto</TabsTrigger>
               <TabsTrigger value="projects">Proyectos</TabsTrigger>
-              <TabsTrigger value="team">Equipo</TabsTrigger>
+              <TabsTrigger value="team">Empleados</TabsTrigger>
               <TabsTrigger value="context">Contexto</TabsTrigger>
               <TabsTrigger value="organigrama">Organigrama</TabsTrigger>
               <TabsTrigger value="documentos">Documentos</TabsTrigger>
@@ -443,7 +443,7 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
               </Button>
               <Button className="w-full justify-start bg-transparent" variant="outline">
                 <Users className="mr-2 h-4 w-4" />
-                Gestionar Equipo
+                Gestionar Empleados
               </Button>
               <Button
                 className="w-full justify-start bg-transparent"

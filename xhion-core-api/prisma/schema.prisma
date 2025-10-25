@@ -93,6 +93,15 @@ enum TipoDocumentoProyecto {
   Notas
 }
 
+enum TipoDocumentoDepartamento {
+  Resumen
+  Objetivos
+  Especificaciones
+  LeccionesAprendidas
+  Documentacion
+  Notas
+}
+
 enum TipoContacto {
   telefono_principal
   telefono_secundario
@@ -166,6 +175,7 @@ model Departamento {
   invitaciones         Invitacion[]
   contextoDepartamento ContextoDepartamento?
   presupuesto          PresupuestoDepartamento?
+  documentos           DocumentoDepartamento[]
 }
 
 /// Catálogo centralizado de puestos de trabajo.
@@ -249,6 +259,7 @@ model Usuario {
   contextosOrganizacionales     ContextoOrganizacional[]
   contextosDepartamento         ContextoDepartamento[]
   documentosProyecto            DocumentoProyecto[]
+  documentosDepartamento        DocumentoDepartamento[]
   presupuestosDepartamentoCreados PresupuestoDepartamento[] @relation("PresupuestosDepartamentoCreados")
   presupuestosProyectoCreados   PresupuestoProyecto[]     @relation("PresupuestosProyectoCreados")
   movimientosPresupuestoDepartamento MovimientoPresupuestoDepartamento[] @relation("MovimientosPresupuestoDepartamento")
@@ -743,6 +754,24 @@ model DocumentoProyecto {
   creadoPor Usuario  @relation(fields: [creadoPorId], references: [id])
 
   @@index([proyectoId])
+  @@index([tipo])
+}
+
+/// Documentos asociados a departamentos (resúmenes, objetivos, etc.).
+model DocumentoDepartamento {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  departamentoId     String                      @db.Uuid
+  tipo               TipoDocumentoDepartamento
+  titulo             String                      @db.VarChar(255)
+  contenido          String
+  fechaCreacion      DateTime                    @default(now())
+  fechaActualizacion DateTime                    @updatedAt
+  creadoPorId        String                      @db.Uuid
+
+  departamento Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  creadoPor    Usuario      @relation(fields: [creadoPorId], references: [id])
+
+  @@index([departamentoId])
   @@index([tipo])
 }
 

@@ -43,12 +43,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useConocimientoStore } from "@/store/conocimientoStore"
-import { TipoDocumentoProyecto } from "@/services/conocimientoService"
+import { TipoDocumentoDepartamento } from "@/services/conocimientoService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
 const documentoSchema = z.object({
-  tipo: z.nativeEnum(TipoDocumentoProyecto),
+  tipo: z.enum([
+    TipoDocumentoDepartamento.Resumen,
+    TipoDocumentoDepartamento.Objetivos,
+    TipoDocumentoDepartamento.Especificaciones,
+    TipoDocumentoDepartamento.LeccionesAprendidas,
+    TipoDocumentoDepartamento.Documentacion,
+    TipoDocumentoDepartamento.Notas,
+  ] as const),
   titulo: z.string().min(1, "El título es requerido").max(255),
   contenido: z.string().min(1, "El contenido es requerido"),
 })
@@ -61,34 +68,34 @@ interface DepartmentDocumentsManagerProps {
 }
 
 const tipoIcons = {
-  [TipoDocumentoProyecto.Resumen]: FileText,
-  [TipoDocumentoProyecto.Objetivos]: Target,
-  [TipoDocumentoProyecto.Especificaciones]: FileCheck,
-  [TipoDocumentoProyecto.LeccionesAprendidas]: Lightbulb,
-  [TipoDocumentoProyecto.Documentacion]: BookOpen,
-  [TipoDocumentoProyecto.Notas]: StickyNote,
+  [TipoDocumentoDepartamento.Resumen]: FileText,
+  [TipoDocumentoDepartamento.Objetivos]: Target,
+  [TipoDocumentoDepartamento.Especificaciones]: FileCheck,
+  [TipoDocumentoDepartamento.LeccionesAprendidas]: Lightbulb,
+  [TipoDocumentoDepartamento.Documentacion]: BookOpen,
+  [TipoDocumentoDepartamento.Notas]: StickyNote,
 }
 
 const tipoColors = {
-  [TipoDocumentoProyecto.Resumen]: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  [TipoDocumentoProyecto.Objetivos]:
+  [TipoDocumentoDepartamento.Resumen]: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  [TipoDocumentoDepartamento.Objetivos]:
     "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  [TipoDocumentoProyecto.Especificaciones]:
+  [TipoDocumentoDepartamento.Especificaciones]:
     "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  [TipoDocumentoProyecto.LeccionesAprendidas]:
+  [TipoDocumentoDepartamento.LeccionesAprendidas]:
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  [TipoDocumentoProyecto.Documentacion]:
+  [TipoDocumentoDepartamento.Documentacion]:
     "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
-  [TipoDocumentoProyecto.Notas]: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  [TipoDocumentoDepartamento.Notas]: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 }
 
 const tipoLabels = {
-  [TipoDocumentoProyecto.Resumen]: "Resumen",
-  [TipoDocumentoProyecto.Objetivos]: "Objetivos",
-  [TipoDocumentoProyecto.Especificaciones]: "Especificaciones",
-  [TipoDocumentoProyecto.LeccionesAprendidas]: "Lecciones Aprendidas",
-  [TipoDocumentoProyecto.Documentacion]: "Documentación",
-  [TipoDocumentoProyecto.Notas]: "Notas",
+  [TipoDocumentoDepartamento.Resumen]: "Resumen",
+  [TipoDocumentoDepartamento.Objetivos]: "Objetivos",
+  [TipoDocumentoDepartamento.Especificaciones]: "Especificaciones",
+  [TipoDocumentoDepartamento.LeccionesAprendidas]: "Lecciones Aprendidas",
+  [TipoDocumentoDepartamento.Documentacion]: "Documentación",
+  [TipoDocumentoDepartamento.Notas]: "Notas",
 }
 
 export function DepartmentDocumentsManager({
@@ -101,15 +108,13 @@ export function DepartmentDocumentsManager({
   const [searchQuery, setSearchQuery] = useState("")
   const [filterTipo, setFilterTipo] = useState<string>("all")
 
-  // NOTA: Por ahora usamos el mismo store de documentos de proyecto
-  // El backend necesitará soportar documentos de departamento
   const {
-    documentosProyecto,
+    documentosDepartamento,
     isLoading,
-    fetchDocumentosProyecto,
-    createDocumentoProyecto,
-    updateDocumentoProyecto,
-    deleteDocumentoProyecto,
+    fetchDocumentosDepartamento,
+    createDocumentoDepartamento,
+    updateDocumentoDepartamento,
+    deleteDocumentoDepartamento,
   } = useConocimientoStore()
 
   const {
@@ -122,7 +127,7 @@ export function DepartmentDocumentsManager({
   } = useForm<DocumentoFormData>({
     resolver: zodResolver(documentoSchema),
     defaultValues: {
-      tipo: TipoDocumentoProyecto.Notas,
+      tipo: TipoDocumentoDepartamento.Notas,
       titulo: "",
       contenido: "",
     },
@@ -130,12 +135,9 @@ export function DepartmentDocumentsManager({
 
   const selectedTipo = watch("tipo")
 
-  // NOTA: Temporalmente usamos departamentoId como proyectoId
-  // Esto requerirá cambios en el backend para soportar documentos de departamento
   useEffect(() => {
-    // fetchDocumentosProyecto(departamentoId)
-    // Por ahora, dejamos vacío hasta que el backend soporte departamentos
-  }, [departamentoId])
+    fetchDocumentosDepartamento(departamentoId)
+  }, [departamentoId, fetchDocumentosDepartamento])
 
   useEffect(() => {
     if (selectedDocumento && showEditModal) {
@@ -146,7 +148,7 @@ export function DepartmentDocumentsManager({
       })
     } else if (showCreateModal) {
       reset({
-        tipo: TipoDocumentoProyecto.Notas,
+        tipo: TipoDocumentoDepartamento.Notas,
         titulo: "",
         contenido: "",
       })
@@ -155,12 +157,10 @@ export function DepartmentDocumentsManager({
 
   const onSubmitCreate = async (data: DocumentoFormData) => {
     try {
-      // NOTA: Esto necesitará adaptarse cuando el backend soporte departamentos
-      // await createDocumentoProyecto({
-      //   ...data,
-      //   departamentoId,  // En lugar de proyectoId
-      // })
-      console.warn("Documentos de departamento aún no soportados en backend")
+      await createDocumentoDepartamento({
+        ...data,
+        departamentoId,
+      })
       setShowCreateModal(false)
       reset()
     } catch (error) {
@@ -171,7 +171,7 @@ export function DepartmentDocumentsManager({
   const onSubmitEdit = async (data: DocumentoFormData) => {
     if (!selectedDocumento) return
     try {
-      await updateDocumentoProyecto(selectedDocumento.id, data)
+      await updateDocumentoDepartamento(selectedDocumento.id, data)
       setShowEditModal(false)
       setSelectedDocumento(null)
       reset()
@@ -183,7 +183,7 @@ export function DepartmentDocumentsManager({
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de eliminar este documento?")) return
     try {
-      await deleteDocumentoProyecto(id)
+      await deleteDocumentoDepartamento(id)
     } catch (error) {
       console.error("Error al eliminar documento:", error)
     }
@@ -194,8 +194,8 @@ export function DepartmentDocumentsManager({
     setShowEditModal(true)
   }
 
-  // Filtrar documentos (temporalmente vacío)
-  const filteredDocumentos = documentosProyecto.filter((doc) => {
+  // Filtrar documentos
+  const filteredDocumentos = documentosDepartamento.filter((doc) => {
     const matchesSearch =
       doc.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.contenido.toLowerCase().includes(searchQuery.toLowerCase())
@@ -255,13 +255,10 @@ export function DepartmentDocumentsManager({
             <p className="text-muted-foreground">
               {searchQuery || filterTipo !== "all"
                 ? "No se encontraron documentos con los filtros aplicados"
-                : "Esta funcionalidad estará disponible próximamente"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              El backend necesita soportar documentos de departamento
+                : "No hay documentos en este departamento"}
             </p>
             {!searchQuery && filterTipo === "all" && (
-              <Button onClick={() => setShowCreateModal(true)} variant="outline" className="gap-2" disabled>
+              <Button onClick={() => setShowCreateModal(true)} variant="outline" className="gap-2">
                 <Plus className="h-4 w-4" />
                 Crear primer documento
               </Button>
@@ -343,14 +340,14 @@ export function DepartmentDocumentsManager({
               </Label>
               <Select
                 value={selectedTipo}
-                onValueChange={(value) => setValue("tipo", value as TipoDocumentoProyecto)}
+                onValueChange={(value) => setValue("tipo", value as TipoDocumentoDepartamento)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(tipoLabels).map(([key, label]) => {
-                    const Icon = tipoIcons[key as TipoDocumentoProyecto]
+                    const Icon = tipoIcons[key as TipoDocumentoDepartamento]
                     return (
                       <SelectItem key={key} value={key}>
                         <div className="flex items-center gap-2">
@@ -391,13 +388,6 @@ export function DepartmentDocumentsManager({
               )}
             </div>
 
-            {/* Warning */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Nota:</strong> Esta funcionalidad requiere que el backend soporte documentos de departamento.
-                Por ahora, el botón está deshabilitado.
-              </p>
-            </div>
 
             {/* Buttons */}
             <div className="flex justify-end gap-3 pt-4">
@@ -408,7 +398,7 @@ export function DepartmentDocumentsManager({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled>Crear Documento (Próximamente)</Button>
+              <Button type="submit">Crear Documento</Button>
             </div>
           </form>
         </DialogContent>
@@ -430,14 +420,14 @@ export function DepartmentDocumentsManager({
               </Label>
               <Select
                 value={selectedTipo}
-                onValueChange={(value) => setValue("tipo", value as TipoDocumentoProyecto)}
+                onValueChange={(value) => setValue("tipo", value as TipoDocumentoDepartamento)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(tipoLabels).map(([key, label]) => {
-                    const Icon = tipoIcons[key as TipoDocumentoProyecto]
+                    const Icon = tipoIcons[key as TipoDocumentoDepartamento]
                     return (
                       <SelectItem key={key} value={key}>
                         <div className="flex items-center gap-2">

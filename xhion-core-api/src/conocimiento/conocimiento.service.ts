@@ -6,6 +6,8 @@ import { CreateContextoDepartamentoDto } from './dto/create-contexto-departament
 import { UpdateContextoDepartamentoDto } from './dto/update-contexto-departamento.dto';
 import { CreateDocumentoProyectoDto } from './dto/create-documento-proyecto.dto';
 import { UpdateDocumentoProyectoDto } from './dto/update-documento-proyecto.dto';
+import { CreateDocumentoDepartamentoDto } from './dto/create-documento-departamento.dto';
+import { UpdateDocumentoDepartamentoDto } from './dto/update-documento-departamento.dto';
 
 @Injectable()
 export class ConocimientoService {
@@ -533,6 +535,331 @@ export class ConocimientoService {
     }
 
     await this.prisma.documentoProyecto.delete({
+      where: { id },
+    });
+
+    return { message: 'Documento eliminado exitosamente' };
+  }
+
+  // ==================== DOCUMENTOS DE DEPARTAMENTO ====================
+
+  /**
+   * Crear documento de departamento
+   */
+  async createDocumentoDepartamento(
+    dto: CreateDocumentoDepartamentoDto,
+    usuarioId: string,
+  ) {
+    // Verificar que el departamento existe y obtener usuarios con puesto en el departamento
+    const departamento = await this.prisma.departamento.findUnique({
+      where: { id: dto.departamentoId },
+      include: {
+        jefe: {
+          select: { id: true },
+        },
+        puestosTrabajo: {
+          include: {
+            usuarios: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!departamento) {
+      throw new NotFoundException(`Departamento con ID ${dto.departamentoId} no encontrado`);
+    }
+
+    // Verificar rol del usuario
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        rol: {
+          select: { nombre: true },
+        },
+      },
+    });
+
+    const esAdministrador = usuario?.rol?.nombre === 'Administrador';
+    const esJefe = departamento.jefe?.id === usuarioId;
+    const esMiembro = departamento.puestosTrabajo.some(puesto => 
+      puesto.usuarios.some(usuario => usuario.id === usuarioId)
+    );
+
+    if (!esAdministrador && !esJefe && !esMiembro) {
+      throw new ForbiddenException('No tienes permiso para crear documentos en este departamento');
+    }
+
+    return this.prisma.documentoDepartamento.create({
+      data: {
+        ...dto,
+        creadoPorId: usuarioId,
+      },
+      include: {
+        departamento: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+        creadoPor: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Obtener documentos de un departamento
+   */
+  async getDocumentosDepartamento(departamentoId: string, usuarioId: string) {
+    // Verificar que el departamento existe y obtener usuarios con puesto en el departamento
+    const departamento = await this.prisma.departamento.findUnique({
+      where: { id: departamentoId },
+      include: {
+        jefe: {
+          select: { id: true },
+        },
+        puestosTrabajo: {
+          include: {
+            usuarios: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!departamento) {
+      throw new NotFoundException(`Departamento con ID ${departamentoId} no encontrado`);
+    }
+
+    // Verificar rol del usuario
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        rol: {
+          select: { nombre: true },
+        },
+      },
+    });
+
+    const esAdministrador = usuario?.rol?.nombre === 'Administrador';
+    const esJefe = departamento.jefe?.id === usuarioId;
+    const esMiembro = departamento.puestosTrabajo.some(puesto => 
+      puesto.usuarios.some(usuario => usuario.id === usuarioId)
+    );
+
+    if (!esAdministrador && !esJefe && !esMiembro) {
+      throw new ForbiddenException('No tienes permiso para ver documentos de este departamento');
+    }
+
+    return this.prisma.documentoDepartamento.findMany({
+      where: { departamentoId },
+      include: {
+        creadoPor: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        fechaCreacion: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Obtener un documento específico de departamento
+   */
+  async getDocumentoDepartamento(id: string, usuarioId: string) {
+    const documento = await this.prisma.documentoDepartamento.findUnique({
+      where: { id },
+      include: {
+        departamento: {
+          include: {
+            jefe: {
+              select: { id: true },
+            },
+            puestosTrabajo: {
+              include: {
+                usuarios: {
+                  select: { id: true },
+                },
+              },
+            },
+          },
+        },
+        creadoPor: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    if (!documento) {
+      throw new NotFoundException(`Documento con ID ${id} no encontrado`);
+    }
+
+    // Verificar rol del usuario
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        rol: {
+          select: { nombre: true },
+        },
+      },
+    });
+
+    const esAdministrador = usuario?.rol?.nombre === 'Administrador';
+    const esJefe = documento.departamento.jefe?.id === usuarioId;
+    const esMiembro = documento.departamento.puestosTrabajo.some(puesto => 
+      puesto.usuarios.some(usuario => usuario.id === usuarioId)
+    );
+
+    if (!esAdministrador && !esJefe && !esMiembro) {
+      throw new ForbiddenException('No tienes permiso para ver este documento');
+    }
+
+    return documento;
+  }
+
+  /**
+   * Actualizar documento de departamento
+   */
+  async updateDocumentoDepartamento(
+    id: string,
+    dto: UpdateDocumentoDepartamentoDto,
+    usuarioId: string,
+  ) {
+    const documento = await this.prisma.documentoDepartamento.findUnique({
+      where: { id },
+      include: {
+        departamento: {
+          include: {
+            jefe: {
+              select: { id: true },
+            },
+            puestosTrabajo: {
+              include: {
+                usuarios: {
+                  select: { id: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!documento) {
+      throw new NotFoundException(`Documento con ID ${id} no encontrado`);
+    }
+
+    // Verificar rol del usuario
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        rol: {
+          select: { nombre: true },
+        },
+      },
+    });
+
+    const esAdministrador = usuario?.rol?.nombre === 'Administrador';
+    const esJefe = documento.departamento.jefe?.id === usuarioId;
+    const esMiembro = documento.departamento.puestosTrabajo.some(puesto => 
+      puesto.usuarios.some(usuario => usuario.id === usuarioId)
+    );
+    const esCreador = documento.creadoPorId === usuarioId;
+
+    if (!esAdministrador && !esJefe && !esMiembro && !esCreador) {
+      throw new ForbiddenException('No tienes permiso para actualizar este documento');
+    }
+
+    return this.prisma.documentoDepartamento.update({
+      where: { id },
+      data: dto,
+      include: {
+        departamento: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+        creadoPor: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Eliminar documento de departamento
+   */
+  async deleteDocumentoDepartamento(id: string, usuarioId: string) {
+    const documento = await this.prisma.documentoDepartamento.findUnique({
+      where: { id },
+      include: {
+        departamento: {
+          include: {
+            jefe: {
+              select: { id: true },
+            },
+            puestosTrabajo: {
+              include: {
+                usuarios: {
+                  select: { id: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!documento) {
+      throw new NotFoundException(`Documento con ID ${id} no encontrado`);
+    }
+
+    // Verificar rol del usuario
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        rol: {
+          select: { nombre: true },
+        },
+      },
+    });
+
+    const esAdministrador = usuario?.rol?.nombre === 'Administrador';
+    const esCreador = documento.creadoPorId === usuarioId;
+    const esJefe = documento.departamento.jefe?.id === usuarioId;
+    const esMiembro = documento.departamento.puestosTrabajo.some(puesto => 
+      puesto.usuarios.some(usuario => usuario.id === usuarioId)
+    );
+
+    if (!esAdministrador && !esCreador && !esJefe && !esMiembro) {
+      throw new ForbiddenException('No tienes permiso para eliminar este documento');
+    }
+
+    await this.prisma.documentoDepartamento.delete({
       where: { id },
     });
 

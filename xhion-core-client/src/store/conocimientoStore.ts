@@ -2,13 +2,17 @@ import { create } from 'zustand';
 import {
   conocimientoService,
   type ContextoOrganizacional,
-  type ContextoDepartamento,
-  type DocumentoProyecto,
   type CreateContextoOrganizacionalDto,
+  type UpdateContextoOrganizacionalDto,
+  type ContextoDepartamento,
   type CreateContextoDepartamentoDto,
   type UpdateContextoDepartamentoDto,
+  type DocumentoProyecto,
   type CreateDocumentoProyectoDto,
   type UpdateDocumentoProyectoDto,
+  type DocumentoDepartamento,
+  type CreateDocumentoDepartamentoDto,
+  type UpdateDocumentoDepartamentoDto,
 } from '@/services/conocimientoService';
 import { toast } from 'sonner';
 
@@ -16,6 +20,7 @@ interface ConocimientoState {
   contextoOrganizacional: ContextoOrganizacional | null;
   contextosDepartamento: ContextoDepartamento[];
   documentosProyecto: DocumentoProyecto[];
+  documentosDepartamento: DocumentoDepartamento[];
   isLoading: boolean;
   error: string | null;
 
@@ -39,6 +44,12 @@ interface ConocimientoState {
   updateDocumentoProyecto: (id: string, data: UpdateDocumentoProyectoDto) => Promise<void>;
   deleteDocumentoProyecto: (id: string) => Promise<void>;
 
+  // Actions - Documentos Departamento
+  fetchDocumentosDepartamento: (departamentoId: string) => Promise<void>;
+  createDocumentoDepartamento: (data: CreateDocumentoDepartamentoDto) => Promise<void>;
+  updateDocumentoDepartamento: (id: string, data: UpdateDocumentoDepartamentoDto) => Promise<void>;
+  deleteDocumentoDepartamento: (id: string) => Promise<void>;
+
   clearError: () => void;
 }
 
@@ -46,6 +57,7 @@ export const useConocimientoStore = create<ConocimientoState>((set, get) => ({
   contextoOrganizacional: null,
   contextosDepartamento: [],
   documentosProyecto: [],
+  documentosDepartamento: [],
   isLoading: false,
   error: null,
 
@@ -247,6 +259,75 @@ export const useConocimientoStore = create<ConocimientoState>((set, get) => ({
       await conocimientoService.deleteDocumentoProyecto(id);
       set((state) => ({
         documentosProyecto: state.documentosProyecto.filter((d) => d.id !== id),
+        isLoading: false,
+      }));
+      toast.success('Documento eliminado exitosamente');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al eliminar documento';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
+  // ==================== DOCUMENTOS DEPARTAMENTO ====================
+
+  fetchDocumentosDepartamento: async (departamentoId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const documentosDepartamento = await conocimientoService.getDocumentosDepartamento(departamentoId);
+      set({ documentosDepartamento, isLoading: false });
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'Error al cargar documentos del departamento';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
+  createDocumentoDepartamento: async (data: CreateDocumentoDepartamentoDto) => {
+    set({ isLoading: true, error: null });
+    try {
+      const nuevoDocumento = await conocimientoService.createDocumentoDepartamento(data);
+      set((state) => ({
+        documentosDepartamento: [...state.documentosDepartamento, nuevoDocumento],
+        isLoading: false,
+      }));
+      toast.success('Documento creado exitosamente');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al crear documento';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
+  updateDocumentoDepartamento: async (id: string, data: UpdateDocumentoDepartamentoDto) => {
+    set({ isLoading: true, error: null });
+    try {
+      const documentoActualizado = await conocimientoService.updateDocumentoDepartamento(id, data);
+      set((state) => ({
+        documentosDepartamento: state.documentosDepartamento.map((d) =>
+          d.id === id ? documentoActualizado : d
+        ),
+        isLoading: false,
+      }));
+      toast.success('Documento actualizado exitosamente');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al actualizar documento';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
+  deleteDocumentoDepartamento: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await conocimientoService.deleteDocumentoDepartamento(id);
+      set((state) => ({
+        documentosDepartamento: state.documentosDepartamento.filter((d) => d.id !== id),
         isLoading: false,
       }));
       toast.success('Documento eliminado exitosamente');

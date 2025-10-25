@@ -51,7 +51,14 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
 const documentoSchema = z.object({
-  tipo: z.nativeEnum(TipoDocumentoProyecto),
+  tipo: z.enum([
+    TipoDocumentoProyecto.Resumen,
+    TipoDocumentoProyecto.Objetivos,
+    TipoDocumentoProyecto.Especificaciones,
+    TipoDocumentoProyecto.LeccionesAprendidas,
+    TipoDocumentoProyecto.Documentacion,
+    TipoDocumentoProyecto.Notas,
+  ] as const),
   titulo: z.string().min(1, "El título es requerido").max(255),
   contenido: z.string().min(1, "El contenido es requerido"),
 })

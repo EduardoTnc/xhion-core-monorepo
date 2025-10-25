@@ -30,6 +30,16 @@ export interface CreateContextoOrganizacionalDto {
   valoresEmpresariales?: string;
 }
 
+export interface UpdateContextoOrganizacionalDto {
+  mision?: string;
+  vision?: string;
+  objetivosEstrategicos?: string;
+  descripcionGeneral?: string;
+  industria?: string;
+  tamanoEmpresa?: string;
+  valoresEmpresariales?: string;
+}
+
 // ==================== CONTEXTO DEPARTAMENTO ====================
 
 export interface ContextoDepartamento {
@@ -74,14 +84,16 @@ export interface UpdateContextoDepartamentoDto {
 
 // ==================== DOCUMENTO PROYECTO ====================
 
-export enum TipoDocumentoProyecto {
-  Resumen = 'Resumen',
-  Objetivos = 'Objetivos',
-  Especificaciones = 'Especificaciones',
-  LeccionesAprendidas = 'LeccionesAprendidas',
-  Documentacion = 'Documentacion',
-  Notas = 'Notas',
-}
+export const TipoDocumentoProyecto = {
+  Resumen: 'Resumen',
+  Objetivos: 'Objetivos',
+  Especificaciones: 'Especificaciones',
+  LeccionesAprendidas: 'LeccionesAprendidas',
+  Documentacion: 'Documentacion',
+  Notas: 'Notas',
+} as const;
+
+export type TipoDocumentoProyecto = typeof TipoDocumentoProyecto[keyof typeof TipoDocumentoProyecto];
 
 export interface DocumentoProyecto {
   id: string;
@@ -125,6 +137,53 @@ export interface UpdateDocumentoProyectoDto {
   titulo?: string;
   contenido?: string;
   archivoId?: string;
+}
+
+// ==================== DOCUMENTO DEPARTAMENTO ====================
+
+export const TipoDocumentoDepartamento = {
+  Resumen: 'Resumen',
+  Objetivos: 'Objetivos',
+  Especificaciones: 'Especificaciones',
+  LeccionesAprendidas: 'LeccionesAprendidas',
+  Documentacion: 'Documentacion',
+  Notas: 'Notas',
+} as const;
+
+export type TipoDocumentoDepartamento = typeof TipoDocumentoDepartamento[keyof typeof TipoDocumentoDepartamento];
+
+export interface DocumentoDepartamento {
+  id: string;
+  departamentoId: string;
+  tipo: TipoDocumentoDepartamento;
+  titulo: string;
+  contenido: string;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  creadoPorId: string;
+  departamento: {
+    id: string;
+    nombre: string;
+  };
+  creadoPor: {
+    id: string;
+    nombreCompleto: string;
+    email: string;
+    avatarUrl?: string;
+  };
+}
+
+export interface CreateDocumentoDepartamentoDto {
+  departamentoId: string;
+  tipo: TipoDocumentoDepartamento;
+  titulo: string;
+  contenido: string;
+}
+
+export interface UpdateDocumentoDepartamentoDto {
+  tipo?: TipoDocumentoDepartamento;
+  titulo?: string;
+  contenido?: string;
 }
 
 class ConocimientoService {
@@ -201,6 +260,36 @@ class ConocimientoService {
 
   async deleteDocumentoProyecto(id: string): Promise<{ message: string }> {
     const response = await apiClient.delete(`/conocimiento/documentos/${id}`);
+    return response.data;
+  }
+
+  // ==================== DOCUMENTOS DEPARTAMENTO ====================
+
+  async createDocumentoDepartamento(data: CreateDocumentoDepartamentoDto): Promise<DocumentoDepartamento> {
+    const response = await apiClient.post('/conocimiento/documentos-departamento', data);
+    return response.data;
+  }
+
+  async getDocumentosDepartamento(departamentoId: string): Promise<DocumentoDepartamento[]> {
+    const response = await apiClient.get(`/conocimiento/documentos-departamento/departamento/${departamentoId}`);
+    return response.data;
+  }
+
+  async getDocumentoDepartamento(id: string): Promise<DocumentoDepartamento> {
+    const response = await apiClient.get(`/conocimiento/documentos-departamento/${id}`);
+    return response.data;
+  }
+
+  async updateDocumentoDepartamento(
+    id: string,
+    data: UpdateDocumentoDepartamentoDto
+  ): Promise<DocumentoDepartamento> {
+    const response = await apiClient.put(`/conocimiento/documentos-departamento/${id}`, data);
+    return response.data;
+  }
+
+  async deleteDocumentoDepartamento(id: string): Promise<{ message: string }> {
+    const response = await apiClient.delete(`/conocimiento/documentos-departamento/${id}`);
     return response.data;
   }
 }

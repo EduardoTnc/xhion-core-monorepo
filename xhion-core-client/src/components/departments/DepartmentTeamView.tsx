@@ -1,6 +1,5 @@
-"use client";
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Plus,
@@ -14,7 +13,21 @@ import {
   Search,
   Filter,
   Download,
+  AlertCircle,
 } from "lucide-react";
+import { AssignEmployeeModal } from "./AssignEmployeeModal";
+import { ChangePuestoModal } from "./ChangePuestoModal";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,8 +83,14 @@ export function DepartmentTeamView({
   puestosTrabajo,
   totalEmpleados,
 }: DepartmentTeamViewProps) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPuesto, setFilterPuesto] = useState<string>("all");
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showChangePuestoModal, setShowChangePuestoModal] = useState(false);
+  const [selectedEmpleado, setSelectedEmpleado] = useState<Usuario | null>(null);
+  const [empleadoToRemove, setEmpleadoToRemove] = useState<Usuario | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -93,21 +112,29 @@ export function DepartmentTeamView({
 
   if (totalEmpleados === 0) {
     return (
-      <EmptyState
-        icon={Users}
-        title="No hay empleados asignados"
-        description={`El departamento ${departamentoNombre} aún no tiene empleados. Asigna empleados para comenzar a formar el equipo.`}
-        actionLabel="Asignar Empleados"
-        onAction={() => {
-          // TODO: Abrir modal de asignar empleados
-          console.log("Asignar empleados a departamento:", departamentoId);
-        }}
-        secondaryActionLabel="Ver Todos los Empleados"
-        onSecondaryAction={() => {
-          // TODO: Navegar a vista de empleados
-          console.log("Navegar a empleados");
-        }}
-      />
+      <>
+        <EmptyState
+          icon={Users}
+          title="No hay empleados asignados"
+          description={`El departamento ${departamentoNombre} aún no tiene empleados. Asigna empleados para comenzar a formar el equipo.`}
+          actionLabel="Asignar Empleados"
+          onAction={() => setShowAssignModal(true)}
+          secondaryActionLabel="Ver Todos los Empleados"
+          onSecondaryAction={() => navigate("/usuarios")}
+        />
+
+        {/* Modal Asignar Empleado - También disponible en estado vacío */}
+        <AssignEmployeeModal
+          open={showAssignModal}
+          onOpenChange={setShowAssignModal}
+          departamentoId={departamentoId}
+          departamentoNombre={departamentoNombre}
+          puestosTrabajo={puestosTrabajo || []}
+          onSuccess={() => {
+            window.location.reload();
+          }}
+        />
+      </>
     );
   }
 
@@ -116,7 +143,7 @@ export function DepartmentTeamView({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Equipo</h2>
+          <h2 className="text-2xl font-bold text-foreground">Empleados</h2>
           <p className="text-sm text-muted-foreground">
             {totalEmpleados} empleado{totalEmpleados !== 1 ? "s" : ""} en total
           </p>
@@ -126,7 +153,7 @@ export function DepartmentTeamView({
             <Download className="h-4 w-4" />
             Exportar
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setShowAssignModal(true)}>
             <UserPlus className="h-4 w-4" />
             Asignar Empleado
           </Button>
@@ -260,15 +287,19 @@ export function DepartmentTeamView({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Ver Perfil
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedEmpleado(empleado);
+                        setShowChangePuestoModal(true);
+                      }}
+                    >
                       <Briefcase className="mr-2 h-4 w-4" />
                       Cambiar Puesto
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => setEmpleadoToRemove(empleado)}
+                    >
                       <UserMinus className="mr-2 h-4 w-4" />
                       Remover del Departamento
                     </DropdownMenuItem>
@@ -326,6 +357,97 @@ export function DepartmentTeamView({
           </div>
         </Card>
       )}
+
+      {/* Modal Asignar Empleado */}
+      <AssignEmployeeModal
+        open={showAssignModal}
+        onOpenChange={setShowAssignModal}
+        departamentoId={departamentoId}
+        departamentoNombre={departamentoNombre}
+        puestosTrabajo={puestosTrabajo || []}
+        onSuccess={() => {
+          // Recargar datos del departamento
+          window.location.reload();
+        }}
+      />
+
+      {/* Modal Cambiar Puesto */}
+      <ChangePuestoModal
+        open={showChangePuestoModal}
+        onOpenChange={setShowChangePuestoModal}
+        empleado={selectedEmpleado}
+        puestosTrabajo={puestosTrabajo || []}
+        onSuccess={() => {
+          setSelectedEmpleado(null);
+          // Recargar datos del departamento
+          window.location.reload();
+        }}
+      />
+
+      {/* Dialog Confirmar Remover */}
+      <AlertDialog
+        open={!!empleadoToRemove}
+        onOpenChange={(open) => !open && setEmpleadoToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              ¿Remover empleado del departamento?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {empleadoToRemove && (
+                <>
+                  Estás a punto de remover a <strong>{empleadoToRemove.nombreCompleto}</strong> del
+                  departamento <strong>{departamentoNombre}</strong>. El empleado perderá su puesto
+                  de trabajo asignado.
+                  <br />
+                  <br />
+                  Esta acción no se puede deshacer.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!empleadoToRemove) return;
+                setIsRemoving(true);
+                try {
+                  const response = await fetch(
+                    `/api/v1/usuarios/${empleadoToRemove.id}/remover-puesto`,
+                    {
+                      method: "DELETE",
+                      headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      },
+                    }
+                  );
+
+                  if (!response.ok) {
+                    throw new Error("Error al remover empleado");
+                  }
+
+                  toast.success("Empleado removido exitosamente");
+                  setEmpleadoToRemove(null);
+                  // Recargar datos del departamento
+                  window.location.reload();
+                } catch (error) {
+                  console.error("Error removing employee:", error);
+                  toast.error("Error al remover empleado");
+                } finally {
+                  setIsRemoving(false);
+                }
+              }}
+              disabled={isRemoving}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isRemoving ? "Removiendo..." : "Remover Empleado"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

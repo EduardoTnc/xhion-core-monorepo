@@ -18,6 +18,8 @@ import { CreateContextoDepartamentoDto } from './dto/create-contexto-departament
 import { UpdateContextoDepartamentoDto } from './dto/update-contexto-departamento.dto';
 import { CreateDocumentoProyectoDto } from './dto/create-documento-proyecto.dto';
 import { UpdateDocumentoProyectoDto } from './dto/update-documento-proyecto.dto';
+import { CreateDocumentoDepartamentoDto } from './dto/create-documento-departamento.dto';
+import { UpdateDocumentoDepartamentoDto } from './dto/update-documento-departamento.dto';
 
 @ApiTags('Conocimiento')
 @ApiBearerAuth()
@@ -155,5 +157,62 @@ export class ConocimientoController {
   @ApiResponse({ status: 403, description: 'Sin permiso para eliminar' })
   async deleteDocumentoProyecto(@Param('id') id: string, @Request() req) {
     return this.conocimientoService.deleteDocumentoProyecto(id, req.user.sub);
+  }
+
+  // ==================== DOCUMENTOS DE DEPARTAMENTO ====================
+
+  @Post('documentos-departamento')
+  @ApiOperation({ summary: 'Crear documento de departamento' })
+  @ApiResponse({ status: 201, description: 'Documento de departamento creado' })
+  @ApiResponse({ status: 404, description: 'Departamento no encontrado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para crear documentos' })
+  async createDocumentoDepartamento(
+    @Body() dto: CreateDocumentoDepartamentoDto,
+    @Request() req,
+  ) {
+    return this.conocimientoService.createDocumentoDepartamento(dto, req.user.sub);
+  }
+
+  @Get('documentos-departamento/departamento/:departamentoId')
+  @ApiOperation({ summary: 'Obtener documentos de un departamento' })
+  @ApiResponse({ status: 200, description: 'Lista de documentos del departamento' })
+  @ApiResponse({ status: 404, description: 'Departamento no encontrado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para ver documentos' })
+  async getDocumentosDepartamento(
+    @Param('departamentoId') departamentoId: string,
+    @Request() req,
+  ) {
+    return this.conocimientoService.getDocumentosDepartamento(departamentoId, req.user.sub);
+  }
+
+  @Get('documentos-departamento/:id')
+  @ApiOperation({ summary: 'Obtener un documento específico de departamento' })
+  @ApiResponse({ status: 200, description: 'Documento obtenido' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para ver el documento' })
+  async getDocumentoDepartamento(@Param('id') id: string, @Request() req) {
+    return this.conocimientoService.getDocumentoDepartamento(id, req.user.sub);
+  }
+
+  @Put('documentos-departamento/:id')
+  @ApiOperation({ summary: 'Actualizar documento de departamento' })
+  @ApiResponse({ status: 200, description: 'Documento actualizado' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para actualizar' })
+  async updateDocumentoDepartamento(
+    @Param('id') id: string,
+    @Body() dto: UpdateDocumentoDepartamentoDto,
+    @Request() req,
+  ) {
+    return this.conocimientoService.updateDocumentoDepartamento(id, dto, req.user.sub);
+  }
+
+  @Delete('documentos-departamento/:id')
+  @ApiOperation({ summary: 'Eliminar documento de departamento' })
+  @ApiResponse({ status: 200, description: 'Documento eliminado' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para eliminar' })
+  async deleteDocumentoDepartamento(@Param('id') id: string, @Request() req) {
+    return this.conocimientoService.deleteDocumentoDepartamento(id, req.user.sub);
   }
 }
