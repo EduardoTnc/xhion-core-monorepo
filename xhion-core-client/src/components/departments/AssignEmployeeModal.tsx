@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import apiClient from "@/api/axios";
 
 const assignEmployeeSchema = z.object({
   usuarioId: z.string().min(1, "Selecciona un empleado"),
@@ -106,18 +105,8 @@ export function AssignEmployeeModal({
   const fetchAvailableUsers = async () => {
     setIsFetchingUsers(true);
     try {
-      const response = await fetch("/api/v1/usuarios/sin-puesto/disponibles", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al cargar usuarios disponibles");
-      }
-
-      const data = await response.json();
-      setAvailableUsers(data);
+      const response = await apiClient.get("/usuarios/sin-puesto/disponibles");
+      setAvailableUsers(response.data);
     } catch (error) {
       console.error("Error fetching available users:", error);
       toast.error("Error al cargar usuarios disponibles");
@@ -129,23 +118,9 @@ export function AssignEmployeeModal({
   const onSubmit = async (data: AssignEmployeeFormData) => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/v1/usuarios/${data.usuarioId}/asignar-puesto`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            puestoTrabajoId: data.puestoTrabajoId,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Error al asignar empleado");
-      }
+      await apiClient.post(`/usuarios/${data.usuarioId}/asignar-puesto`, {
+        puestoTrabajoId: data.puestoTrabajoId,
+      });
 
       toast.success("Empleado asignado exitosamente");
       reset();

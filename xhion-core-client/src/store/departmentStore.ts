@@ -8,6 +8,7 @@ import {
   type UpdateDepartamentoDto,
 } from '@/services/departmentService';
 import { toast } from 'sonner';
+import apiClient from '@/api/axios';
 
 interface DepartmentState {
   departamentos: Departamento[];
@@ -156,9 +157,8 @@ export const useDepartmentStore = create<DepartmentState>((set, get) => ({
     try {
       // TODO: Implementar endpoint en el backend para obtener usuarios disponibles
       // Por ahora usamos un mock
-      const response = await fetch(`/api/usuarios?disponiblesParaDepartamento=${departamentoId}`);
-      const usuarios = await response.json();
-      set({ usuariosDisponibles: usuarios, isLoading: false });
+      const response = await apiClient.get(`/usuarios?disponiblesParaDepartamento=${departamentoId}`);
+      set({ usuariosDisponibles: response.data, isLoading: false });
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al cargar usuarios disponibles';
       set({ error: errorMessage, isLoading: false, usuariosDisponibles: [] });
@@ -172,9 +172,7 @@ export const useDepartmentStore = create<DepartmentState>((set, get) => ({
       // TODO: Implementar endpoint en el backend
       await Promise.all(
         usuarioIds.map(usuarioId =>
-          fetch(`/api/departamentos/${departamentoId}/usuarios/${usuarioId}`, {
-            method: 'POST',
-          })
+          apiClient.post(`/departamentos/${departamentoId}/usuarios/${usuarioId}`)
         )
       );
       // Refrescar departamento actual
@@ -192,9 +190,7 @@ export const useDepartmentStore = create<DepartmentState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       // TODO: Implementar endpoint en el backend
-      await fetch(`/api/departamentos/${departamentoId}/usuarios/${usuarioId}`, {
-        method: 'DELETE',
-      });
+      await apiClient.delete(`/departamentos/${departamentoId}/usuarios/${usuarioId}`);
       // Refrescar departamento actual
       await get().fetchDepartamentoById(departamentoId);
       set({ isLoading: false });

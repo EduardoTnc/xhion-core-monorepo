@@ -1,5 +1,3 @@
-"use client";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import apiClient from "@/api/axios";
 
 const changePuestoSchema = z.object({
   puestoTrabajoId: z.string().min(1, "Selecciona un puesto"),
@@ -86,23 +85,9 @@ export function ChangePuestoModal({
     if (!empleado) return;
 
     try {
-      const response = await fetch(
-        `/api/v1/usuarios/${empleado.id}/asignar-puesto`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            puestoTrabajoId: data.puestoTrabajoId,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Error al cambiar puesto");
-      }
+      await apiClient.post(`/usuarios/${empleado.id}/asignar-puesto`, {
+        puestoTrabajoId: data.puestoTrabajoId,
+      });
 
       toast.success("Puesto actualizado exitosamente");
       reset();

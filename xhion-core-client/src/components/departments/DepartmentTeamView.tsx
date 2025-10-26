@@ -18,6 +18,7 @@ import {
 import { AssignEmployeeModal } from "./AssignEmployeeModal";
 import { ChangePuestoModal } from "./ChangePuestoModal";
 import { toast } from "sonner";
+import apiClient from "@/api/axios";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +49,7 @@ interface Usuario {
   telefono?: string;
   avatarUrl?: string;
   puestoTrabajo?: {
-    id?: string;
+    id: string;
     titulo: string;
   };
   rol?: {
@@ -415,19 +416,9 @@ export function DepartmentTeamView({
                 if (!empleadoToRemove) return;
                 setIsRemoving(true);
                 try {
-                  const response = await fetch(
-                    `/api/v1/usuarios/${empleadoToRemove.id}/remover-puesto`,
-                    {
-                      method: "DELETE",
-                      headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                      },
-                    }
+                  await apiClient.delete(
+                    `/usuarios/${empleadoToRemove.id}/remover-puesto`
                   );
-
-                  if (!response.ok) {
-                    throw new Error("Error al remover empleado");
-                  }
 
                   toast.success("Empleado removido exitosamente");
                   setEmpleadoToRemove(null);

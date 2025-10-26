@@ -31,6 +31,20 @@ export class UsuariosController {
   }
 
   /**
+   * GET /api/v1/usuarios/sin-puesto/disponibles
+   * Obtiene usuarios sin puesto de trabajo asignado
+   * Requiere rol: Administrador
+   * IMPORTANTE: Esta ruta debe estar ANTES de ':id' para evitar conflictos
+   */
+  @Get('sin-puesto/disponibles')
+  @Roles('Administrador')
+  @ApiOperation({ summary: 'Obtener usuarios sin puesto asignado' })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios sin puesto' })
+  async obtenerUsuariosSinPuesto() {
+    return this.usuariosService.obtenerUsuariosSinPuesto();
+  }
+
+  /**
    * GET /api/v1/usuarios/:id
    * Obtiene un usuario específico por ID
    * Requiere rol: Admin o Gerente
@@ -76,18 +90,5 @@ export class UsuariosController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async removerPuestoTrabajo(@Param('id') usuarioId: string) {
     return this.usuariosService.removerPuestoTrabajo(usuarioId);
-  }
-
-  /**
-   * GET /api/v1/usuarios/sin-puesto/disponibles
-   * Obtiene usuarios sin puesto de trabajo asignado
-   * Requiere rol: Administrador
-   */
-  @Get('sin-puesto/disponibles')
-  @Roles('Administrador')
-  @ApiOperation({ summary: 'Obtener usuarios sin puesto asignado' })
-  @ApiResponse({ status: 200, description: 'Lista de usuarios sin puesto' })
-  async obtenerUsuariosSinPuesto() {
-    return this.usuariosService.obtenerUsuariosSinPuesto();
   }
 }
