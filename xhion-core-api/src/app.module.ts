@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { InvitacionesModule } from './invitaciones/invitaciones.module';
@@ -19,12 +19,15 @@ import { PresupuestosModule } from './presupuestos/presupuestos.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: seconds(60), // 60 segundos
-        limit: 20, // 20 peticiones
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          ttl: configService.get<number>('THROTTLE_TTL') || seconds(60), // 60 segundos
+          limit: configService.get<number>('THROTTLE_LIMIT') || 60, // 60 peticiones
+        },
+      ],
+    }),
     PrismaModule,
     AuthModule,
     InvitacionesModule,
