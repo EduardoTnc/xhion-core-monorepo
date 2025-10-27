@@ -23,11 +23,13 @@ import {
   ReorderEtapasDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequiresPermission } from '../auth/permissions.decorator';
 import { Auditar } from '../auditoria/auditar.decorator';
 
 @ApiTags('Proyectos')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('proyectos')
 export class ProyectosController {
   constructor(private readonly proyectosService: ProyectosService) {}
@@ -35,6 +37,7 @@ export class ProyectosController {
   // ==================== CRUD DE PROYECTOS ====================
 
   @Post()
+  @RequiresPermission('proyectos.crear')
   @Auditar('Crear Proyecto')
   @ApiOperation({ summary: 'Crear un nuevo proyecto' })
   @ApiResponse({ status: 201, description: 'Proyecto creado exitosamente' })
@@ -45,6 +48,7 @@ export class ProyectosController {
   }
 
   @Get()
+  @RequiresPermission('proyectos.ver')
   @ApiOperation({ summary: 'Obtener todos los proyectos del usuario' })
   @ApiQuery({ name: 'estado', required: false, description: 'Filtrar por estado' })
   @ApiQuery({ name: 'departamentoId', required: false, description: 'Filtrar por departamento' })
@@ -54,6 +58,7 @@ export class ProyectosController {
   }
 
   @Get(':id')
+  @RequiresPermission('proyectos.ver')
   @ApiOperation({ summary: 'Obtener un proyecto por ID' })
   @ApiResponse({ status: 200, description: 'Proyecto encontrado' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a este proyecto' })
@@ -63,6 +68,7 @@ export class ProyectosController {
   }
 
   @Patch(':id')
+  @RequiresPermission('proyectos.editar')
   @Auditar('Actualizar Proyecto')
   @ApiOperation({ summary: 'Actualizar un proyecto' })
   @ApiResponse({ status: 200, description: 'Proyecto actualizado exitosamente' })
@@ -73,6 +79,7 @@ export class ProyectosController {
   }
 
   @Delete(':id')
+  @RequiresPermission('proyectos.eliminar')
   @Auditar('Eliminar Proyecto')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar un proyecto (soft delete)' })
@@ -86,6 +93,7 @@ export class ProyectosController {
   // ==================== GESTIÓN DE MIEMBROS ====================
 
   @Post(':id/miembros')
+  @RequiresPermission('proyectos.gestionar_miembros')
   @Auditar('Agregar Miembro a Proyecto')
   @ApiOperation({ summary: 'Agregar un miembro al proyecto' })
   @ApiResponse({ status: 201, description: 'Miembro agregado exitosamente' })
@@ -97,6 +105,7 @@ export class ProyectosController {
   }
 
   @Get(':id/miembros')
+  @RequiresPermission('proyectos.ver')
   @ApiOperation({ summary: 'Obtener miembros de un proyecto' })
   @ApiResponse({ status: 200, description: 'Lista de miembros' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a este proyecto' })
@@ -106,6 +115,7 @@ export class ProyectosController {
   }
 
   @Delete(':id/miembros/:miembroId')
+  @RequiresPermission('proyectos.gestionar_miembros')
   @Auditar('Remover Miembro de Proyecto')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remover un miembro del proyecto' })
@@ -120,6 +130,7 @@ export class ProyectosController {
   // ==================== GESTIÓN DE ETAPAS ====================
 
   @Post(':id/etapas')
+  @RequiresPermission('proyectos.gestionar_etapas')
   @Auditar('Crear Etapa en Proyecto')
   @ApiOperation({ summary: 'Crear una etapa en el proyecto' })
   @ApiResponse({ status: 201, description: 'Etapa creada exitosamente' })
@@ -131,6 +142,7 @@ export class ProyectosController {
   }
 
   @Get(':id/etapas')
+  @RequiresPermission('proyectos.ver')
   @ApiOperation({ summary: 'Obtener etapas de un proyecto' })
   @ApiResponse({ status: 200, description: 'Lista de etapas ordenadas' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a este proyecto' })
@@ -140,6 +152,7 @@ export class ProyectosController {
   }
 
   @Patch(':id/etapas/:etapaId')
+  @RequiresPermission('proyectos.gestionar_etapas')
   @Auditar('Actualizar Etapa')
   @ApiOperation({ summary: 'Actualizar una etapa' })
   @ApiResponse({ status: 200, description: 'Etapa actualizada exitosamente' })
@@ -156,6 +169,7 @@ export class ProyectosController {
   }
 
   @Delete(':id/etapas/:etapaId')
+  @RequiresPermission('proyectos.gestionar_etapas')
   @Auditar('Eliminar Etapa')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar una etapa' })
@@ -168,6 +182,7 @@ export class ProyectosController {
   }
 
   @Patch(':id/etapas/reorder')
+  @RequiresPermission('proyectos.gestionar_etapas')
   @Auditar('Reordenar Etapas')
   @ApiOperation({ summary: 'Reordenar etapas de un proyecto' })
   @ApiResponse({ status: 200, description: 'Etapas reordenadas exitosamente' })

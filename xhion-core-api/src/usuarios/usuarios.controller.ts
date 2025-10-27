@@ -7,13 +7,19 @@ import {
   Body,
   UseGuards,
   NotFoundException,
+  Patch,
 } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequiresPermission } from '../auth/permissions.decorator';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { AsignarRolDto } from './dto';
 
+@ApiTags('Usuarios')
+@ApiBearerAuth('JWT-auth')
 @Controller('usuarios')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsuariosController {
@@ -90,5 +96,141 @@ export class UsuariosController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async removerPuestoTrabajo(@Param('id') usuarioId: string) {
     return this.usuariosService.removerPuestoTrabajo(usuarioId);
+  }
+
+  /**
+   * POST /api/v1/usuarios/:id/asignar-rol
+   * Asigna un rol a un usuario
+   * Requiere permiso: usuarios.gestionar_roles
+   */
+  @Post(':id/asignar-rol')
+  @UseGuards(PermissionsGuard)
+  @RequiresPermission('usuarios.gestionar_roles')
+  @ApiOperation({ summary: 'Asignar rol a usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Rol asignado exitosamente',
+    schema: {
+      example: {
+        message: 'Rol "Editor" asignado exitosamente al usuario Juan Pérez',
+        usuario: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          nombreCompleto: 'Juan Pérez',
+          email: 'juan@example.com',
+          rolAnterior: 'Colaborador',
+          rolNuevo: 'Editor',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario o rol no encontrado' })
+  @ApiResponse({ status: 400, description: 'El rol está eliminado' })
+  async asignarRol(
+    @Param('id') usuarioId: string,
+    @Body() dto: AsignarRolDto,
+  ) {
+    return this.usuariosService.asignarRol(usuarioId, dto.rolId);
+  }
+
+  /**
+   * PATCH /api/v1/usuarios/:id/cambiar-rol
+   * Cambia el rol de un usuario (alias de asignar-rol)
+   * Requiere permiso: usuarios.gestionar_roles
+   */
+  @Patch(':id/cambiar-rol')
+  @UseGuards(PermissionsGuard)
+  @RequiresPermission('usuarios.gestionar_roles')
+  @ApiOperation({ summary: 'Cambiar rol de usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Rol cambiado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Usuario o rol no encontrado' })
+  async cambiarRol(
+    @Param('id') usuarioId: string,
+    @Body() dto: AsignarRolDto,
+  ) {
+    return this.usuariosService.cambiarRol(usuarioId, dto.rolId);
+  }
+
+  /**
+   * GET /api/v1/usuarios/por-rol/:rolId
+   * Obtiene todos los usuarios que tienen un rol específico
+   * Requiere permiso: usuarios.ver
+   */
+  @Get('por-rol/:rolId')
+  @UseGuards(PermissionsGuard)
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener usuarios por rol' })
+  @ApiParam({ name: 'rolId', description: 'ID del rol' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de usuarios con el rol especificado',
+    schema: {
+      example: {
+        rol: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          nombre: 'Editor',
+          descripcion: 'Puede crear y editar contenido',
+          color: 'bg-blue-500',
+        },
+        totalUsuarios: 5,
+        usuarios: [
+          {
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            nombreCompleto: 'Juan Pérez',
+            email: 'juan@example.com',
+            avatarUrl: null,
+            estado: 'ACTIVO',
+            fechaIngreso: '2024-01-15T00:00:00.000Z',
+            puesto: 'Desarrollador Senior',
+            departamento: 'Tecnología',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
+  async obtenerUsuariosPorRol(@Param('rolId') rolId: string) {
+    return this.usuariosService.obtenerUsuariosPorRol(rolId);
+  }
+
+  /**
+   * GET /api/v1/usuarios/estadisticas/por-rol
+   * Obtiene estadísticas de usuarios por rol
+   * Requiere permiso: sistema.ver_estadisticas
+   */
+  @Get('estadisticas/por-rol')
+  @UseGuards(PermissionsGuard)
+  @RequiresPermission('sistema.ver_estadisticas')
+  @ApiOperation({ summary: 'Obtener estadísticas de usuarios por rol' })
+  @ApiResponse({
+    status: 200,
+    description: 'Estadísticas de usuarios por rol',
+    schema: {
+      example: {
+        totalUsuarios: 25,
+        roles: [
+          {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            nombre: 'Administrador',
+            descripcion: 'Acceso total al sistema',
+            color: 'bg-destructive',
+            cantidadUsuarios: 2,
+            porcentaje: '8.00',
+          },
+          {
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            nombre: 'Editor',
+            descripcion: 'Puede crear y editar contenido',
+            color: 'bg-blue-500',
+            cantidadUsuarios: 10,
+            porcentaje: '40.00',
+          },
+        ],
+      },
+    },
+  })
+  async obtenerEstadisticasPorRol() {
+    return this.usuariosService.obtenerEstadisticasPorRol();
   }
 }

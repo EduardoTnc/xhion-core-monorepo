@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequiresPermission } from '../auth/permissions.decorator';
 import { PresupuestosService } from './presupuestos.service';
 import { CreatePresupuestoDepartamentoDto } from './dto/create-presupuesto-departamento.dto';
 import { UpdatePresupuestoDepartamentoDto } from './dto/update-presupuesto-departamento.dto';
@@ -20,8 +22,8 @@ import { UpdatePresupuestoProyectoDto } from './dto/update-presupuesto-proyecto.
 import { CreateMovimientoProyectoDto } from './dto/create-movimiento-proyecto.dto';
 
 @ApiTags('Presupuestos')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('presupuestos')
 export class PresupuestosController {
   constructor(private readonly presupuestosService: PresupuestosService) {}
@@ -29,6 +31,7 @@ export class PresupuestosController {
   // ==================== PRESUPUESTOS DE DEPARTAMENTO ====================
 
   @Post('departamento')
+  @RequiresPermission('presupuestos.crear')
   @ApiOperation({ summary: 'Crear presupuesto para un departamento' })
   @ApiResponse({ status: 201, description: 'Presupuesto creado exitosamente' })
   @ApiResponse({ status: 404, description: 'Departamento no encontrado' })
@@ -41,6 +44,7 @@ export class PresupuestosController {
   }
 
   @Get('departamento/:departamentoId')
+  @RequiresPermission('presupuestos.ver')
   @ApiOperation({ summary: 'Obtener presupuesto de un departamento' })
   @ApiResponse({ status: 200, description: 'Presupuesto encontrado' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -49,6 +53,7 @@ export class PresupuestosController {
   }
 
   @Put('departamento/:departamentoId')
+  @RequiresPermission('presupuestos.editar')
   @ApiOperation({ summary: 'Actualizar presupuesto de un departamento' })
   @ApiResponse({ status: 200, description: 'Presupuesto actualizado' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -60,6 +65,7 @@ export class PresupuestosController {
   }
 
   @Delete('departamento/:departamentoId')
+  @RequiresPermission('presupuestos.eliminar')
   @ApiOperation({ summary: 'Eliminar presupuesto de un departamento' })
   @ApiResponse({ status: 200, description: 'Presupuesto eliminado' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -71,6 +77,7 @@ export class PresupuestosController {
   // ==================== MOVIMIENTOS DE DEPARTAMENTO ====================
 
   @Post('departamento/movimiento')
+  @RequiresPermission('presupuestos.registrar_movimientos')
   @ApiOperation({ summary: 'Registrar movimiento en presupuesto de departamento' })
   @ApiResponse({ status: 201, description: 'Movimiento registrado exitosamente' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -83,6 +90,7 @@ export class PresupuestosController {
   }
 
   @Get('departamento/movimientos/:presupuestoDepartamentoId')
+  @RequiresPermission('presupuestos.ver')
   @ApiOperation({ summary: 'Listar movimientos de un presupuesto de departamento' })
   @ApiResponse({ status: 200, description: 'Lista de movimientos' })
   async getMovimientosDepartamento(
@@ -92,6 +100,7 @@ export class PresupuestosController {
   }
 
   @Delete('departamento/movimiento/:id')
+  @RequiresPermission('presupuestos.eliminar')
   @ApiOperation({ summary: 'Eliminar movimiento de presupuesto de departamento' })
   @ApiResponse({ status: 200, description: 'Movimiento eliminado' })
   @ApiResponse({ status: 404, description: 'Movimiento no encontrado' })
@@ -102,6 +111,7 @@ export class PresupuestosController {
   // ==================== PRESUPUESTOS DE PROYECTO ====================
 
   @Post('proyecto')
+  @RequiresPermission('presupuestos.crear')
   @ApiOperation({ summary: 'Crear presupuesto para un proyecto' })
   @ApiResponse({ status: 201, description: 'Presupuesto creado exitosamente' })
   @ApiResponse({ status: 404, description: 'Proyecto no encontrado' })
@@ -111,6 +121,7 @@ export class PresupuestosController {
   }
 
   @Get('proyecto/:proyectoId')
+  @RequiresPermission('presupuestos.ver')
   @ApiOperation({ summary: 'Obtener presupuesto de un proyecto' })
   @ApiResponse({ status: 200, description: 'Presupuesto encontrado' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -119,6 +130,7 @@ export class PresupuestosController {
   }
 
   @Put('proyecto/:proyectoId')
+  @RequiresPermission('presupuestos.editar')
   @ApiOperation({ summary: 'Actualizar presupuesto de un proyecto' })
   @ApiResponse({ status: 200, description: 'Presupuesto actualizado' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -130,6 +142,7 @@ export class PresupuestosController {
   }
 
   @Delete('proyecto/:proyectoId')
+  @RequiresPermission('presupuestos.eliminar')
   @ApiOperation({ summary: 'Eliminar presupuesto de un proyecto' })
   @ApiResponse({ status: 200, description: 'Presupuesto eliminado' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -141,6 +154,7 @@ export class PresupuestosController {
   // ==================== MOVIMIENTOS DE PROYECTO ====================
 
   @Post('proyecto/movimiento')
+  @RequiresPermission('presupuestos.registrar_movimientos')
   @ApiOperation({ summary: 'Registrar movimiento en presupuesto de proyecto' })
   @ApiResponse({ status: 201, description: 'Movimiento registrado exitosamente' })
   @ApiResponse({ status: 404, description: 'Presupuesto no encontrado' })
@@ -150,6 +164,7 @@ export class PresupuestosController {
   }
 
   @Get('proyecto/movimientos/:presupuestoProyectoId')
+  @RequiresPermission('presupuestos.ver')
   @ApiOperation({ summary: 'Listar movimientos de un presupuesto de proyecto' })
   @ApiResponse({ status: 200, description: 'Lista de movimientos' })
   async getMovimientosProyecto(
@@ -159,6 +174,7 @@ export class PresupuestosController {
   }
 
   @Delete('proyecto/movimiento/:id')
+  @RequiresPermission('presupuestos.eliminar')
   @ApiOperation({ summary: 'Eliminar movimiento de presupuesto de proyecto' })
   @ApiResponse({ status: 200, description: 'Movimiento eliminado' })
   @ApiResponse({ status: 404, description: 'Movimiento no encontrado' })

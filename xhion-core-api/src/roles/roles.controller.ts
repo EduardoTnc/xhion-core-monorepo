@@ -13,19 +13,22 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { ActualizarPermisosDto, CrearRolDto, ActualizarRolDto } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequiresPermission } from '../auth/permissions.decorator';
 
 /**
  * Controlador para la gestión de roles y permisos
  * Todos los endpoints requieren autenticación
  * Los endpoints de escritura requieren rol de Admin
  */
+@ApiTags('Roles')
+@ApiBearerAuth('JWT-auth')
 @Controller('roles')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
@@ -34,6 +37,7 @@ export class RolesController {
    * Obtiene todos los roles con el conteo de usuarios
    */
   @Get()
+  @RequiresPermission('roles.ver')
   findAll() {
     return this.rolesService.findAll();
   }
@@ -44,6 +48,7 @@ export class RolesController {
    * Optimizado para carga inicial - una sola petición
    */
   @Get('with-details')
+  @RequiresPermission('roles.ver')
   findAllWithDetails() {
     return this.rolesService.findAllWithDetails();
   }
@@ -54,6 +59,7 @@ export class RolesController {
    * Optimizado para carga inicial - sin paginación
    */
   @Get('usuarios/all')
+  @RequiresPermission('usuarios.ver')
   findAllUsersSimple() {
     return this.rolesService.findAllUsersSimple();
   }
@@ -63,6 +69,7 @@ export class RolesController {
    * Obtiene un rol específico con todos sus permisos
    */
   @Get(':id')
+  @RequiresPermission('roles.ver')
   findOne(@Param('id') id: string) {
     return this.rolesService.findOne(id);
   }
@@ -74,8 +81,7 @@ export class RolesController {
    * Solo accesible por usuarios con rol Admin
    */
   @Patch(':id/permisos')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
+  @RequiresPermission('roles.asignar_permisos')
   updatePermissions(
     @Param('id') id: string,
     @Body() dto: ActualizarPermisosDto,
@@ -88,6 +94,7 @@ export class RolesController {
    * Obtiene todos los permisos disponibles en el sistema
    */
   @Get('permisos/all')
+  @RequiresPermission('roles.ver')
   findAllPermissions() {
     return this.rolesService.findAllPermissions();
   }
@@ -98,8 +105,7 @@ export class RolesController {
    * Solo accesible por usuarios con rol Admin
    */
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
+  @RequiresPermission('roles.crear')
   create(@Body() dto: CrearRolDto) {
     return this.rolesService.create(dto);
   }
@@ -110,8 +116,7 @@ export class RolesController {
    * Solo accesible por usuarios con rol Admin
    */
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
+  @RequiresPermission('roles.editar')
   update(@Param('id') id: string, @Body() dto: ActualizarRolDto) {
     return this.rolesService.update(id, dto);
   }
@@ -122,8 +127,7 @@ export class RolesController {
    * Solo accesible por usuarios con rol Admin
    */
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
+  @RequiresPermission('roles.eliminar')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string) {
     return this.rolesService.remove(id);

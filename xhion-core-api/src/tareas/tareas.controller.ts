@@ -16,11 +16,13 @@ import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@ne
 import { TareasService } from './tareas.service';
 import { CreateTareaDto, UpdateTareaDto, MoveTareaDto, CreateComentarioDto } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequiresPermission } from '../auth/permissions.decorator';
 import { Auditar } from '../auditoria/auditar.decorator';
 
 @ApiTags('Tareas')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('tareas')
 export class TareasController {
   constructor(private readonly tareasService: TareasService) {}
@@ -28,6 +30,7 @@ export class TareasController {
   // ==================== CRUD DE TAREAS ====================
 
   @Post()
+  @RequiresPermission('tareas.crear')
   @Auditar('Crear Tarea')
   @ApiOperation({ summary: 'Crear una nueva tarea' })
   @ApiResponse({ status: 201, description: 'Tarea creada exitosamente' })
@@ -39,6 +42,7 @@ export class TareasController {
   }
 
   @Get()
+  @RequiresPermission('tareas.ver')
   @ApiOperation({ summary: 'Obtener todas las tareas con filtros opcionales' })
   @ApiQuery({ name: 'proyectoId', required: false, description: 'Filtrar por proyecto' })
   @ApiQuery({ name: 'etapaId', required: false, description: 'Filtrar por etapa' })
@@ -64,6 +68,7 @@ export class TareasController {
   }
 
   @Get('mis-tareas')
+  @RequiresPermission('tareas.ver')
   @ApiOperation({ summary: 'Obtener tareas asignadas al usuario actual' })
   @ApiResponse({ status: 200, description: 'Lista de tareas asignadas' })
   getMisTareas(@Request() req) {
@@ -71,6 +76,7 @@ export class TareasController {
   }
 
   @Get(':id')
+  @RequiresPermission('tareas.ver')
   @ApiOperation({ summary: 'Obtener una tarea por ID' })
   @ApiResponse({ status: 200, description: 'Tarea encontrada con comentarios' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a esta tarea' })
@@ -80,6 +86,7 @@ export class TareasController {
   }
 
   @Patch(':id')
+  @RequiresPermission('tareas.editar')
   @Auditar('Actualizar Tarea')
   @ApiOperation({ summary: 'Actualizar una tarea' })
   @ApiResponse({ status: 200, description: 'Tarea actualizada exitosamente' })
@@ -91,6 +98,7 @@ export class TareasController {
   }
 
   @Patch(':id/move')
+  @RequiresPermission('tareas.cambiar_estado')
   @Auditar('Mover Tarea')
   @ApiOperation({ summary: 'Mover tarea entre etapas o cambiar estado' })
   @ApiResponse({ status: 200, description: 'Tarea movida exitosamente' })
@@ -102,6 +110,7 @@ export class TareasController {
   }
 
   @Delete(':id')
+  @RequiresPermission('tareas.eliminar')
   @Auditar('Eliminar Tarea')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar una tarea (soft delete)' })
@@ -115,6 +124,7 @@ export class TareasController {
   // ==================== GESTIÓN DE COMENTARIOS ====================
 
   @Post(':id/comentarios')
+  @RequiresPermission('tareas.comentar')
   @Auditar('Agregar Comentario')
   @ApiOperation({ summary: 'Agregar un comentario a una tarea' })
   @ApiResponse({ status: 201, description: 'Comentario agregado exitosamente' })
@@ -129,6 +139,7 @@ export class TareasController {
   }
 
   @Get(':id/comentarios')
+  @RequiresPermission('tareas.ver')
   @ApiOperation({ summary: 'Obtener comentarios de una tarea' })
   @ApiResponse({ status: 200, description: 'Lista de comentarios' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a esta tarea' })
@@ -138,6 +149,7 @@ export class TareasController {
   }
 
   @Delete(':id/comentarios/:comentarioId')
+  @RequiresPermission('tareas.comentar')
   @Auditar('Eliminar Comentario')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar un comentario' })
