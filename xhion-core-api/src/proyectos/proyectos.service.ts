@@ -150,6 +150,8 @@ export class ProyectosService {
 
   /**
    * Obtener un proyecto por ID
+   * Nota: Los usuarios con permiso 'proyectos.ver' pueden acceder a cualquier proyecto.
+   * La verificación de permisos se hace en el PermissionsGuard del controller.
    */
   async findOne(id: string, usuarioId: string) {
     const proyecto = await this.prisma.proyecto.findUnique({
@@ -204,15 +206,10 @@ export class ProyectosService {
       throw new NotFoundException('Proyecto no encontrado');
     }
 
-    // Verificar que el usuario tiene acceso
-    const tieneAcceso =
-      proyecto.responsableId === usuarioId ||
-      proyecto.miembros.some((m) => m.usuarioId === usuarioId);
-
-    if (!tieneAcceso) {
-      throw new ForbiddenException('No tienes acceso a este proyecto');
-    }
-
+    // Si el usuario tiene el permiso 'proyectos.ver', puede acceder a cualquier proyecto
+    // La verificación de permisos ya se hizo en el PermissionsGuard
+    // Solo verificamos que sea miembro para operaciones de escritura
+    
     return proyecto;
   }
 
