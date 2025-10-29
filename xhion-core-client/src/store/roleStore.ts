@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RolConConteo, RolCompleto, UsuarioEnRol } from '../types';
+import type { RolConConteo, RolCompleto, UsuarioEnRol, Permiso } from '../types';
 import { roleService } from '../services/roleService';
 import { userService } from '../services/userService';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ interface RoleState {
   // Estado - Eager Loading: todos los roles y usuarios cargados de una vez
   rolesCompletos: RolCompleto[];
   todosLosUsuarios: UsuarioEnRol[];
+  todosLosPermisos: Permiso[];
   selectedRole: RolCompleto | null;
   isLoading: boolean;
   error: string | null;
@@ -30,22 +31,24 @@ export const useRoleStore = create<RoleState>((set, get) => ({
   // Estado inicial
   rolesCompletos: [],
   todosLosUsuarios: [],
+  todosLosPermisos: [],
   selectedRole: null,
   isLoading: false,
   error: null,
   permisosActivosSet: new Set(),
 
-  // Obtener todos los roles y usuarios en paralelo (Eager Loading)
+  // Obtener todos los roles, usuarios y permisos en paralelo (Eager Loading)
   fetchInitialData: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Cargar roles y usuarios en paralelo para máxima velocidad
-      const [rolesCompletos, todosLosUsuarios] = await Promise.all([
+      // Cargar roles, usuarios y permisos en paralelo para máxima velocidad
+      const [rolesCompletos, todosLosUsuarios, todosLosPermisos] = await Promise.all([
         roleService.obtenerRolesConDetalles(),
-        userService.obtenerTodosLosUsuarios(), // ✅ Ahora usa el endpoint correcto
+        userService.obtenerTodosLosUsuarios(),
+        roleService.obtenerTodosLosPermisos(),
       ]);
       
-      set({ rolesCompletos, todosLosUsuarios, isLoading: false });
+      set({ rolesCompletos, todosLosUsuarios, todosLosPermisos, isLoading: false });
     } catch (error: any) {
       const errorMessage = error.message || 'Error al cargar los datos';
       set({ error: errorMessage, isLoading: false });

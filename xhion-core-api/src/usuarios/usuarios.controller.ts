@@ -21,17 +21,19 @@ import { AsignarRolDto } from './dto';
 @ApiTags('Usuarios')
 @ApiBearerAuth('JWT-auth')
 @Controller('usuarios')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
   /**
    * GET /api/v1/usuarios
    * Obtiene todos los usuarios del sistema con sus roles
-   * Requiere rol: Admin o Gerente
+   * Requiere permiso: usuarios.ver
    */
   @Get()
-  @Roles('Admin', 'Gerente')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener todos los usuarios' })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios' })
   async obtenerTodosLosUsuarios() {
     return this.usuariosService.obtenerTodosLosUsuarios();
   }
@@ -39,11 +41,11 @@ export class UsuariosController {
   /**
    * GET /api/v1/usuarios/sin-puesto/disponibles
    * Obtiene usuarios sin puesto de trabajo asignado
-   * Requiere rol: Administrador
+   * Requiere permiso: departamentos.gestionar_empleados
    * IMPORTANTE: Esta ruta debe estar ANTES de ':id' para evitar conflictos
    */
   @Get('sin-puesto/disponibles')
-  @Roles('Administrador')
+  @RequiresPermission('departamentos.gestionar_empleados')
   @ApiOperation({ summary: 'Obtener usuarios sin puesto asignado' })
   @ApiResponse({ status: 200, description: 'Lista de usuarios sin puesto' })
   async obtenerUsuariosSinPuesto() {
@@ -53,10 +55,13 @@ export class UsuariosController {
   /**
    * GET /api/v1/usuarios/:id
    * Obtiene un usuario específico por ID
-   * Requiere rol: Admin o Gerente
+   * Requiere permiso: usuarios.ver
    */
   @Get(':id')
-  @Roles('Admin', 'Gerente')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener usuario por ID' })
+  @ApiResponse({ status: 200, description: 'Usuario encontrado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async obtenerUsuarioPorId(@Param('id') id: string) {
     const usuario = await this.usuariosService.obtenerUsuarioPorId(id);
     
@@ -70,10 +75,10 @@ export class UsuariosController {
   /**
    * POST /api/v1/usuarios/:id/asignar-puesto
    * Asigna un puesto de trabajo a un usuario
-   * Requiere rol: Administrador
+   * Requiere permiso: departamentos.gestionar_empleados
    */
   @Post(':id/asignar-puesto')
-  @Roles('Administrador')
+  @RequiresPermission('departamentos.gestionar_empleados')
   @ApiOperation({ summary: 'Asignar puesto de trabajo a usuario' })
   @ApiResponse({ status: 200, description: 'Puesto asignado exitosamente' })
   @ApiResponse({ status: 404, description: 'Usuario o puesto no encontrado' })
@@ -87,10 +92,10 @@ export class UsuariosController {
   /**
    * DELETE /api/v1/usuarios/:id/remover-puesto
    * Remueve el puesto de trabajo de un usuario
-   * Requiere rol: Administrador
+   * Requiere permiso: departamentos.gestionar_empleados
    */
   @Delete(':id/remover-puesto')
-  @Roles('Administrador')
+  @RequiresPermission('departamentos.gestionar_empleados')
   @ApiOperation({ summary: 'Remover puesto de trabajo de usuario' })
   @ApiResponse({ status: 200, description: 'Puesto removido exitosamente' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
@@ -104,7 +109,6 @@ export class UsuariosController {
    * Requiere permiso: usuarios.gestionar_roles
    */
   @Post(':id/asignar-rol')
-  @UseGuards(PermissionsGuard)
   @RequiresPermission('usuarios.gestionar_roles')
   @ApiOperation({ summary: 'Asignar rol a usuario' })
   @ApiParam({ name: 'id', description: 'ID del usuario' })
@@ -139,7 +143,6 @@ export class UsuariosController {
    * Requiere permiso: usuarios.gestionar_roles
    */
   @Patch(':id/cambiar-rol')
-  @UseGuards(PermissionsGuard)
   @RequiresPermission('usuarios.gestionar_roles')
   @ApiOperation({ summary: 'Cambiar rol de usuario' })
   @ApiParam({ name: 'id', description: 'ID del usuario' })
@@ -158,7 +161,6 @@ export class UsuariosController {
    * Requiere permiso: usuarios.ver
    */
   @Get('por-rol/:rolId')
-  @UseGuards(PermissionsGuard)
   @RequiresPermission('usuarios.ver')
   @ApiOperation({ summary: 'Obtener usuarios por rol' })
   @ApiParam({ name: 'rolId', description: 'ID del rol' })
@@ -200,7 +202,6 @@ export class UsuariosController {
    * Requiere permiso: sistema.ver_estadisticas
    */
   @Get('estadisticas/por-rol')
-  @UseGuards(PermissionsGuard)
   @RequiresPermission('sistema.ver_estadisticas')
   @ApiOperation({ summary: 'Obtener estadísticas de usuarios por rol' })
   @ApiResponse({

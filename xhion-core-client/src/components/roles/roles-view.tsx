@@ -78,17 +78,18 @@ export function RolesView() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full flex-col lg:flex-row">
       {/* Roles sidebar */}
-      <div className="w-80 border-r border-border bg-card">
+      <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border bg-card">
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="border-b border-border p-4 space-y-3">
+          <div className="border-b border-border p-3 sm:p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Roles</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">Roles</h2>
               <Button size="sm" className="gap-2" onClick={handleCreateRole}>
                 <Plus className="h-4 w-4" />
-                Nuevo
+                <span className="hidden sm:inline">Nuevo</span>
+                <span className="sm:hidden">+</span>
               </Button>
             </div>
             <div className="relative">
@@ -103,7 +104,7 @@ export function RolesView() {
           </div>
 
           {/* Roles list */}
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-2 max-h-[300px] lg:max-h-none">
             {isLoading ? (
               // Skeleton loading
               Array.from({ length: 5 }).map((_, i) => (
@@ -164,8 +165,8 @@ export function RolesView() {
           </div>
 
           {/* Stats */}
-          <div className="border-t border-border p-4">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="border-t border-border p-3 sm:p-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-2xl font-semibold text-foreground mt-1">{rolesCompletos.length}</p>
                 <p className="text-xs text-muted-foreground">Total Roles</p>
@@ -183,16 +184,16 @@ export function RolesView() {
       <div className="flex-1 overflow-hidden">
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="border-b border-border bg-card p-6">
+          <div className="border-b border-border bg-card p-4 sm:p-6">
             {selectedRole ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold text-foreground">{selectedRole.nombre}</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-semibold text-foreground truncate">{selectedRole.nombre}</h1>
+                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">
                     {selectedRole.descripcion || 'Sin descripción'}
                   </p>
                 </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button
                   variant={view === "roles" ? "default" : "outline"}
                   size="sm"
@@ -219,7 +220,7 @@ export function RolesView() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {selectedRole ? (
               view === "roles" ? <RoleCard /> : <UsersList />
             ) : (
