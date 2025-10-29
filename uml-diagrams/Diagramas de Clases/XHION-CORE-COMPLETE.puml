@@ -1,0 +1,478 @@
+@startuml XHION-CORE-COMPLETE-CLASS-DIAGRAM
+
+!define ENTITY_COLOR #E8F5E9
+!define ENUM_COLOR #FFF9C4
+!define PIVOT_COLOR #E1F5FE
+
+title XHION CORE - Diagrama de Clases Completo\nPlataforma de Productividad Operativa v1.8
+
+' ============================================
+' ENUMERACIONES
+' ============================================
+
+enum EstadoUsuario <<enumeration>> ENUM_COLOR {
+  INVITADO
+  ACTIVO
+  INACTIVO
+  SUSPENDIDO
+  BLOQUEADO
+  ELIMINADO
+}
+
+enum EstadoProyecto <<enumeration>> ENUM_COLOR {
+  Activo
+  Completado
+  En_Pausa
+  Archivado
+}
+
+enum EstadoTarea <<enumeration>> ENUM_COLOR {
+  Por_Hacer
+  En_Progreso
+  Hecho
+  Bloqueado
+}
+
+enum PrioridadTarea <<enumeration>> ENUM_COLOR {
+  Baja
+  Media
+  Alta
+  Urgente
+}
+
+enum RolProyecto <<enumeration>> ENUM_COLOR {
+  Responsable
+  Miembro
+  Observador
+}
+
+enum TipoDocumentoProyecto <<enumeration>> ENUM_COLOR {
+  Resumen
+  Objetivos
+  Especificaciones
+  LeccionesAprendidas
+  Documentacion
+  Notas
+}
+
+enum EstadoPresupuesto <<enumeration>> ENUM_COLOR {
+  Activo
+  Agotado
+  Cerrado
+  Suspendido
+}
+
+enum TipoMovimientoPresupuesto <<enumeration>> ENUM_COLOR {
+  Asignacion
+  Gasto
+  Ajuste
+  Transferencia
+}
+
+' ============================================
+' MÓDULO: NÚCLEO ORGANIZACIONAL
+' ============================================
+
+class Departamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(100) <<unique>>
+  + descripcion: String
+  + color: String(50)
+  + jefeId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  Gestiona departamentos de la empresa
+}
+
+class PuestoTrabajo <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + titulo: String(100) <<unique>>
+  + descripcion: String
+  + departamentoId: UUID <<FK>>
+  --
+  Catálogo de puestos de trabajo
+}
+
+class Rol <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(50) <<unique>>
+  + descripcion: String
+  + color: String(50)
+  + fechaEliminacion: DateTime
+  --
+  Define roles para gestión de permisos
+}
+
+class Usuario <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombreCompleto: String(100)
+  + email: String(100) <<unique>>
+  + passwordHash: String(255)
+  + estado: EstadoUsuario
+  + rolId: UUID <<FK>>
+  + puestoTrabajoId: UUID <<FK>>
+  + supervisorId: UUID <<FK>>
+  + avatarUrl: String
+  + biografia: String
+  + fechaNacimiento: Date
+  + fechaIngreso: Date
+  + archivoCvId: UUID <<FK>>
+  + puntajePerfilCompleto: Int
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  Perfil completo del empleado
+}
+
+class Invitacion <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre_completo: String(100)
+  + email: String(100)
+  + rol_id: UUID <<FK>>
+  + departamento_id: UUID <<FK>>
+  + token: String(255) <<unique>>
+  + fecha_expiracion: DateTime
+  + fue_utilizada: Boolean
+  + fecha_utilizacion: DateTime
+  + invitado_por_id: UUID <<FK>>
+  + fecha_creacion: DateTime
+  --
+  Gestión de invitaciones de usuarios
+}
+
+class Sesion <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + usuarioId: UUID <<FK>>
+  + refreshTokenHash: String(255) <<unique>>
+  + userAgent: String
+  + direccionIp: String(45)
+  + fechaCreacion: DateTime
+  + fechaUltimoUso: DateTime
+  --
+  Gestión de sesiones y tokens
+}
+
+' ============================================
+' MÓDULO: PROYECTOS Y TAREAS
+' ============================================
+
+class Proyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(255)
+  + descripcion: String
+  + estado: EstadoProyecto
+  + responsableId: UUID <<FK>>
+  + departamentoId: UUID <<FK>>
+  + fechaInicio: Date
+  + fechaFin: Date
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  Información de proyectos
+}
+
+class Tarea <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + titulo: String(255)
+  + descripcion: String
+  + estado: EstadoTarea
+  + prioridad: PrioridadTarea
+  + fechaVencimiento: Date
+  + proyectoId: UUID <<FK>>
+  + etapaId: UUID <<FK>>
+  + asignadoId: UUID <<FK>>
+  + creadorId: UUID <<FK>>
+  + resumenIa: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + fechaCompletado: DateTime
+  + fechaEliminacion: DateTime
+  --
+  Registro de tareas del proyecto
+}
+
+class Etapa <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(100)
+  + descripcion: String
+  + color: String(7)
+  + orden: Int
+  + proyectoId: UUID <<FK>>
+  + fechaInicio: Date
+  + fechaFin: Date
+  + estado: EstadoEtapa
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  --
+  Etapas/fases de un proyecto
+}
+
+class Comentario <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + contenido: String
+  + usuarioId: UUID <<FK>>
+  + tareaId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  --
+  Comentarios en tareas
+}
+
+class ProyectoMiembro <<pivot>> PIVOT_COLOR {
+  + proyectoId: UUID <<PK,FK>>
+  + usuarioId: UUID <<PK,FK>>
+  + rol: RolProyecto
+  + fechaUnion: DateTime
+  --
+  Miembros de proyectos
+}
+
+' ============================================
+' MÓDULO: PRESUPUESTOS
+' ============================================
+
+class PresupuestoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + departamentoId: UUID <<FK>> <<unique>>
+  + montoTotal: Decimal(15,2)
+  + montoGastado: Decimal(15,2)
+  + montoDisponible: Decimal(15,2)
+  + periodo: String(50)
+  + fechaInicio: DateTime
+  + fechaFin: DateTime
+  + estado: EstadoPresupuesto
+  + descripcion: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  Presupuesto de departamento
+}
+
+class MovimientoPresupuestoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + presupuestoDepartamentoId: UUID <<FK>>
+  + tipo: TipoMovimientoPresupuesto
+  + monto: Decimal(15,2)
+  + descripcion: String
+  + categoria: String(100)
+  + comprobante: String
+  + archivoId: UUID <<FK>>
+  + fechaMovimiento: DateTime
+  + registradoPorId: UUID <<FK>>
+  --
+  Movimientos del presupuesto
+}
+
+class PresupuestoProyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + proyectoId: UUID <<FK>> <<unique>>
+  + montoTotal: Decimal(15,2)
+  + montoGastado: Decimal(15,2)
+  + montoDisponible: Decimal(15,2)
+  + estado: EstadoPresupuesto
+  + descripcion: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  Presupuesto de proyecto
+}
+
+class MovimientoPresupuestoProyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + presupuestoProyectoId: UUID <<FK>>
+  + tipo: TipoMovimientoPresupuesto
+  + monto: Decimal(15,2)
+  + descripcion: String
+  + categoria: String(100)
+  + comprobante: String
+  + archivoId: UUID <<FK>>
+  + fechaMovimiento: DateTime
+  + registradoPorId: UUID <<FK>>
+  --
+  Movimientos del presupuesto
+}
+
+' ============================================
+' MÓDULO: BASE DE CONOCIMIENTO
+' ============================================
+
+class ContextoOrganizacional <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + mision: String
+  + vision: String
+  + objetivosEstrategicos: String
+  + descripcionGeneral: String
+  + industria: String(100)
+  + tamanoEmpresa: String(50)
+  + valoresEmpresariales: String
+  + fechaActualizacion: DateTime
+  + actualizadoPorId: UUID <<FK>>
+  --
+  Contexto organizacional global
+}
+
+class ContextoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + departamentoId: UUID <<FK>> <<unique>>
+  + funciones: String
+  + responsabilidades: String
+  + procesosClave: String
+  + objetivos: String
+  + kpis: String
+  + fechaActualizacion: DateTime
+  + actualizadoPorId: UUID <<FK>>
+  --
+  Contexto de departamento
+}
+
+class DocumentoProyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + proyectoId: UUID <<FK>>
+  + tipo: TipoDocumentoProyecto
+  + titulo: String(255)
+  + contenido: String
+  + archivoId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  Documentos de proyecto
+}
+
+class DocumentoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + departamentoId: UUID <<FK>>
+  + tipo: TipoDocumentoDepartamento
+  + titulo: String(255)
+  + contenido: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  Documentos de departamento
+}
+
+' ============================================
+' MÓDULO: SEGURIDAD Y PERMISOS
+' ============================================
+
+class Permiso <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombreAccion: String(100) <<unique>>
+  + descripcion: String
+  --
+  Catálogo de permisos
+}
+
+class RolPermiso <<pivot>> PIVOT_COLOR {
+  + rolId: UUID <<PK,FK>>
+  + permisoId: UUID <<PK,FK>>
+  --
+  Asignación de permisos a roles
+}
+
+class RegistroAuditoria <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + usuarioId: UUID <<FK>>
+  + accion: String(255)
+  + detalles: JSON
+  + direccionIp: String(45)
+  + timestamp: DateTime
+  --
+  Registro de auditoría
+}
+
+' ============================================
+' MÓDULO: ARCHIVOS
+' ============================================
+
+class Archivo <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombreArchivo: String(255)
+  + urlArchivo: String
+  + tipoArchivo: String(100)
+  + tamanoBytes: Int
+  + subidoPorId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  Metadatos de archivos
+}
+
+' ============================================
+' RELACIONES PRINCIPALES
+' ============================================
+
+' Departamento
+Departamento "1" -- "0..*" Usuario : jefe >
+Departamento "1" -- "0..*" PuestoTrabajo
+Departamento "1" -- "0..*" Proyecto
+Departamento "1" -- "0..1" ContextoDepartamento
+Departamento "1" -- "0..1" PresupuestoDepartamento
+Departamento "1" -- "0..*" DocumentoDepartamento
+Departamento "1" -- "0..*" Invitacion
+
+' Usuario
+Usuario "1" -- "0..*" Usuario : supervisa >
+Usuario "1" -- "0..*" Invitacion : invita >
+Usuario "1" -- "0..*" Sesion
+Usuario "1" -- "0..*" Proyecto : responsable >
+Usuario "1" -- "0..*" ProyectoMiembro
+Usuario "1" -- "0..*" Tarea : asignado >
+Usuario "1" -- "0..*" Tarea : creador >
+Usuario "1" -- "0..*" Comentario
+Usuario "1" -- "0..*" RegistroAuditoria
+Usuario "1" -- "0..*" Archivo : sube >
+Usuario "1" -- "0..*" ContextoOrganizacional : actualiza >
+Usuario "1" -- "0..*" ContextoDepartamento : actualiza >
+Usuario "1" -- "0..*" DocumentoProyecto : crea >
+Usuario "1" -- "0..*" DocumentoDepartamento : crea >
+
+' Rol
+Rol "1" -- "0..*" Usuario
+Rol "1" -- "0..*" RolPermiso
+Rol "1" -- "0..*" Invitacion
+
+' PuestoTrabajo
+PuestoTrabajo "1" -- "0..*" Usuario
+
+' Proyecto
+Proyecto "1" -- "0..*" Tarea
+Proyecto "1" -- "0..*" Etapa
+Proyecto "1" -- "0..*" ProyectoMiembro
+Proyecto "1" -- "0..*" DocumentoProyecto
+Proyecto "1" -- "0..1" PresupuestoProyecto
+
+' Tarea
+Tarea "1" -- "0..*" Comentario
+Etapa "1" -- "0..*" Tarea
+
+' Presupuestos
+PresupuestoDepartamento "1" -- "0..*" MovimientoPresupuestoDepartamento
+PresupuestoProyecto "1" -- "0..*" MovimientoPresupuestoProyecto
+
+' Permisos
+Permiso "1" -- "0..*" RolPermiso
+
+' Archivos
+Archivo "1" -- "0..*" DocumentoProyecto
+Archivo "1" -- "0..*" MovimientoPresupuestoDepartamento
+Archivo "1" -- "0..*" MovimientoPresupuestoProyecto
+
+' Enumeraciones
+Usuario -- EstadoUsuario
+Proyecto -- EstadoProyecto
+Tarea -- EstadoTarea
+Tarea -- PrioridadTarea
+ProyectoMiembro -- RolProyecto
+DocumentoProyecto -- TipoDocumentoProyecto
+PresupuestoDepartamento -- EstadoPresupuesto
+PresupuestoProyecto -- EstadoPresupuesto
+MovimientoPresupuestoDepartamento -- TipoMovimientoPresupuesto
+MovimientoPresupuestoProyecto -- TipoMovimientoPresupuesto
+
+@enduml

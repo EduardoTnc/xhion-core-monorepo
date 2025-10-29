@@ -1,0 +1,215 @@
+@startuml MODULO-CONOCIMIENTO
+
+!define ENTITY_COLOR #E8F5E9
+!define ENUM_COLOR #FFF9C4
+
+title XHION CORE - Módulo de Base de Conocimiento\nContexto Organizacional y Documentación
+
+' ============================================
+' ENUMERACIONES
+' ============================================
+
+enum TipoDocumentoProyecto <<enumeration>> ENUM_COLOR {
+  Resumen
+  Objetivos
+  Especificaciones
+  LeccionesAprendidas
+  Documentacion
+  Notas
+}
+
+enum TipoDocumentoDepartamento <<enumeration>> ENUM_COLOR {
+  Resumen
+  Objetivos
+  Especificaciones
+  LeccionesAprendidas
+  Documentacion
+  Notas
+}
+
+' ============================================
+' CONTEXTO ORGANIZACIONAL
+' ============================================
+
+class ContextoOrganizacional <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + mision: String
+  + vision: String
+  + objetivosEstrategicos: String
+  + descripcionGeneral: String
+  + industria: String(100)
+  + tamanoEmpresa: String(50)
+  + valoresEmpresariales: String
+  + fechaActualizacion: DateTime
+  + actualizadoPorId: UUID <<FK>>
+  --
+  + getActualizador(): Usuario
+  + actualizar(datos: Object): void
+  + generarResumenIA(): String
+  + validarCompletitud(): Float
+}
+
+class ContextoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + departamentoId: UUID <<FK>> <<unique>>
+  + funciones: String
+  + responsabilidades: String
+  + procesosClave: String
+  + objetivos: String
+  + kpis: String
+  + fechaActualizacion: DateTime
+  + actualizadoPorId: UUID <<FK>>
+  --
+  + getDepartamento(): Departamento
+  + getActualizador(): Usuario
+  + actualizar(datos: Object): void
+  + calcularCompletitud(): Float
+  + generarResumenIA(): String
+}
+
+' ============================================
+' DOCUMENTOS
+' ============================================
+
+class DocumentoProyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + proyectoId: UUID <<FK>>
+  + tipo: TipoDocumentoProyecto
+  + titulo: String(255)
+  + contenido: String
+  + archivoId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  + getProyecto(): Proyecto
+  + getArchivo(): Archivo
+  + getCreador(): Usuario
+  + actualizar(contenido: String): void
+  + adjuntarArchivo(archivo: Archivo): void
+  + generarResumenIA(): String
+  + buscarPorContenido(query: String): Boolean
+}
+
+class DocumentoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + departamentoId: UUID <<FK>>
+  + tipo: TipoDocumentoDepartamento
+  + titulo: String(255)
+  + contenido: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  + getDepartamento(): Departamento
+  + getCreador(): Usuario
+  + actualizar(contenido: String): void
+  + generarResumenIA(): String
+  + buscarPorContenido(query: String): Boolean
+}
+
+' ============================================
+' ARCHIVOS
+' ============================================
+
+class Archivo <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombreArchivo: String(255)
+  + urlArchivo: String
+  + tipoArchivo: String(100)
+  + tamanoBytes: Int
+  + subidoPorId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  + getSubidor(): Usuario
+  + descargar(): Stream
+  + eliminar(): void
+  + validarTipo(): Boolean
+  + calcularTamano(): String
+}
+
+' ============================================
+' RELACIONES
+' ============================================
+
+' Contexto Organizacional
+ContextoOrganizacional "*" -- "1" Usuario : "actualizado por >"
+
+' Contexto Departamento
+Departamento "1" -- "0..1" ContextoDepartamento : "tiene >"
+ContextoDepartamento "*" -- "1" Usuario : "actualizado por >"
+
+' Documentos Proyecto
+Proyecto "1" -- "0..*" DocumentoProyecto : "contiene >"
+DocumentoProyecto "*" -- "1" Usuario : "creado por >"
+DocumentoProyecto "*" -- "0..1" Archivo : "adjunta >"
+
+' Documentos Departamento
+Departamento "1" -- "0..*" DocumentoDepartamento : "contiene >"
+DocumentoDepartamento "*" -- "1" Usuario : "creado por >"
+
+' Archivos
+Usuario "1" -- "0..*" Archivo : "sube >"
+
+' Enumeraciones
+DocumentoProyecto -- TipoDocumentoProyecto
+DocumentoDepartamento -- TipoDocumentoDepartamento
+
+note right of ContextoOrganizacional
+  **Contexto Organizacional**
+  - Información global de la empresa
+  - Alimenta al sistema de IA
+  - Una sola instancia por empresa
+  - Actualizable por administradores
+  - Genera contexto para Gemini API
+end note
+
+note right of ContextoDepartamento
+  **Contexto de Departamento**
+  - Información específica del departamento
+  - KPIs y objetivos propios
+  - Procesos clave documentados
+  - Uno por departamento
+  - Calcula completitud automáticamente
+end note
+
+note right of DocumentoProyecto
+  **Documentos de Proyecto**
+  - 6 tipos predefinidos
+  - Soporta archivos adjuntos
+  - Búsqueda por contenido
+  - Versionado por fechas
+  - Resumen generado por IA
+  
+  **Tipos:**
+  - Resumen: Overview del proyecto
+  - Objetivos: Metas y alcance
+  - Especificaciones: Detalles técnicos
+  - Lecciones Aprendidas: Post-mortem
+  - Documentación: Guías y manuales
+  - Notas: Información adicional
+end note
+
+note right of DocumentoDepartamento
+  **Documentos de Departamento**
+  - Mismos tipos que proyecto
+  - Sin archivos adjuntos
+  - Documentación organizacional
+  - Procesos y procedimientos
+  - Base de conocimiento departamental
+end note
+
+note bottom of Archivo
+  **Sistema de Archivos**
+  - Metadatos centralizados
+  - Soporte para múltiples tipos
+  - Eliminación lógica
+  - Tracking de subidor
+  - Usado por:
+    * Documentos de proyecto
+    * Comprobantes de presupuesto
+    * CVs de usuarios
+end note
+
+@enduml

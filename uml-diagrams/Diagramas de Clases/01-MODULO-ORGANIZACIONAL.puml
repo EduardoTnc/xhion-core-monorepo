@@ -1,0 +1,251 @@
+@startuml MODULO-ORGANIZACIONAL
+
+!define ENTITY_COLOR #E8F5E9
+!define ENUM_COLOR #FFF9C4
+!define PIVOT_COLOR #E1F5FE
+
+title XHION CORE - Módulo Organizacional\nGestión de Departamentos, Usuarios y Roles
+
+' ============================================
+' ENUMERACIONES
+' ============================================
+
+enum EstadoUsuario <<enumeration>> ENUM_COLOR {
+  INVITADO
+  ACTIVO
+  INACTIVO
+  SUSPENDIDO
+  BLOQUEADO
+  ELIMINADO
+}
+
+enum TipoContacto <<enumeration>> ENUM_COLOR {
+  telefono_principal
+  telefono_secundario
+  email_personal
+}
+
+enum TipoEnlaceProfesional <<enumeration>> ENUM_COLOR {
+  linkedin
+  portafolio_personal
+  blog_tecnico
+}
+
+enum NivelHabilidad <<enumeration>> ENUM_COLOR {
+  Basico
+  Intermedio
+  Avanzado
+  Experto
+}
+
+enum CategoriaHabilidad <<enumeration>> ENUM_COLOR {
+  Frontend
+  Backend
+  DevOps
+  Diseno_UI_UX
+  Gestion_Proyectos
+  Habilidad_Blanda
+}
+
+' ============================================
+' ENTIDADES PRINCIPALES
+' ============================================
+
+class Departamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(100) <<unique>>
+  + descripcion: String
+  + color: String(50)
+  + jefeId: UUID <<FK>>
+  + fechaCreacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  + getProyectosActivos(): Proyecto[]
+  + getEmpleados(): Usuario[]
+  + getPresupuesto(): PresupuestoDepartamento
+  + getContexto(): ContextoDepartamento
+}
+
+class PuestoTrabajo <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + titulo: String(100) <<unique>>
+  + descripcion: String
+  + departamentoId: UUID <<FK>>
+  --
+  + getUsuarios(): Usuario[]
+  + getDepartamento(): Departamento
+}
+
+class Rol <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(50) <<unique>>
+  + descripcion: String
+  + color: String(50)
+  + fechaEliminacion: DateTime
+  --
+  + getPermisos(): Permiso[]
+  + getUsuarios(): Usuario[]
+  + tienePermiso(accion: String): Boolean
+}
+
+class Usuario <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombreCompleto: String(100)
+  + email: String(100) <<unique>>
+  + passwordHash: String(255)
+  + estado: EstadoUsuario
+  + rolId: UUID <<FK>>
+  + puestoTrabajoId: UUID <<FK>>
+  + supervisorId: UUID <<FK>>
+  + avatarUrl: String
+  + biografia: String
+  + fechaNacimiento: Date
+  + fechaIngreso: Date
+  + archivoCvId: UUID <<FK>>
+  + puntajePerfilCompleto: Int
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + fechaEliminacion: DateTime
+  --
+  + getRol(): Rol
+  + getPuestoTrabajo(): PuestoTrabajo
+  + getSupervisor(): Usuario
+  + getSubordinados(): Usuario[]
+  + getHabilidades(): Habilidad[]
+  + getProyectos(): Proyecto[]
+  + getTareasAsignadas(): Tarea[]
+  + calcularPuntajePerfil(): Int
+  + tienePermiso(accion: String): Boolean
+}
+
+class Invitacion <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre_completo: String(100)
+  + email: String(100)
+  + rol_id: UUID <<FK>>
+  + departamento_id: UUID <<FK>>
+  + token: String(255) <<unique>>
+  + fecha_expiracion: DateTime
+  + fue_utilizada: Boolean
+  + fecha_utilizacion: DateTime
+  + invitado_por_id: UUID <<FK>>
+  + fecha_creacion: DateTime
+  --
+  + estaVigente(): Boolean
+  + estaExpirada(): Boolean
+  + marcarComoUtilizada(): void
+  + generarEnlace(): String
+}
+
+class Sesion <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + usuarioId: UUID <<FK>>
+  + refreshTokenHash: String(255) <<unique>>
+  + userAgent: String
+  + direccionIp: String(45)
+  + fechaCreacion: DateTime
+  + fechaUltimoUso: DateTime
+  --
+  + renovarToken(): String
+  + cerrarSesion(): void
+  + estaActiva(): Boolean
+}
+
+' ============================================
+' PERFIL DE USUARIO
+' ============================================
+
+class UsuarioContacto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + usuarioId: UUID <<FK>>
+  + tipo: TipoContacto
+  + valor: String(255)
+  + esPrivado: Boolean
+  --
+  + getUsuario(): Usuario
+}
+
+class UsuarioEnlaceProfesional <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + usuarioId: UUID <<FK>>
+  + tipo: TipoEnlaceProfesional
+  + url: String
+  --
+  + getUsuario(): Usuario
+  + validarUrl(): Boolean
+}
+
+class Habilidad <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(100) <<unique>>
+  + categoria: CategoriaHabilidad
+  --
+  + getUsuarios(): Usuario[]
+}
+
+class UsuarioHabilidad <<pivot>> PIVOT_COLOR {
+  + usuarioId: UUID <<PK,FK>>
+  + habilidadId: UUID <<PK,FK>>
+  + nivel: NivelHabilidad
+  + sugeridoPorIa: Boolean
+  --
+  + getUsuario(): Usuario
+  + getHabilidad(): Habilidad
+}
+
+' ============================================
+' RELACIONES
+' ============================================
+
+' Departamento
+Departamento "1" -- "0..*" Usuario : "jefe >"
+Departamento "1" -- "1..*" PuestoTrabajo : "tiene >"
+Departamento "1" -- "0..*" Invitacion : "genera >"
+
+' Usuario - Jerarquía
+Usuario "0..1" -- "0..*" Usuario : "supervisa >"
+
+' Usuario - Rol y Puesto
+Rol "1" -- "0..*" Usuario : "asignado a >"
+PuestoTrabajo "0..1" -- "0..*" Usuario : "ocupa >"
+
+' Usuario - Invitaciones
+Usuario "1" -- "0..*" Invitacion : "invita >"
+Invitacion "*" -- "1" Rol : "asigna >"
+Invitacion "*" -- "0..1" Departamento : "asigna a >"
+
+' Usuario - Sesiones
+Usuario "1" -- "0..*" Sesion : "tiene >"
+
+' Usuario - Perfil
+Usuario "1" -- "0..*" UsuarioContacto : "tiene >"
+Usuario "1" -- "0..*" UsuarioEnlaceProfesional : "tiene >"
+Usuario "1" -- "0..*" UsuarioHabilidad : "posee >"
+
+' Habilidades
+Habilidad "1" -- "0..*" UsuarioHabilidad : "asignada a >"
+
+' Enumeraciones
+Usuario -- EstadoUsuario
+UsuarioContacto -- TipoContacto
+UsuarioEnlaceProfesional -- TipoEnlaceProfesional
+UsuarioHabilidad -- NivelHabilidad
+Habilidad -- CategoriaHabilidad
+
+note right of Usuario
+  **Usuario es la entidad central**
+  - Gestiona autenticación y autorización
+  - Mantiene jerarquía organizacional
+  - Almacena perfil profesional completo
+  - Calcula puntaje de completitud
+end note
+
+note right of Invitacion
+  **Sistema de Invitaciones**
+  - Token único de 64 caracteres
+  - Expira en 24 horas
+  - Registra fecha de utilización
+  - Permite doble flujo (usuario/admin)
+end note
+
+@enduml

@@ -1,0 +1,145 @@
+@startuml MODULO-SEGURIDAD
+
+!define ENTITY_COLOR #E8F5E9
+!define PIVOT_COLOR #E1F5FE
+
+title XHION CORE - Módulo de Seguridad y Auditoría\nRBAC, Permisos y Trazabilidad
+
+' ============================================
+' SISTEMA DE PERMISOS (RBAC)
+' ============================================
+
+class Permiso <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombreAccion: String(100) <<unique>>
+  + descripcion: String
+  --
+  + getRoles(): Rol[]
+  + validar(): Boolean
+  + estaAsignadoA(rol: Rol): Boolean
+}
+
+class RolPermiso <<pivot>> PIVOT_COLOR {
+  + rolId: UUID <<PK,FK>>
+  + permisoId: UUID <<PK,FK>>
+  --
+  + getRol(): Rol
+  + getPermiso(): Permiso
+  + asignar(): void
+  + revocar(): void
+}
+
+class Rol <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + nombre: String(50) <<unique>>
+  + descripcion: String
+  + color: String(50)
+  + fechaEliminacion: DateTime
+  --
+  + getPermisos(): Permiso[]
+  + getUsuarios(): Usuario[]
+  + tienePermiso(accion: String): Boolean
+  + asignarPermiso(permiso: Permiso): void
+  + revocarPermiso(permiso: Permiso): void
+  + clonar(nuevoNombre: String): Rol
+}
+
+' ============================================
+' AUDITORÍA
+' ============================================
+
+class RegistroAuditoria <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + usuarioId: UUID <<FK>>
+  + accion: String(255)
+  + detalles: JSON
+  + direccionIp: String(45)
+  + timestamp: DateTime
+  --
+  + getUsuario(): Usuario
+  + getDetalles(): Object
+  + buscarPorAccion(accion: String): RegistroAuditoria[]
+  + buscarPorUsuario(usuarioId: UUID): RegistroAuditoria[]
+  + buscarPorFecha(inicio: DateTime, fin: DateTime): RegistroAuditoria[]
+  + exportar(formato: String): File
+}
+
+' ============================================
+' RELACIONES
+' ============================================
+
+' RBAC
+Rol "1" -- "0..*" RolPermiso : "tiene >"
+Permiso "1" -- "0..*" RolPermiso : "asignado a >"
+Rol "1" -- "0..*" Usuario : "asignado a >"
+
+' Auditoría
+Usuario "1" -- "0..*" RegistroAuditoria : "genera >"
+
+note right of Permiso
+  **Sistema de Permisos**
+  - 47 permisos granulares
+  - Organizados en 10 módulos:
+    * Proyectos (8)
+    * Tareas (8)
+    * Departamentos (6)
+    * Presupuestos (6)
+    * Conocimiento (4)
+    * Usuarios (6)
+    * Roles (5)
+    * Auditoría (2)
+    * Sistema (3)
+    * Invitaciones (3)
+  
+  **Formato:** modulo.accion
+  Ejemplo: "proyectos.crear"
+end note
+
+note right of Rol
+  **Roles del Sistema**
+  - Control de acceso basado en roles (RBAC)
+  - Permisos granulares por acción
+  - Eliminación lógica
+  - Color personalizable para UI
+  - Clonación para crear variantes
+  
+  **Validación:**
+  - Backend: @RequiresPermission decorator
+  - Frontend: Catálogo sincronizado
+  - Caché de permisos en request (O(1))
+end note
+
+note right of RegistroAuditoria
+  **Sistema de Auditoría**
+  - Registro inmutable de acciones
+  - Captura automática con @Auditar decorator
+  - Detalles en formato JSON
+  - Tracking de IP
+  - Timestamp preciso
+  
+  **Acciones Auditadas:**
+  - CRUD de entidades críticas
+  - Cambios de permisos
+  - Inicio/cierre de sesión
+  - Aceptación de invitaciones
+  - Movimientos de presupuesto
+  - Cambios de estado
+  
+  **Búsquedas:**
+  - Por usuario
+  - Por acción
+  - Por rango de fechas
+  - Por IP
+  - Exportable a Excel/PDF
+end note
+
+note bottom of RolPermiso
+  **Tabla Pivote**
+  - Relación muchos a muchos
+  - Rol puede tener múltiples permisos
+  - Permiso puede estar en múltiples roles
+  - Asignación/revocación dinámica
+  - Sin eliminación física
+end note
+
+@enduml

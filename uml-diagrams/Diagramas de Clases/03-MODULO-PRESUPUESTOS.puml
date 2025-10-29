@@ -1,0 +1,188 @@
+@startuml MODULO-PRESUPUESTOS
+
+!define ENTITY_COLOR #E8F5E9
+!define ENUM_COLOR #FFF9C4
+
+title XHION CORE - Módulo de Presupuestos\nGestión Financiera de Departamentos y Proyectos
+
+' ============================================
+' ENUMERACIONES
+' ============================================
+
+enum EstadoPresupuesto <<enumeration>> ENUM_COLOR {
+  Activo
+  Agotado
+  Cerrado
+  Suspendido
+}
+
+enum TipoMovimientoPresupuesto <<enumeration>> ENUM_COLOR {
+  Asignacion
+  Gasto
+  Ajuste
+  Transferencia
+}
+
+' ============================================
+' PRESUPUESTO DE DEPARTAMENTO
+' ============================================
+
+class PresupuestoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + departamentoId: UUID <<FK>> <<unique>>
+  + montoTotal: Decimal(15,2)
+  + montoGastado: Decimal(15,2)
+  + montoDisponible: Decimal(15,2)
+  + periodo: String(50)
+  + fechaInicio: DateTime
+  + fechaFin: DateTime
+  + estado: EstadoPresupuesto
+  + descripcion: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  + getDepartamento(): Departamento
+  + getMovimientos(): MovimientoPresupuestoDepartamento[]
+  + registrarGasto(monto: Decimal, descripcion: String): void
+  + registrarAsignacion(monto: Decimal): void
+  + calcularDisponible(): Decimal
+  + calcularPorcentajeGastado(): Float
+  + estaAgotado(): Boolean
+  + transferirA(destino: PresupuestoDepartamento, monto: Decimal): void
+}
+
+class MovimientoPresupuestoDepartamento <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + presupuestoDepartamentoId: UUID <<FK>>
+  + tipo: TipoMovimientoPresupuesto
+  + monto: Decimal(15,2)
+  + descripcion: String
+  + categoria: String(100)
+  + comprobante: String
+  + archivoId: UUID <<FK>>
+  + fechaMovimiento: DateTime
+  + registradoPorId: UUID <<FK>>
+  --
+  + getPresupuesto(): PresupuestoDepartamento
+  + getArchivo(): Archivo
+  + getRegistrador(): Usuario
+  + validarMonto(): Boolean
+  + adjuntarComprobante(archivo: Archivo): void
+}
+
+' ============================================
+' PRESUPUESTO DE PROYECTO
+' ============================================
+
+class PresupuestoProyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + proyectoId: UUID <<FK>> <<unique>>
+  + montoTotal: Decimal(15,2)
+  + montoGastado: Decimal(15,2)
+  + montoDisponible: Decimal(15,2)
+  + estado: EstadoPresupuesto
+  + descripcion: String
+  + fechaCreacion: DateTime
+  + fechaActualizacion: DateTime
+  + creadoPorId: UUID <<FK>>
+  --
+  + getProyecto(): Proyecto
+  + getMovimientos(): MovimientoPresupuestoProyecto[]
+  + registrarGasto(monto: Decimal, descripcion: String): void
+  + registrarAsignacion(monto: Decimal): void
+  + calcularDisponible(): Decimal
+  + calcularPorcentajeGastado(): Float
+  + estaAgotado(): Boolean
+  + cerrar(): void
+}
+
+class MovimientoPresupuestoProyecto <<entity>> ENTITY_COLOR {
+  + id: UUID <<PK>>
+  + presupuestoProyectoId: UUID <<FK>>
+  + tipo: TipoMovimientoPresupuesto
+  + monto: Decimal(15,2)
+  + descripcion: String
+  + categoria: String(100)
+  + comprobante: String
+  + archivoId: UUID <<FK>>
+  + fechaMovimiento: DateTime
+  + registradoPorId: UUID <<FK>>
+  --
+  + getPresupuesto(): PresupuestoProyecto
+  + getArchivo(): Archivo
+  + getRegistrador(): Usuario
+  + validarMonto(): Boolean
+  + adjuntarComprobante(archivo: Archivo): void
+}
+
+' ============================================
+' RELACIONES
+' ============================================
+
+' Presupuesto Departamento
+Departamento "1" -- "0..1" PresupuestoDepartamento : "tiene >"
+PresupuestoDepartamento "1" -- "0..*" MovimientoPresupuestoDepartamento : "registra >"
+Usuario "1" -- "0..*" PresupuestoDepartamento : "crea >"
+Usuario "1" -- "0..*" MovimientoPresupuestoDepartamento : "registra >"
+
+' Presupuesto Proyecto
+Proyecto "1" -- "0..1" PresupuestoProyecto : "tiene >"
+PresupuestoProyecto "1" -- "0..*" MovimientoPresupuestoProyecto : "registra >"
+Usuario "1" -- "0..*" PresupuestoProyecto : "crea >"
+Usuario "1" -- "0..*" MovimientoPresupuestoProyecto : "registra >"
+
+' Archivos
+Archivo "1" -- "0..*" MovimientoPresupuestoDepartamento : "comprobante >"
+Archivo "1" -- "0..*" MovimientoPresupuestoProyecto : "comprobante >"
+
+' Enumeraciones
+PresupuestoDepartamento -- EstadoPresupuesto
+PresupuestoProyecto -- EstadoPresupuesto
+MovimientoPresupuestoDepartamento -- TipoMovimientoPresupuesto
+MovimientoPresupuestoProyecto -- TipoMovimientoPresupuesto
+
+note right of PresupuestoDepartamento
+  **Presupuesto de Departamento**
+  - Un presupuesto por departamento
+  - Periodo configurable (mensual, trimestral, anual)
+  - Calcula automáticamente monto disponible
+  - Soporta transferencias entre departamentos
+  - Rastrea gastos por categoría
+end note
+
+note right of PresupuestoProyecto
+  **Presupuesto de Proyecto**
+  - Un presupuesto por proyecto
+  - Independiente del departamento
+  - Cierre automático al finalizar proyecto
+  - Categorías específicas de proyecto
+  - Control de gastos en tiempo real
+end note
+
+note bottom of MovimientoPresupuestoDepartamento
+  **Tipos de Movimiento**
+  - Asignación: Fondos iniciales o adicionales
+  - Gasto: Reducción del presupuesto
+  - Ajuste: Corrección de montos
+  - Transferencia: Entre presupuestos
+  
+  **Categorías Comunes (Departamento)**
+  - Salarios
+  - Equipamiento
+  - Marketing
+  - Capacitación
+  - Infraestructura
+end note
+
+note bottom of MovimientoPresupuestoProyecto
+  **Categorías Comunes (Proyecto)**
+  - Desarrollo
+  - Infraestructura
+  - Licencias
+  - Consultoría
+  - Testing
+  - Despliegue
+end note
+
+@enduml
