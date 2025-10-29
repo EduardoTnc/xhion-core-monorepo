@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Folder,
   Building2,
+  Archive,
 } from "lucide-react";
 import { type Proyecto } from "@/services/projectService";
 import { cn } from "@/lib/utils";
@@ -59,9 +60,14 @@ export function ProjectSidebarShadcn({
   const [searchQuery, setSearchQuery] = useState("");
   const [openDepartments, setOpenDepartments] = useState<Set<string>>(new Set());
   const [userToggledDepartments, setUserToggledDepartments] = useState<Set<string>>(new Set());
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Separar proyectos activos y archivados
+  const proyectosActivos = proyectos.filter((p) => p.estado !== "Archivado");
+  const proyectosArchivados = proyectos.filter((p) => p.estado === "Archivado");
 
   // Filtrar proyectos por búsqueda
-  const filteredProyectos = proyectos.filter((proyecto) =>
+  const filteredProyectos = (showArchived ? proyectosArchivados : proyectosActivos).filter((proyecto) =>
     proyecto.nombre.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -141,6 +147,24 @@ export function ProjectSidebarShadcn({
           <Button onClick={onCreateProject} className="w-full" size="sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Proyecto
+          </Button>
+        </div>
+
+        {/* Toggle Archived Projects */}
+        <div className="px-2">
+          <Button
+            onClick={() => setShowArchived(!showArchived)}
+            variant={showArchived ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            size="sm"
+          >
+            <Archive className="mr-2 h-4 w-4" />
+            {showArchived ? "Ver Activos" : "Ver Archivados"}
+            {proyectosArchivados.length > 0 && (
+              <Badge variant="secondary" className="ml-auto text-xs">
+                {proyectosArchivados.length}
+              </Badge>
+            )}
           </Button>
         </div>
       </SidebarHeader>

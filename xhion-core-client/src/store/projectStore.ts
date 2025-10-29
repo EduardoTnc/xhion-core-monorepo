@@ -16,6 +16,7 @@ interface ProjectState {
   createProyecto: (data: any) => Promise<Proyecto>;
   updateProyecto: (id: string, data: any) => Promise<Proyecto>;
   deleteProyecto: (id: string) => Promise<void>;
+  duplicateProyecto: (id: string) => Promise<Proyecto>;
   setProyectoActual: (proyecto: Proyecto | null) => void;
 
   // Acciones - Miembros
@@ -108,6 +109,34 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         proyectoActual: state.proyectoActual?.id === id ? null : state.proyectoActual,
         isLoading: false,
       }));
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  duplicateProyecto: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      // Obtener el proyecto original
+      const proyectoOriginal = await projectService.getById(id);
+      
+      // Crear copia con nombre modificado
+      const proyectoDuplicado = await projectService.create({
+        nombre: `${proyectoOriginal.nombre} (Copia)`,
+        descripcion: proyectoOriginal.descripcion || undefined,
+        responsableId: proyectoOriginal.responsableId,
+        departamentoId: proyectoOriginal.departamentoId || undefined,
+        fechaInicio: proyectoOriginal.fechaInicio,
+        fechaFin: proyectoOriginal.fechaFin,
+      });
+
+      set((state) => ({
+        proyectos: [...state.proyectos, proyectoDuplicado],
+        isLoading: false,
+      }));
+
+      return proyectoDuplicado;
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
       throw error;

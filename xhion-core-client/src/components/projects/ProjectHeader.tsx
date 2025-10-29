@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -6,17 +7,33 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { UserPlus, Settings, MoreVertical, Calendar, Users } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { UserPlus, Settings, MoreVertical, Calendar, Users, Eye, Copy, Download, Archive } from "lucide-react";
 import { type Proyecto } from "@/services/projectService";
 import { type ProyectoMiembro } from "@/services/projectService";
+import { useProjectStore } from "@/store/projectStore";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ProjectDetailsModal } from "./ProjectDetailsModal";
 
 interface ProjectHeaderProps {
   proyecto: Proyecto;
   miembros: ProyectoMiembro[];
   onEdit: () => void;
   onInvite: () => void;
+  onDuplicate?: () => void;
+  onArchive?: () => void;
 }
 
 const estadoColors = {
@@ -26,7 +43,12 @@ const estadoColors = {
   Archivado: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
-export function ProjectHeader({ proyecto, miembros, onEdit, onInvite }: ProjectHeaderProps) {
+export function ProjectHeader({ proyecto, miembros, onEdit, onInvite, onDuplicate, onArchive }: ProjectHeaderProps) {
+  const { duplicateProyecto, updateProyecto } = useProjectStore();
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -43,6 +65,88 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite }: ProjectH
       month: "short",
       year: "numeric",
     });
+  };
+
+  // 1. Ver detalles - Abrir modal con toda la información
+  const handleVerDetalles = () => {
+    setShowDetailsModal(true);
+  };
+
+  // 2. Duplicar proyecto
+  const handleDuplicar = async () => {
+    try {
+      setIsDuplicating(true);
+      await duplicateProyecto(proyecto.id);
+      toast.success("Proyecto duplicado exitosamente");
+      if (onDuplicate) {
+        onDuplicate();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error al duplicar el proyecto");
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
+  // 3. Exportar datos
+  const handleExportar = () => {
+    try {
+      // Preparar datos para exportar
+      const exportData = {
+        proyecto: {
+          nombre: proyecto.nombre,
+          descripcion: proyecto.descripcion,
+          estado: proyecto.estado,
+          fechaInicio: proyecto.fechaInicio,
+          fechaFin: proyecto.fechaFin,
+          responsable: proyecto.responsable.nombreCompleto,
+          departamento: proyecto.departamento?.nombre,
+        },
+        miembros: miembros.map(m => ({
+          nombre: m.usuario.nombreCompleto,
+          email: m.usuario.email,
+          rol: m.rol,
+        })),
+        estadisticas: {
+          totalTareas: proyecto._count?.tareas || 0,
+          totalMiembros: miembros.length,
+          totalEtapas: proyecto._count?.etapas || 0,
+        },
+      };
+
+      // Crear y descargar archivo JSON
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${proyecto.nombre.replace(/\s+/g, "_")}_export.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Datos exportados exitosamente");
+    } catch (error) {
+      toast.error("Error al exportar los datos");
+    }
+  };
+
+  // 4. Archivar proyecto
+  const handleArchivar = async () => {
+    try {
+      setIsArchiving(true);
+      await updateProyecto(proyecto.id, { estado: "Archivado" });
+      toast.success("Proyecto archivado exitosamente");
+      setShowArchiveDialog(false);
+      if (onArchive) {
+        onArchive();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error al archivar el proyecto");
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   return (
@@ -88,7 +192,7 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite }: ProjectH
             <div className="flex -space-x-2 sm:mr-2">
               {proyecto.responsable && (
                 <Avatar className="h-8 w-8 border-2 border-background ring-1 ring-border">
-                  <AvatarImage src={proyecto.responsable.avatarUrl} />
+                  <AvatarImage src={proyecto.responsable.avatarUrl || undefined} />
                   <AvatarFallback className="text-xs bg-primary text-primary-foreground">
                     {getInitials(proyecto.responsable.nombreCompleto)}
                   </AvatarFallback>
@@ -99,7 +203,7 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite }: ProjectH
                   key={miembro.usuarioId}
                   className="h-8 w-8 border-2 border-background ring-1 ring-border"
                 >
-                  <AvatarImage src={miembro.usuario.avatarUrl} />
+                  <AvatarImage src={miembro.usuario.avatarUrl || undefined} />
                   <AvatarFallback className="text-xs">
                     {getInitials(miembro.usuario.nombreCompleto)}
                   </AvatarFallback>
@@ -135,10 +239,24 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite }: ProjectH
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-                  <DropdownMenuItem>Duplicar proyecto</DropdownMenuItem>
-                  <DropdownMenuItem>Exportar datos</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem onClick={handleVerDetalles}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Ver detalles
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDuplicar} disabled={isDuplicating}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    {isDuplicating ? "Duplicando..." : "Duplicar proyecto"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportar}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar datos
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="text-destructive"
+                    onClick={() => setShowArchiveDialog(true)}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
                     Archivar proyecto
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -147,6 +265,36 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite }: ProjectH
           </div>
         </div>
       </div>
+
+      {/* Modal de Detalles del Proyecto */}
+      <ProjectDetailsModal
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
+        proyecto={proyecto}
+        miembros={miembros}
+      />
+
+      {/* Dialog de Confirmación de Archivar */}
+      <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Archivar proyecto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El proyecto "{proyecto.nombre}" será archivado. Podrás restaurarlo más tarde desde la sección de proyectos archivados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleArchivar}
+              disabled={isArchiving}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isArchiving ? "Archivando..." : "Archivar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

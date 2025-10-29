@@ -22,7 +22,12 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
   },
   {
     nombreAccion: 'proyectos.ver',
-    descripcion: 'Permite ver proyectos existentes y sus detalles',
+    descripcion: 'Permite ver proyectos donde el usuario es responsable o miembro',
+    modulo: 'Proyectos',
+  },
+  {
+    nombreAccion: 'proyectos.ver_todos',
+    descripcion: 'Permite ver TODOS los proyectos del sistema sin restricciones',
     modulo: 'Proyectos',
   },
   {
@@ -61,7 +66,12 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
   },
   {
     nombreAccion: 'tareas.ver',
-    descripcion: 'Permite ver tareas existentes y sus detalles',
+    descripcion: 'Permite ver tareas asignadas o del proyecto donde es miembro',
+    modulo: 'Tareas',
+  },
+  {
+    nombreAccion: 'tareas.ver_todas',
+    descripcion: 'Permite ver TODAS las tareas del sistema sin restricciones',
     modulo: 'Tareas',
   },
   {

@@ -49,7 +49,7 @@ interface Usuario {
   telefono?: string;
   avatarUrl?: string;
   puestoTrabajo?: {
-    id: string;
+    id?: string;  // Opcional porque el jefe solo tiene titulo
     titulo: string;
   };
   rol?: {

@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed": "ts-node -r dotenv/config prisma/seed.ts",
-    "db:fix-permissions": "ts-node -r dotenv/config prisma/fix-permissions.ts"
+    "db:fix-permissions": "ts-node -r dotenv/config prisma/fix-permissions.ts",
+    "db:fix-proyectos": "ts-node -r dotenv/config prisma/fix-proyectos.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

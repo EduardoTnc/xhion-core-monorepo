@@ -49,12 +49,12 @@ export class ProyectosController {
 
   @Get()
   @RequiresPermission('proyectos.ver')
-  @ApiOperation({ summary: 'Obtener todos los proyectos del usuario' })
+  @ApiOperation({ summary: 'Obtener proyectos del usuario (o todos si tiene permiso proyectos.ver_todos)' })
   @ApiQuery({ name: 'estado', required: false, description: 'Filtrar por estado' })
   @ApiQuery({ name: 'departamentoId', required: false, description: 'Filtrar por departamento' })
   @ApiResponse({ status: 200, description: 'Lista de proyectos' })
   findAll(@Request() req, @Query('estado') estado?: string, @Query('departamentoId') departamentoId?: string) {
-    return this.proyectosService.findAll(req.user.id, { estado, departamentoId });
+    return this.proyectosService.findAll(req.user.id, req.user.permisos, { estado, departamentoId });
   }
 
   @Get(':id')

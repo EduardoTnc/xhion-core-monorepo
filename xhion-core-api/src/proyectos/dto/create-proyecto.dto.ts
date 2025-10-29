@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsUUID, MaxLength, MinLength, IsISO8601 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProyectoDto {
@@ -35,4 +35,20 @@ export class CreateProyectoDto {
   @IsOptional()
   @IsUUID('4', { message: 'El departamentoId debe ser un UUID válido' })
   departamentoId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de inicio del proyecto',
+    example: '2025-01-15T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601({}, { message: 'La fecha de inicio debe ser una fecha válida en formato ISO 8601' })
+  fechaInicio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de finalización del proyecto',
+    example: '2025-06-30T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601({}, { message: 'La fecha de fin debe ser una fecha válida en formato ISO 8601' })
+  fechaFin?: string;
 }

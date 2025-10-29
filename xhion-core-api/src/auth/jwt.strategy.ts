@@ -36,6 +36,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         rol: {
           select: {
             nombre: true,
+            permisos: {
+              select: {
+                permiso: {
+                  select: {
+                    nombreAccion: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -46,10 +55,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       return null;
     }
 
+    // Extraer los nombres de los permisos en un array simple
+    const permisos = user.rol?.permisos.map((rp) => rp.permiso.nombreAccion) || [];
+
     return {
       sub: user.id, // Mantener compatibilidad con controllers que usan req.user.sub
       ...user,
       rol: user.rol?.nombre,
+      permisos, // Agregar array de permisos
       sessionId: payload.sid,
     }; // se asigna a req.user
   }

@@ -43,7 +43,7 @@ export class TareasController {
 
   @Get()
   @RequiresPermission('tareas.ver')
-  @ApiOperation({ summary: 'Obtener todas las tareas con filtros opcionales' })
+  @ApiOperation({ summary: 'Obtener tareas del usuario (o todas si tiene permiso tareas.ver_todas)' })
   @ApiQuery({ name: 'proyectoId', required: false, description: 'Filtrar por proyecto' })
   @ApiQuery({ name: 'etapaId', required: false, description: 'Filtrar por etapa' })
   @ApiQuery({ name: 'asignadoId', required: false, description: 'Filtrar por usuario asignado' })
@@ -58,7 +58,7 @@ export class TareasController {
     @Query('estado') estado?: string,
     @Query('prioridad') prioridad?: string,
   ) {
-    return this.tareasService.findAll(req.user.id, {
+    return this.tareasService.findAll(req.user.id, req.user.permisos, {
       proyectoId,
       etapaId,
       asignadoId,

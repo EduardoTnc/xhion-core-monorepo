@@ -30,6 +30,8 @@ import { Loader2, Building2, Calendar } from "lucide-react";
 interface CreateProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  departamentoIdPredeterminado?: string;
+  onSuccess?: () => void;
 }
 
 interface ProjectFormData {
@@ -41,12 +43,12 @@ interface ProjectFormData {
   fechaFin?: Date;
 }
 
-export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalProps) {
+export function CreateProjectModal({ open, onOpenChange, departamentoIdPredeterminado, onSuccess }: CreateProjectModalProps) {
   const { createProyecto, isLoading } = useProjectStore();
   const { user } = useAuthStore();
   const { departamentos, fetchDepartamentos } = useDepartmentStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDepartamento, setSelectedDepartamento] = useState<string>("");
+  const [selectedDepartamento, setSelectedDepartamento] = useState<string>(departamentoIdPredeterminado || "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
@@ -67,6 +69,14 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
     },
   });
 
+  // Actualizar departamento seleccionado cuando cambie la prop
+  useEffect(() => {
+    if (departamentoIdPredeterminado) {
+      setSelectedDepartamento(departamentoIdPredeterminado);
+      setValue("departamentoId", departamentoIdPredeterminado);
+    }
+  }, [departamentoIdPredeterminado, setValue]);
+
   const onSubmit = async (data: ProjectFormData) => {
     try {
       setIsSubmitting(true);
@@ -84,6 +94,11 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
       setSelectedDepartamento("");
       setDateRange(undefined);
       onOpenChange(false);
+      
+      // Llamar callback de éxito para actualizar la lista
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: any) {
       toast.error(error.message || "Error al crear proyecto");
     } finally {

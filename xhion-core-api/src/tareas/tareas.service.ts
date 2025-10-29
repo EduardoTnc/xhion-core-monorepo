@@ -113,9 +113,12 @@ export class TareasService {
 
   /**
    * Obtener todas las tareas (con filtros)
+   * Si el usuario tiene el permiso 'tareas.ver_todas', verá TODAS las tareas
+   * Si no, solo verá tareas de proyectos donde es responsable o miembro
    */
   async findAll(
     usuarioId: string,
+    permisos: string[],
     filters?: {
       proyectoId?: string;
       etapaId?: string;
@@ -124,15 +127,22 @@ export class TareasService {
       prioridad?: string;
     },
   ) {
+    // Verificar si el usuario tiene permiso para ver todas las tareas
+    const puedeVerTodas = permisos.includes('tareas.ver_todas');
+
     const where: any = {
       fechaEliminacion: null,
-      proyecto: {
+    };
+
+    // Si NO tiene permiso para ver todas, aplicar filtro de acceso
+    if (!puedeVerTodas) {
+      where.proyecto = {
         OR: [
           { responsableId: usuarioId },
           { miembros: { some: { usuarioId } } },
         ],
-      },
-    };
+      };
+    }
 
     if (filters?.proyectoId) {
       where.proyectoId = filters.proyectoId;

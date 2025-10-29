@@ -27,21 +27,36 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { EditProjectModal } from "@/components/projects/EditProjectModal";
+import { useProjectStore } from "@/store/projectStore";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import type { Proyecto as ProyectoCompleto } from "@/services/projectService";
 
+// Tipo simplificado de proyecto que viene del endpoint de departamentos
 interface Proyecto {
   id: string;
   nombre: string;
-  descripcion?: string;
+  descripcion?: string | null;
   estado: string;
   fechaCreacion: string;
   fechaInicio?: string;
   fechaFin?: string;
-  responsable?: {
+  responsable: {
     id: string;
     nombreCompleto: string;
     avatarUrl?: string;
   };
-  _count: {
+  _count?: {
     tareas: number;
     miembros: number;
     etapas: number;
@@ -53,33 +68,30 @@ interface DepartmentProjectsViewProps {
   departamentoId: string;
   departamentoNombre: string;
   onProjectClick?: (projectId: string) => void;
+  onCreateProject?: () => void;
+  onViewAllProjects?: () => void;
 }
 
 const estadoConfig = {
-  Planificacion: {
-    icon: Clock,
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    label: "Planificación",
-  },
-  EnProgreso: {
+  Activo: {
     icon: TrendingUp,
-    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    label: "En Progreso",
+    color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    label: "Activo",
   },
   Completado: {
     icon: CheckCircle2,
     color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     label: "Completado",
   },
-  Suspendido: {
+  En_Pausa: {
     icon: AlertCircle,
     color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-    label: "Suspendido",
+    label: "En Pausa",
   },
-  Cancelado: {
+  Archivado: {
     icon: XCircle,
-    color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    label: "Cancelado",
+    color: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+    label: "Archivado",
   },
 };
 
@@ -88,8 +100,12 @@ export function DepartmentProjectsView({
   departamentoId,
   departamentoNombre,
   onProjectClick,
+  onCreateProject,
+  onViewAllProjects,
 }: DepartmentProjectsViewProps) {
   const [filter, setFilter] = useState<string>("all");
+  const [editingProject, setEditingProject] = useState<Proyecto | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 
   const filteredProyectos =
     filter === "all"
@@ -103,24 +119,19 @@ export function DepartmentProjectsView({
         title="No hay proyectos asignados"
         description={`El departamento ${departamentoNombre} aún no tiene proyectos. Crea el primer proyecto para comenzar a organizar el trabajo.`}
         actionLabel="Crear Proyecto"
-        onAction={() => {
-          // TODO: Abrir modal de crear proyecto
-          console.log("Crear proyecto para departamento:", departamentoId);
-        }}
+        onAction={onCreateProject}
         secondaryActionLabel="Ver Todos los Proyectos"
-        onSecondaryAction={() => {
-          // TODO: Navegar a vista de proyectos
-          console.log("Navegar a proyectos");
-        }}
+        onSecondaryAction={onViewAllProjects}
       />
     );
   }
 
   const estadisticas = {
     total: proyectos.length,
-    enProgreso: proyectos.filter((p) => p.estado === "EnProgreso").length,
+    activos: proyectos.filter((p) => p.estado === "Activo").length,
     completados: proyectos.filter((p) => p.estado === "Completado").length,
-    planificacion: proyectos.filter((p) => p.estado === "Planificacion").length,
+    enPausa: proyectos.filter((p) => p.estado === "En_Pausa").length,
+    archivados: proyectos.filter((p) => p.estado === "Archivado").length,
   };
 
   return (
@@ -133,7 +144,7 @@ export function DepartmentProjectsView({
             {estadisticas.total} proyecto{estadisticas.total !== 1 ? "s" : ""} en total
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={onCreateProject}>
           <Plus className="h-4 w-4" />
           Nuevo Proyecto
         </Button>
@@ -154,10 +165,10 @@ export function DepartmentProjectsView({
         <Card className="border-border bg-card p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">En Progreso</p>
-              <p className="text-2xl font-bold text-yellow-600">{estadisticas.enProgreso}</p>
+              <p className="text-sm text-muted-foreground">Activos</p>
+              <p className="text-2xl font-bold text-blue-600">{estadisticas.activos}</p>
             </div>
-            <TrendingUp className="h-8 w-8 text-yellow-600" />
+            <TrendingUp className="h-8 w-8 text-blue-600" />
           </div>
         </Card>
 
@@ -174,10 +185,10 @@ export function DepartmentProjectsView({
         <Card className="border-border bg-card p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Planificación</p>
-              <p className="text-2xl font-bold text-blue-600">{estadisticas.planificacion}</p>
+              <p className="text-sm text-muted-foreground">En Pausa</p>
+              <p className="text-2xl font-bold text-orange-600">{estadisticas.enPausa}</p>
             </div>
-            <Clock className="h-8 w-8 text-blue-600" />
+            <AlertCircle className="h-8 w-8 text-orange-600" />
           </div>
         </Card>
       </div>
@@ -192,11 +203,11 @@ export function DepartmentProjectsView({
           Todos
         </Button>
         <Button
-          variant={filter === "EnProgreso" ? "default" : "outline"}
+          variant={filter === "Activo" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("EnProgreso")}
+          onClick={() => setFilter("Activo")}
         >
-          En Progreso
+          Activos
         </Button>
         <Button
           variant={filter === "Completado" ? "default" : "outline"}
@@ -206,11 +217,18 @@ export function DepartmentProjectsView({
           Completados
         </Button>
         <Button
-          variant={filter === "Planificacion" ? "default" : "outline"}
+          variant={filter === "En_Pausa" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("Planificacion")}
+          onClick={() => setFilter("En_Pausa")}
         >
-          Planificación
+          En Pausa
+        </Button>
+        <Button
+          variant={filter === "Archivado" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("Archivado")}
+        >
+          Archivados
         </Button>
       </div>
 
@@ -258,15 +276,31 @@ export function DepartmentProjectsView({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onProjectClick?.(proyecto.id);
+                        }}
+                      >
                         <Eye className="mr-2 h-4 w-4" />
                         Ver Detalles
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingProject(proyecto);
+                        }}
+                      >
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingProjectId(proyecto.id);
+                        }}
+                      >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Eliminar
                       </DropdownMenuItem>
@@ -283,15 +317,15 @@ export function DepartmentProjectsView({
                 {/* Estadísticas */}
                 <div className="grid grid-cols-3 gap-4 pt-2 border-t border-border">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">{proyecto._count.tareas}</p>
+                    <p className="text-2xl font-bold text-foreground">{proyecto._count?.tareas ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Tareas</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">{proyecto._count.miembros}</p>
+                    <p className="text-2xl font-bold text-foreground">{proyecto._count?.miembros ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Miembros</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">{proyecto._count.etapas}</p>
+                    <p className="text-2xl font-bold text-foreground">{proyecto._count?.etapas ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Etapas</p>
                   </div>
                 </div>
@@ -333,6 +367,55 @@ export function DepartmentProjectsView({
           </div>
         </Card>
       )}
+
+      {/* Modal de Editar Proyecto */}
+      {editingProject && (
+        <EditProjectModal
+          open={!!editingProject}
+          onOpenChange={(open) => !open && setEditingProject(null)}
+          proyecto={{
+            ...editingProject,
+            estado: editingProject.estado as ProyectoCompleto['estado'],
+            responsableId: editingProject.responsable.id,
+            fechaActualizacion: editingProject.fechaCreacion,
+            tareas: [],
+            departamento: undefined,
+          } as ProyectoCompleto}
+        />
+      )}
+
+      {/* Dialog de Confirmación de Eliminación */}
+      <AlertDialog open={!!deletingProjectId} onOpenChange={(open) => !open && setDeletingProjectId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el proyecto de forma permanente. Todas las tareas, etapas y datos
+              asociados también serán eliminados. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deletingProjectId) {
+                  try {
+                    const { deleteProyecto } = useProjectStore.getState();
+                    await deleteProyecto(deletingProjectId);
+                    toast.success("Proyecto eliminado correctamente");
+                    setDeletingProjectId(null);
+                  } catch (error) {
+                    toast.error("Error al eliminar el proyecto");
+                  }
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

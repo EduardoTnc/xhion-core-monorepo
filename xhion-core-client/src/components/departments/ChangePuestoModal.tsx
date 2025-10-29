@@ -34,7 +34,7 @@ interface Usuario {
   email: string;
   avatarUrl?: string;
   puestoTrabajo?: {
-    id: string;
+    id?: string;  // Opcional para compatibilidad con diferentes endpoints
     titulo: string;
   };
 }

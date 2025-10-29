@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import {
   ArrowLeft,
@@ -39,6 +37,8 @@ import { DepartmentContextView } from "./DepartmentContextView"
 import { DepartmentOrgChart } from "./DepartmentOrgChart"
 import { DepartmentDocumentsManager } from "./DepartmentDocumentsManager"
 import { ProjectWorkspaceEnhanced } from "@/components/projects/ProjectWorkspaceEnhanced"
+import { CreateProjectModal } from "@/components/projects/CreateProjectModal"
+import { useNavigate } from "react-router-dom"
 
 interface DepartmentDetailProps {
   departamentoId: string
@@ -48,8 +48,10 @@ interface DepartmentDetailProps {
 export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailProps) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showContextModal, setShowContextModal] = useState(false)
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
+  const navigate = useNavigate()
 
   const {
     departamentoActual,
@@ -341,6 +343,8 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
                 departamentoId={departamentoId}
                 departamentoNombre={departamentoActual.nombre}
                 onProjectClick={(projectId) => setSelectedProjectId(projectId)}
+                onCreateProject={() => setShowCreateProjectModal(true)}
+                onViewAllProjects={() => navigate('/proyectos')}
               />
             </TabsContent>
 
@@ -437,11 +441,19 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
           <Card className="border-border bg-card p-6">
             <h3 className="font-semibold text-foreground">Acciones Rápidas</h3>
             <div className="mt-4 space-y-2">
-              <Button className="w-full justify-start bg-transparent" variant="outline">
+              <Button 
+                className="w-full justify-start bg-transparent" 
+                variant="outline"
+                onClick={() => setShowCreateProjectModal(true)}
+              >
                 <FolderKanban className="mr-2 h-4 w-4" />
                 Nuevo Proyecto
               </Button>
-              <Button className="w-full justify-start bg-transparent" variant="outline">
+              <Button 
+                className="w-full justify-start bg-transparent" 
+                variant="outline"
+                onClick={() => setActiveTab("team")}
+              >
                 <Users className="mr-2 h-4 w-4" />
                 Gestionar Empleados
               </Button>
@@ -471,6 +483,17 @@ export function DepartmentDetail({ departamentoId, onBack }: DepartmentDetailPro
         departamentoId={departamentoId}
         departamentoNombre={departamentoActual.nombre}
         contextoExistente={contexto}
+      />
+
+      <CreateProjectModal
+        open={showCreateProjectModal}
+        onOpenChange={setShowCreateProjectModal}
+        departamentoIdPredeterminado={departamentoId}
+        onSuccess={() => {
+          // Recargar datos del departamento para mostrar el nuevo proyecto
+          fetchDepartamentoById(departamentoId);
+          fetchEstadisticas(departamentoId);
+        }}
       />
     </div>
   )

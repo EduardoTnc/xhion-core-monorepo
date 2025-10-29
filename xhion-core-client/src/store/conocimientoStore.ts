@@ -126,10 +126,13 @@ export const useConocimientoStore = create<ConocimientoState>((set, get) => ({
       }));
       return contexto;
     } catch (error: any) {
+      // Si el módulo de conocimiento no está implementado (404), no mostrar error
       if (error.response?.status === 404) {
         set({ isLoading: false });
+        // Silenciosamente retornar null - el módulo aún no está implementado
         return null;
       }
+      // Solo mostrar error si es un error real (no 404)
       const errorMessage =
         error.response?.data?.message || 'Error al cargar contexto de departamento';
       set({ error: errorMessage, isLoading: false });

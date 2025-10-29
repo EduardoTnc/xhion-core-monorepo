@@ -1,26 +1,10 @@
 import apiClient from '../api/axios';
+import type { Proyecto as ProyectoBase, UsuarioSimple, Departamento } from '@/types';
 
-export interface Proyecto {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  estado: 'Activo' | 'Completado' | 'En_Pausa' | 'Archivado';
-  responsableId: string;
-  departamentoId?: string;
+// Extender el tipo base con campos adicionales del backend
+export interface Proyecto extends ProyectoBase {
   fechaInicio?: string;
   fechaFin?: string;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  responsable: {
-    id: string;
-    nombreCompleto: string;
-    email: string;
-    avatarUrl?: string;
-  };
-  departamento?: {
-    id: string;
-    nombre: string;
-  };
   miembros?: ProyectoMiembro[];
   etapas?: Etapa[];
   _count?: {
@@ -70,6 +54,8 @@ export interface CreateProyectoDto {
   descripcion?: string;
   responsableId: string;
   departamentoId?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
 }
 
 export interface UpdateProyectoDto {
@@ -78,6 +64,8 @@ export interface UpdateProyectoDto {
   responsableId?: string;
   departamentoId?: string;
   estado?: 'Activo' | 'Completado' | 'En_Pausa' | 'Archivado';
+  fechaInicio?: string;
+  fechaFin?: string;
 }
 
 export interface AddMiembroDto {

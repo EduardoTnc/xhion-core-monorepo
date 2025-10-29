@@ -97,15 +97,28 @@ export class ProyectosService {
 
   /**
    * Obtener todos los proyectos (con filtros opcionales)
+   * Si el usuario tiene el permiso 'proyectos.ver_todos', verá TODOS los proyectos
+   * Si no, solo verá proyectos donde es responsable o miembro
    */
-  async findAll(usuarioId: string, filters?: { estado?: string; departamentoId?: string }) {
+  async findAll(
+    usuarioId: string, 
+    permisos: string[], 
+    filters?: { estado?: string; departamentoId?: string }
+  ) {
+    // Verificar si el usuario tiene permiso para ver todos los proyectos
+    const puedeVerTodos = permisos.includes('proyectos.ver_todos');
+
     const where: any = {
       fechaEliminacion: null,
-      OR: [
+    };
+
+    // Si NO tiene permiso para ver todos, aplicar filtro de acceso
+    if (!puedeVerTodos) {
+      where.OR = [
         { responsableId: usuarioId },
         { miembros: { some: { usuarioId } } },
-      ],
-    };
+      ];
+    }
 
     if (filters?.estado) {
       where.estado = filters.estado;
