@@ -434,4 +434,145 @@ export class UsuariosService {
       })),
     };
   }
+
+  /**
+   * Cambia el estado de un usuario (ACTIVO/INACTIVO)
+   * @param usuarioId - ID del usuario
+   * @param nuevoEstado - Nuevo estado del usuario
+   */
+  async cambiarEstado(usuarioId: string, nuevoEstado: 'ACTIVO' | 'INACTIVO') {
+    // Validar estado
+    if (!['ACTIVO', 'INACTIVO'].includes(nuevoEstado)) {
+      throw new BadRequestException(
+        'Estado inválido. Debe ser ACTIVO o INACTIVO',
+      );
+    }
+
+    // Verificar que el usuario existe
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        email: true,
+        estado: true,
+      },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado`);
+    }
+
+    // Verificar si el estado ya es el mismo
+    if (usuario.estado === nuevoEstado) {
+      return {
+        message: `El usuario ya está ${nuevoEstado.toLowerCase()}`,
+        usuario: {
+          id: usuario.id,
+          nombreCompleto: usuario.nombreCompleto,
+          email: usuario.email,
+          estado: usuario.estado,
+        },
+      };
+    }
+
+    // Actualizar el estado
+    const usuarioActualizado = await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        estado: nuevoEstado,
+      },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        email: true,
+        estado: true,
+      },
+    });
+
+    const accion = nuevoEstado === 'ACTIVO' ? 'activado' : 'desactivado';
+
+    return {
+      message: `Usuario "${usuario.nombreCompleto}" ${accion} exitosamente`,
+      usuario: {
+        id: usuarioActualizado.id,
+        nombreCompleto: usuarioActualizado.nombreCompleto,
+        email: usuarioActualizado.email,
+        estadoAnterior: usuario.estado,
+        estadoNuevo: usuarioActualizado.estado,
+      },
+    };
+  }
+
+  /**
+   * Elimina un usuario del sistema (eliminación lógica)
+   * @param usuarioId - ID del usuario a eliminar
+   */
+  async eliminarUsuario(usuarioId: string) {
+    // Verificar que el usuario existe
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        rol: {
+          select: {
+            nombre: true,
+          },
+        },
+      },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado`);
+    }
+
+    // Verificar si ya está eliminado
+    if (usuario.fechaEliminacion) {
+      throw new BadRequestException(
+        `El usuario "${usuario.nombreCompleto}" ya está eliminado`,
+      );
+    }
+
+    // Verificar que no sea el último administrador
+    if (usuario.rol?.nombre === 'Administrador') {
+      const totalAdministradores = await this.prisma.usuario.count({
+        where: {
+          rol: {
+            nombre: 'Administrador',
+          },
+          fechaEliminacion: null,
+        },
+      });
+
+      if (totalAdministradores <= 1) {
+        throw new BadRequestException(
+          'No se puede eliminar el último administrador del sistema',
+        );
+      }
+    }
+
+    // Realizar eliminación lógica
+    const usuarioEliminado = await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        fechaEliminacion: new Date(),
+        estado: 'INACTIVO', // Cambiar estado a inactivo al eliminar
+      },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        email: true,
+        fechaEliminacion: true,
+      },
+    });
+
+    return {
+      message: `Usuario "${usuario.nombreCompleto}" eliminado exitosamente`,
+      usuario: {
+        id: usuarioEliminado.id,
+        nombreCompleto: usuarioEliminado.nombreCompleto,
+        email: usuarioEliminado.email,
+        eliminadoEn: usuarioEliminado.fechaEliminacion,
+      },
+    };
+  }
 }

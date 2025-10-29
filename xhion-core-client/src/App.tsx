@@ -6,7 +6,7 @@ import { ThemeProvider } from './components/providers/ThemeProvider'
 import { useThemeStore } from './store/themeStore'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import LoginPage from './pages/LoginPage'
-import AcceptInvitationPage from './pages/AcceptInvitationPage'
+import AceptarInvitacionPage from './pages/AceptarInvitacionPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
 import RolesPage from './pages/RolesPage'
@@ -39,7 +39,7 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/aceptar-invitacion" element={<AcceptInvitationPage />} />
+        <Route path="/aceptar-invitacion" element={<AceptarInvitacionPage />} />
 
         {/* Rutas Protegidas */}
         <Route element={<ProtectedRoute />}>

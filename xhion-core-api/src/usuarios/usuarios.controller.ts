@@ -156,6 +156,70 @@ export class UsuariosController {
   }
 
   /**
+   * PATCH /api/v1/usuarios/:id/estado
+   * Cambia el estado de un usuario (ACTIVO/INACTIVO)
+   * Requiere permiso: usuarios.editar
+   */
+  @Patch(':id/estado')
+  @RequiresPermission('usuarios.editar')
+  @ApiOperation({ summary: 'Cambiar estado de usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Estado cambiado exitosamente',
+    schema: {
+      example: {
+        message: 'Usuario "Juan Pérez" desactivado exitosamente',
+        usuario: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          nombreCompleto: 'Juan Pérez',
+          email: 'juan@example.com',
+          estadoAnterior: 'ACTIVO',
+          estadoNuevo: 'INACTIVO',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 400, description: 'Estado inválido' })
+  async cambiarEstado(
+    @Param('id') usuarioId: string,
+    @Body('estado') estado: 'ACTIVO' | 'INACTIVO',
+  ) {
+    return this.usuariosService.cambiarEstado(usuarioId, estado);
+  }
+
+  /**
+   * DELETE /api/v1/usuarios/:id
+   * Elimina un usuario del sistema (eliminación lógica)
+   * Requiere permiso: usuarios.eliminar
+   */
+  @Delete(':id')
+  @RequiresPermission('usuarios.eliminar')
+  @ApiOperation({ summary: 'Eliminar usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Usuario eliminado exitosamente',
+    schema: {
+      example: {
+        message: 'Usuario "Juan Pérez" eliminado exitosamente',
+        usuario: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          nombreCompleto: 'Juan Pérez',
+          email: 'juan@example.com',
+          eliminadoEn: '2025-10-28T23:47:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 400, description: 'No se puede eliminar el último administrador' })
+  async eliminarUsuario(@Param('id') usuarioId: string) {
+    return this.usuariosService.eliminarUsuario(usuarioId);
+  }
+
+  /**
    * GET /api/v1/usuarios/por-rol/:rolId
    * Obtiene todos los usuarios que tienen un rol específico
    * Requiere permiso: usuarios.ver

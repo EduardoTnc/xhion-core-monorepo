@@ -20,9 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Copy, Check, UserPlus, Link as LinkIcon } from "lucide-react"
+import { Loader2, Copy, Check, UserPlus, Link as LinkIcon, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { useRoleStore } from "../../store/roleStore"
+import { CompleteRegistrationModal } from "./CompleteRegistrationModal"
 import apiClient from "../../api/axios"
 
 // Schema de validación
@@ -41,10 +42,13 @@ interface InviteUserModalProps {
 }
 
 export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserModalProps) {
-  const { rolesCompletos } = useRoleStore()
+  const { rolesCompletos, fetchInitialData } = useRoleStore()
   const [step, setStep] = useState<"form" | "success">("form")
   const [invitationUrl, setInvitationUrl] = useState("")
+  const [invitationToken, setInvitationToken] = useState("")
+  const [invitedUserData, setInvitedUserData] = useState<{ email: string; nombre_completo: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showCompleteRegistrationModal, setShowCompleteRegistrationModal] = useState(false)
 
   const {
     register,
@@ -81,13 +85,18 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
       // Obtener usuario actual del localStorage o contexto
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
       
-      const response = await apiClient.post("/api/v1/invitaciones", {
+      const response = await apiClient.post("/invitaciones", {
         ...data,
         invitado_por_id: currentUser.id,
       })
 
-      // Guardar URL y cambiar a vista de éxito
+      // Guardar URL, token y datos del usuario
       setInvitationUrl(response.data.invitationUrl)
+      setInvitationToken(response.data.token)
+      setInvitedUserData({
+        email: data.email,
+        nombre_completo: data.nombre_completo,
+      })
       setStep("success")
       toast.success("¡Enlace de invitación generado!")
     } catch (error: any) {
@@ -249,30 +258,42 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
               <div className="rounded-lg border border-border bg-muted/50 p-4">
                 <h4 className="text-sm font-medium mb-2">Próximos pasos:</h4>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Comparte este enlace con el nuevo usuario</li>
-                  <li>El usuario creará su contraseña</li>
-                  <li>El usuario completará su perfil</li>
+                  <li>Comparte este enlace con el nuevo usuario para que complete su registro</li>
+                  <li>O completa el registro tú mismo usando el botón de abajo</li>
                   <li>El enlace expirará en 24 horas</li>
                 </ul>
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleClose}
+                className="w-full sm:w-auto"
               >
-                Listo
+                Cerrar
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowCompleteRegistrationModal(true)}
+                className="w-full sm:w-auto"
+              >
+                <UserCheck className="mr-2 h-4 w-4" />
+                Completar Registro Ahora
               </Button>
               <Button
                 type="button"
                 onClick={() => {
                   setStep("form")
                   setInvitationUrl("")
+                  setInvitationToken("")
+                  setInvitedUserData(null)
                   setCopied(false)
                   reset()
                 }}
+                className="w-full sm:w-auto"
               >
                 <UserPlus className="mr-2 h-4 w-4" />
                 Invitar a Otro Usuario
@@ -281,6 +302,22 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
           </>
         )}
       </DialogContent>
+
+      {/* Modal para completar registro por admin */}
+      {invitedUserData && (
+        <CompleteRegistrationModal
+          open={showCompleteRegistrationModal}
+          onOpenChange={setShowCompleteRegistrationModal}
+          token={invitationToken}
+          invitacionData={invitedUserData}
+          onSuccess={async () => {
+            toast.success("Usuario registrado exitosamente")
+            handleClose()
+            // Recargar datos
+            await fetchInitialData()
+          }}
+        />
+      )}
     </Dialog>
   )
 }

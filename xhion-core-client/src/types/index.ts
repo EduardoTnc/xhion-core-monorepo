@@ -600,9 +600,12 @@ export interface UsuarioEnRol {
     avatarUrl?: string | null;
     estado: EstadoUsuario;
     fechaIngreso?: string | null;
+    creadoEn?: string | null;
+    actualizadoEn?: string | null;
     rolId: string;
     puestoTrabajo?: {
         titulo: string;
+        descripcion?: string | null;
     } | null;
 }
 

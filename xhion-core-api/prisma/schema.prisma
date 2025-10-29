@@ -268,14 +268,15 @@ model Usuario {
 
 /// Invitaciones para nuevos usuarios.
 model Invitacion {
-  id               String   @id @default(uuid()) @db.Uuid
-  nombre_completo  String   @db.VarChar(100) @default("Desconocido")
-  email            String   @db.VarChar(100)
-  rol_id           String   @map("rol_id") @db.Uuid
-  departamento_id  String?  @map("departamento_id") @db.Uuid // Opcional si un invitado no tiene depto al inicio
-  token            String   @unique @db.VarChar(255)
-  fecha_expiracion DateTime
-  fue_utilizada    Boolean  @default(false)
+  id                 String    @id @default(uuid()) @db.Uuid
+  nombre_completo    String    @db.VarChar(100) @default("Desconocido")
+  email              String    @db.VarChar(100)
+  rol_id             String    @map("rol_id") @db.Uuid
+  departamento_id    String?   @map("departamento_id") @db.Uuid // Opcional si un invitado no tiene depto al inicio
+  token              String    @unique @db.VarChar(255)
+  fecha_expiracion   DateTime
+  fue_utilizada      Boolean   @default(false)
+  fecha_utilizacion  DateTime? // Fecha en que se aceptó la invitación
 
   invitado_por_id String  @map("invitado_por_id") @db.Uuid
   invitado_por    Usuario @relation("InvitadoPor", fields: [invitado_por_id], references: [id])

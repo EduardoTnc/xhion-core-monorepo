@@ -30,4 +30,47 @@ export const userService = {
       throw new Error(errorMessage);
     }
   },
+
+  /**
+   * Cambia el rol de un usuario
+   */
+  async changeRole(userId: string, newRoleId: string): Promise<any> {
+    try {
+      const response = await apiClient.patch(`/usuarios/${userId}/cambiar-rol`, {
+        rolId: newRoleId,
+      });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al cambiar el rol del usuario';
+      throw new Error(errorMessage);
+    }
+  },
+
+  /**
+   * Cambia el estado de un usuario (ACTIVO/INACTIVO)
+   */
+  async updateStatus(userId: string, status: 'ACTIVO' | 'INACTIVO'): Promise<any> {
+    try {
+      const response = await apiClient.patch(`/usuarios/${userId}/estado`, {
+        estado: status,
+      });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al cambiar el estado del usuario';
+      throw new Error(errorMessage);
+    }
+  },
+
+  /**
+   * Elimina un usuario del sistema (eliminación lógica)
+   */
+  async deleteUser(userId: string): Promise<any> {
+    try {
+      const response = await apiClient.delete(`/usuarios/${userId}`);
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al eliminar el usuario';
+      throw new Error(errorMessage);
+    }
+  },
 };
