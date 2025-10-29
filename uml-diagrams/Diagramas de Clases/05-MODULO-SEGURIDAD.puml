@@ -68,13 +68,15 @@ class RegistroAuditoria <<entity>> ENTITY_COLOR {
 ' RELACIONES
 ' ============================================
 
-' RBAC
-Rol "1" -- "0..*" RolPermiso : "tiene >"
-Permiso "1" -- "0..*" RolPermiso : "asignado a >"
-Rol "1" -- "0..*" Usuario : "asignado a >"
+' Rol - RolPermiso (Pivot)
+Rol --> RolPermiso : tiene
+Permiso --> RolPermiso : asignado en
 
-' Auditoría
-Usuario "1" -- "0..*" RegistroAuditoria : "genera >"
+' Rol - Usuario
+Rol --> Usuario : asignado a
+
+' Usuario - RegistroAuditoria
+Usuario --> RegistroAuditoria : genera
 
 note right of Permiso
   **Sistema de Permisos**

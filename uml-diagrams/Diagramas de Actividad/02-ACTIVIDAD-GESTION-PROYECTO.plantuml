@@ -1,0 +1,227 @@
+@startuml ACTIVIDAD-GESTION-PROYECTO
+!theme cerulean-outline
+title XHION CORE - Diagrama de Actividad\nGestión Completa de Proyecto
+
+|Responsable|
+start
+:Acceder al panel de proyectos;
+:Hacer clic en "Nuevo Proyecto";
+
+|Sistema|
+:Mostrar formulario de creación;
+
+|Responsable|
+:Ingresar información del proyecto;
+note right
+  - Nombre
+  - Descripción
+  - Departamento
+  - Fechas (inicio/fin)
+  - Estado inicial
+end note
+
+:Hacer clic en "Crear Proyecto";
+
+|Sistema|
+:Validar datos;
+
+if (¿Datos válidos?) then (no)
+  :Mostrar errores;
+  stop
+else (sí)
+  :Crear proyecto en BD;
+  :Asignar responsable;
+  :Registrar en auditoría;
+  :Mostrar proyecto creado;
+endif
+
+|Responsable|
+:Acceder al workspace del proyecto;
+
+partition "Configuración Inicial" {
+  |Responsable|
+  :Crear etapas del proyecto;
+  note right
+    - Por Hacer
+    - En Progreso
+    - En Revisión
+    - Hecho
+  end note
+  
+  |Sistema|
+  :Guardar etapas con orden;
+  
+  |Responsable|
+  :Agregar miembros al equipo;
+  
+  |Sistema|
+  :Validar permisos de usuarios;
+  :Asignar roles en proyecto;
+  note right
+    - Responsable
+    - Miembro
+    - Observador
+  end note
+  :Enviar notificaciones a miembros;
+}
+
+partition "Gestión de Tareas" {
+  |Miembro|
+  :Crear nueva tarea;
+  
+  |Sistema|
+  :Mostrar formulario de tarea;
+  
+  |Miembro|
+  :Ingresar detalles de tarea;
+  note right
+    - Título
+    - Descripción
+    - Prioridad
+    - Fecha vencimiento
+    - Etapa
+    - Asignado
+  end note
+  
+  :Guardar tarea;
+  
+  |Sistema|
+  :Validar datos;
+  :Crear tarea en BD;
+  :Notificar a usuario asignado;
+  
+  if (¿Tiene IA habilitada?) then (sí)
+    :Generar resumen con IA;
+    :Guardar resumen en tarea;
+  endif
+}
+
+partition "Seguimiento" {
+  |Miembro|
+  repeat
+    :Trabajar en tarea;
+    :Actualizar estado;
+    
+    |Sistema|
+    :Mover tarea entre etapas;
+    :Actualizar fecha de modificación;
+    :Registrar cambio en auditoría;
+    
+    |Miembro|
+    :Agregar comentarios;
+    
+    |Sistema|
+    :Guardar comentario;
+    :Notificar a participantes;
+    
+  repeat while (¿Tarea completada?) is (no)
+  ->sí;
+  
+  |Sistema|
+  :Marcar tarea como completada;
+  :Registrar fecha de completado;
+  :Calcular progreso del proyecto;
+  :Actualizar estadísticas;
+}
+
+partition "Gestión de Presupuesto" {
+  |Responsable|
+  if (¿Proyecto requiere presupuesto?) then (sí)
+    :Crear presupuesto de proyecto;
+    
+    |Sistema|
+    :Validar monto total;
+    :Crear registro de presupuesto;
+    
+    |Responsable|
+    repeat
+      :Registrar movimiento;
+      note right
+        - Tipo: Gasto/Asignación
+        - Monto
+        - Categoría
+        - Descripción
+        - Comprobante
+      end note
+      
+      |Sistema|
+      :Validar movimiento;
+      :Actualizar balance;
+      :Calcular disponible;
+      
+      if (¿Sobregasto?) then (sí)
+        :Generar alerta;
+        :Notificar a responsable;
+      endif
+      
+    repeat while (¿Más movimientos?) is (sí)
+  endif
+}
+
+partition "Documentación" {
+  |Miembro|
+  :Crear documentos del proyecto;
+  note right
+    Tipos:
+    - Resumen
+    - Objetivos
+    - Especificaciones
+    - Lecciones Aprendidas
+    - Documentación Técnica
+    - Notas
+  end note
+  
+  |Sistema|
+  :Guardar documento;
+  :Asociar con proyecto;
+  
+  if (¿Tiene archivo adjunto?) then (sí)
+    :Subir archivo;
+    :Validar tipo y tamaño;
+    :Guardar en almacenamiento;
+    :Vincular con documento;
+  endif
+}
+
+partition "Cierre de Proyecto" {
+  |Responsable|
+  if (¿Proyecto completado?) then (sí)
+    :Cambiar estado a "Completado";
+    
+    |Sistema|
+    :Validar todas las tareas;
+    
+    if (¿Hay tareas pendientes?) then (sí)
+      :Mostrar advertencia;
+      
+      |Responsable|
+      if (¿Forzar cierre?) then (no)
+        stop
+      endif
+    endif
+    
+    |Sistema|
+    :Actualizar estado del proyecto;
+    :Cerrar presupuesto (si existe);
+    :Calcular métricas finales;
+    note right
+      - Duración total
+      - Tareas completadas
+      - Presupuesto utilizado
+      - Miembros participantes
+    end note
+    :Registrar en auditoría;
+    :Generar reporte final;
+    :Notificar a equipo;
+  else (no)
+    if (¿Archivar proyecto?) then (sí)
+      :Cambiar estado a "Archivado";
+      :Registrar fecha de archivo;
+      :Notificar a equipo;
+    endif
+  endif
+}
+
+stop
+
+@enduml

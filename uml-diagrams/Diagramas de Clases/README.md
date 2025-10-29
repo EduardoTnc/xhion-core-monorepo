@@ -7,14 +7,15 @@
 
 ---
 
-## 📋 ÍNDICE
+## 🔄 ACTUALIZACIÓN IMPORTANTE (29/Oct/2025)
 
-1. [Introducción](#introducción)
-2. [Estructura de Diagramas](#estructura-de-diagramas)
-3. [Convenciones y Estándares](#convenciones-y-estándares)
-4. [Diagramas Disponibles](#diagramas-disponibles)
-5. [Cómo Visualizar](#cómo-visualizar)
-6. [Métricas del Sistema](#métricas-del-sistema)
+**Cambios aplicados:**
+- ✅ Eliminadas todas las relaciones con cardinalidad (1, 0..*, etc.)
+- ✅ Reemplazadas por asociaciones simples con roles descriptivos
+- ✅ Enumeraciones ahora usan relaciones de dependencia (<<use>>)
+- ✅ Tablas pivot claramente identificadas
+- ✅ Relaciones bidireccionales convertidas a unidireccionales
+- ✅ Cumplimiento estricto con estándares UML de clases
 
 ---
 
@@ -69,17 +70,41 @@ Este directorio contiene los **diagramas UML de clases** completos del sistema X
 <<unique>> Restricción única
 ```
 
-### **Relaciones:**
+### **Relaciones (Corregidas):**
+
+**Asociaciones Simples:**
+```plantuml
+ClaseA --> ClaseB : rol descriptivo
 ```
-"1" -- "0..*"  : Uno a muchos
-"1" -- "0..1"  : Uno a cero o uno
-"*" -- "*"     : Muchos a muchos
+- Flecha simple unidireccional
+- Sin cardinalidad (eliminada según estándares UML de clases)
+- Rol descriptivo que explica la relación
+
+**Dependencias (Enumeraciones):**
+```plantuml
+Clase ..> Enumeracion : <<use>>
+```
+- Línea punteada para dependencias
+- Estereotipo `<<use>>` para enumeraciones
+
+**Ejemplos:**
+```plantuml
+' ✅ CORRECTO - Asociación simple
+Proyecto --> Usuario : responsable
+Departamento --> PuestoTrabajo : contiene
+
+' ✅ CORRECTO - Dependencia
+Usuario ..> EstadoUsuario : <<use>>
+
+' ❌ INCORRECTO - No usar cardinalidad
+Proyecto "1" -- "0..*" Tarea : contiene
 ```
 
 ### **Estereotipos:**
 - `<<entity>>` - Entidad de dominio
 - `<<enumeration>>` - Tipo enumerado
 - `<<pivot>>` - Tabla de relación muchos a muchos
+- `<<use>>` - Dependencia de uso (para enumeraciones)
 
 ---
 

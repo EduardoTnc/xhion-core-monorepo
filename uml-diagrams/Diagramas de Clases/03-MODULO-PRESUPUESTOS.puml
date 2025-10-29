@@ -120,27 +120,39 @@ class MovimientoPresupuestoProyecto <<entity>> ENTITY_COLOR {
 ' RELACIONES
 ' ============================================
 
-' Presupuesto Departamento
-Departamento "1" -- "0..1" PresupuestoDepartamento : "tiene >"
-PresupuestoDepartamento "1" -- "0..*" MovimientoPresupuestoDepartamento : "registra >"
-Usuario "1" -- "0..*" PresupuestoDepartamento : "crea >"
-Usuario "1" -- "0..*" MovimientoPresupuestoDepartamento : "registra >"
+' Departamento - PresupuestoDepartamento
+Departamento --> PresupuestoDepartamento : tiene
 
-' Presupuesto Proyecto
-Proyecto "1" -- "0..1" PresupuestoProyecto : "tiene >"
-PresupuestoProyecto "1" -- "0..*" MovimientoPresupuestoProyecto : "registra >"
-Usuario "1" -- "0..*" PresupuestoProyecto : "crea >"
-Usuario "1" -- "0..*" MovimientoPresupuestoProyecto : "registra >"
+' PresupuestoDepartamento - MovimientoPresupuestoDepartamento
+PresupuestoDepartamento --> MovimientoPresupuestoDepartamento : registra
 
-' Archivos
-Archivo "1" -- "0..*" MovimientoPresupuestoDepartamento : "comprobante >"
-Archivo "1" -- "0..*" MovimientoPresupuestoProyecto : "comprobante >"
+' Usuario - PresupuestoDepartamento (Creador)
+Usuario --> PresupuestoDepartamento : crea
 
-' Enumeraciones
-PresupuestoDepartamento -- EstadoPresupuesto
-PresupuestoProyecto -- EstadoPresupuesto
-MovimientoPresupuestoDepartamento -- TipoMovimientoPresupuesto
-MovimientoPresupuestoProyecto -- TipoMovimientoPresupuesto
+' Usuario - MovimientoPresupuestoDepartamento (Registrador)
+Usuario --> MovimientoPresupuestoDepartamento : registra
+
+' Proyecto - PresupuestoProyecto
+Proyecto --> PresupuestoProyecto : tiene
+
+' PresupuestoProyecto - MovimientoPresupuestoProyecto
+PresupuestoProyecto --> MovimientoPresupuestoProyecto : registra
+
+' Usuario - PresupuestoProyecto (Creador)
+Usuario --> PresupuestoProyecto : crea
+
+' Usuario - MovimientoPresupuestoProyecto (Registrador)
+Usuario --> MovimientoPresupuestoProyecto : registra
+
+' Archivo - Movimientos (Comprobantes)
+Archivo --> MovimientoPresupuestoDepartamento : comprobante de
+Archivo --> MovimientoPresupuestoProyecto : comprobante de
+
+' Enumeraciones (Dependencias)
+PresupuestoDepartamento ..> EstadoPresupuesto : <<use>>
+PresupuestoProyecto ..> EstadoPresupuesto : <<use>>
+MovimientoPresupuestoDepartamento ..> TipoMovimientoPresupuesto : <<use>>
+MovimientoPresupuestoProyecto ..> TipoMovimientoPresupuesto : <<use>>
 
 note right of PresupuestoDepartamento
   **Presupuesto de Departamento**

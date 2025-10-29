@@ -197,40 +197,49 @@ class UsuarioHabilidad <<pivot>> PIVOT_COLOR {
 ' RELACIONES
 ' ============================================
 
-' Departamento
-Departamento "1" -- "0..*" Usuario : "jefe >"
-Departamento "1" -- "1..*" PuestoTrabajo : "tiene >"
-Departamento "1" -- "0..*" Invitacion : "genera >"
+' Departamento - Usuario (Jefe)
+Departamento --> Usuario : jefe
 
-' Usuario - Jerarquía
-Usuario "0..1" -- "0..*" Usuario : "supervisa >"
+' Departamento - PuestoTrabajo
+Departamento --> PuestoTrabajo : contiene
 
-' Usuario - Rol y Puesto
-Rol "1" -- "0..*" Usuario : "asignado a >"
-PuestoTrabajo "0..1" -- "0..*" Usuario : "ocupa >"
+' Departamento - Invitacion
+Departamento --> Invitacion : genera
 
-' Usuario - Invitaciones
-Usuario "1" -- "0..*" Invitacion : "invita >"
-Invitacion "*" -- "1" Rol : "asigna >"
-Invitacion "*" -- "0..1" Departamento : "asigna a >"
+' Usuario - Jerarquía (Auto-referencia)
+Usuario --> Usuario : supervisa
 
-' Usuario - Sesiones
-Usuario "1" -- "0..*" Sesion : "tiene >"
+' Rol - Usuario
+Rol --> Usuario : asignado a
 
-' Usuario - Perfil
-Usuario "1" -- "0..*" UsuarioContacto : "tiene >"
-Usuario "1" -- "0..*" UsuarioEnlaceProfesional : "tiene >"
-Usuario "1" -- "0..*" UsuarioHabilidad : "posee >"
+' PuestoTrabajo - Usuario
+PuestoTrabajo --> Usuario : ocupado por
 
-' Habilidades
-Habilidad "1" -- "0..*" UsuarioHabilidad : "asignada a >"
+' Usuario - Invitacion (Creador)
+Usuario --> Invitacion : crea
 
-' Enumeraciones
-Usuario -- EstadoUsuario
-UsuarioContacto -- TipoContacto
-UsuarioEnlaceProfesional -- TipoEnlaceProfesional
-UsuarioHabilidad -- NivelHabilidad
-Habilidad -- CategoriaHabilidad
+' Invitacion - Rol
+Invitacion --> Rol : asigna
+
+' Usuario - Sesion
+Usuario --> Sesion : tiene
+
+' Usuario - UsuarioContacto
+Usuario --> UsuarioContacto : tiene
+
+' Usuario - UsuarioEnlaceProfesional
+Usuario --> UsuarioEnlaceProfesional : tiene
+
+' Usuario - UsuarioHabilidad (Pivot)
+Usuario --> UsuarioHabilidad : posee
+Habilidad --> UsuarioHabilidad : asignada en
+
+' Enumeraciones (Dependencias)
+Usuario ..> EstadoUsuario : <<use>>
+UsuarioContacto ..> TipoContacto : <<use>>
+UsuarioEnlaceProfesional ..> TipoEnlaceProfesional : <<use>>
+UsuarioHabilidad ..> NivelHabilidad : <<use>>
+Habilidad ..> CategoriaHabilidad : <<use>>
 
 note right of Usuario
   **Usuario es la entidad central**

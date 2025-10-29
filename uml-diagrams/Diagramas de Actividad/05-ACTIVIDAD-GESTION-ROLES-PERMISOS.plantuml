@@ -1,0 +1,266 @@
+@startuml ACTIVIDAD-GESTION-ROLES-PERMISOS
+!theme cerulean-outline
+title XHION CORE - Diagrama de Actividad\nGestión de Roles y Permisos Granulares
+
+|Administrador|
+start
+:Acceder al panel de Roles y Permisos;
+
+|Sistema|
+:Cargar todos los roles;
+:Mostrar lista de roles con estadísticas;
+note right
+  Por cada rol:
+  - Nombre y color
+  - Usuarios asignados
+  - Permisos activos
+  - Cobertura de permisos
+end note
+
+partition "Creación de Rol" {
+  |Administrador|
+  :Hacer clic en "Crear Rol";
+  
+  |Sistema|
+  :Mostrar formulario de creación;
+  
+  |Administrador|
+  :Ingresar datos del rol;
+  note right
+    - Nombre (único)
+    - Descripción
+    - Color (para UI)
+  end note
+  
+  :Hacer clic en "Crear";
+  
+  |Sistema|
+  :Validar datos;
+  
+  if (¿Nombre único?) then (no)
+    :Mostrar error "Rol ya existe";
+    stop
+  else (sí)
+    :Crear rol en BD;
+    :Registrar en auditoría;
+    :Mostrar rol creado;
+  endif
+}
+
+partition "Asignación de Permisos" {
+  |Administrador|
+  :Seleccionar rol a configurar;
+  :Hacer clic en "Gestionar Permisos";
+  
+  |Sistema|
+  :Cargar todos los permisos del sistema;
+  note right
+    47 permisos granulares
+    organizados en 10 módulos
+  end note
+  :Cargar permisos actuales del rol;
+  :Mostrar modal de gestión de permisos;
+  
+  |Administrador|
+  :Navegar por tabs de módulos;
+  note right
+    Módulos:
+    1. Proyectos (8)
+    2. Tareas (8)
+    3. Departamentos (6)
+    4. Presupuestos (6)
+    5. Conocimiento (4)
+    6. Usuarios (6)
+    7. Roles (5)
+    8. Auditoría (2)
+    9. Sistema (3)
+    10. Invitaciones (3)
+  end note
+  
+  repeat
+    :Seleccionar módulo;
+    
+    |Sistema|
+    :Mostrar permisos del módulo;
+    :Marcar permisos activos;
+    
+    |Administrador|
+    :Activar/Desactivar permisos;
+    note right
+      Opciones:
+      - Seleccionar individual
+      - Seleccionar todos del módulo
+      - Búsqueda de permisos
+    end note
+    
+  repeat while (¿Más módulos?) is (sí)
+  
+  |Administrador|
+  :Hacer clic en "Guardar Permisos";
+  
+  |Sistema|
+  :Validar selección;
+  :Iniciar transacción de BD;
+  
+  fork
+    :Eliminar permisos anteriores del rol;
+  fork again
+    :Insertar nuevos permisos;
+    note right
+      Tabla: RolPermiso
+      - rolId
+      - permisoId
+    end note
+  end fork
+  
+  :Confirmar transacción;
+  :Invalidar caché de permisos;
+  :Registrar en auditoría;
+  note right
+    Registra:
+    - Permisos agregados
+    - Permisos removidos
+    - Usuario que modificó
+  end note
+  :Mostrar mensaje de éxito;
+  :Actualizar estadísticas del rol;
+}
+
+partition "Asignación de Rol a Usuario" {
+  |Administrador|
+  :Acceder al panel de usuarios;
+  :Seleccionar usuario;
+  :Hacer clic en "Cambiar Rol";
+  
+  |Sistema|
+  :Mostrar lista de roles disponibles;
+  :Marcar rol actual del usuario;
+  
+  |Administrador|
+  :Seleccionar nuevo rol;
+  :Confirmar cambio;
+  
+  |Sistema|
+  :Validar rol seleccionado;
+  :Actualizar rol del usuario;
+  :Invalidar sesiones activas del usuario;
+  note right
+    Fuerza re-login para
+    aplicar nuevos permisos
+  end note
+  :Registrar en auditoría;
+  :Notificar al usuario del cambio;
+  :Mostrar mensaje de éxito;
+}
+
+partition "Validación de Permisos en Runtime" {
+  |Usuario|
+  :Intentar realizar acción;
+  
+  |Sistema|
+  :Extraer userId del JWT;
+  :Obtener rol del usuario;
+  
+  if (¿Permisos en caché?) then (sí)
+    :Recuperar de caché (O(1));
+  else (no)
+    :Cargar permisos del rol (Eager Loading);
+    :Cachear en request;
+  endif
+  
+  :Verificar permiso requerido;
+  note right
+    Decorador: @RequiresPermission
+    Ejemplo: @RequiresPermission('proyectos.crear')
+  end note
+  
+  if (¿Tiene permiso?) then (sí)
+    :Ejecutar acción;
+    :Retornar resultado;
+  else (no)
+    :Registrar intento no autorizado;
+    :Retornar error 403 Forbidden;
+    :Mostrar mensaje "Sin permisos";
+  endif
+}
+
+partition "Clonación de Rol" {
+  |Administrador|
+  if (¿Clonar rol existente?) then (sí)
+    :Seleccionar rol a clonar;
+    :Hacer clic en "Clonar Rol";
+    
+    |Sistema|
+    :Mostrar formulario con datos pre-llenados;
+    
+    |Administrador|
+    :Modificar nombre del nuevo rol;
+    :Ajustar permisos si es necesario;
+    :Guardar nuevo rol;
+    
+    |Sistema|
+    :Crear rol con permisos copiados;
+    :Registrar en auditoría;
+  endif
+}
+
+partition "Eliminación de Rol" {
+  |Administrador|
+  :Seleccionar rol a eliminar;
+  :Hacer clic en "Eliminar";
+  
+  |Sistema|
+  :Verificar usuarios asignados;
+  
+  if (¿Tiene usuarios asignados?) then (sí)
+    :Mostrar advertencia;
+    note right
+      "Este rol tiene X usuarios asignados.
+      Debes reasignarlos antes de eliminar."
+    end note
+    
+    |Administrador|
+    :Reasignar usuarios a otro rol;
+    
+    |Sistema|
+    :Actualizar usuarios;
+  endif
+  
+  |Administrador|
+  :Confirmar eliminación;
+  
+  |Sistema|
+  :Eliminación lógica del rol;
+  note right
+    fecha_eliminacion = NOW()
+    No se elimina físicamente
+  end note
+  :Eliminar permisos asociados;
+  :Registrar en auditoría;
+  :Mostrar mensaje de éxito;
+}
+
+partition "Búsqueda y Filtros" {
+  |Administrador|
+  if (¿Buscar permisos?) then (sí)
+    :Ingresar término de búsqueda;
+    
+    |Sistema|
+    :Filtrar permisos en tiempo real;
+    :Resaltar coincidencias;
+    :Mostrar resultados agrupados por módulo;
+  endif
+  
+  if (¿Ver usuarios por rol?) then (sí)
+    :Seleccionar rol;
+    
+    |Sistema|
+    :Cargar usuarios con ese rol;
+    :Mostrar lista con avatares;
+    :Mostrar estadísticas;
+  endif
+}
+
+stop
+
+@enduml

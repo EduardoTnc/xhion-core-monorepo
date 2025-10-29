@@ -1,0 +1,118 @@
+@startuml ACTIVIDAD-INVITACION-USUARIO
+!theme cerulean-outline
+title XHION CORE - Diagrama de Actividad\nProceso de Invitación y Registro de Usuario
+
+|Administrador|
+start
+:Acceder al panel de usuarios;
+:Hacer clic en "Invitar Usuario";
+
+|Sistema|
+:Mostrar formulario de invitación;
+
+|Administrador|
+:Ingresar datos del nuevo usuario;
+note right
+  - Nombre completo
+  - Email
+  - Rol
+  - Departamento (opcional)
+end note
+
+:Hacer clic en "Generar Invitación";
+
+|Sistema|
+:Validar datos ingresados;
+
+if (¿Datos válidos?) then (no)
+  :Mostrar errores de validación;
+  stop
+else (sí)
+  :Generar token único (64 caracteres);
+  :Calcular fecha de expiración (24 horas);
+  :Crear registro de invitación en BD;
+  :Generar enlace de invitación;
+  :Mostrar enlace generado;
+  :Registrar evento en auditoría;
+endif
+
+|Administrador|
+:Copiar enlace de invitación;
+:Enviar enlace por WhatsApp/Email;
+
+|Usuario Invitado|
+:Recibir enlace de invitación;
+:Hacer clic en el enlace;
+
+|Sistema|
+:Validar token de invitación;
+
+if (¿Token válido?) then (no)
+  if (¿Token no existe?) then (sí)
+    :Mostrar error "Invitación no encontrada";
+    stop
+  else (no)
+    if (¿Ya fue utilizada?) then (sí)
+      :Mostrar error con fecha de uso;
+      stop
+    else (no)
+      :Mostrar error "Invitación expirada";
+      stop
+    endif
+  endif
+else (sí)
+  :Mostrar formulario de registro;
+  :Pre-llenar nombre y email;
+endif
+
+|Usuario Invitado|
+:Completar información personal;
+note right
+  - Contraseña
+  - Confirmación de contraseña
+  - Avatar (opcional)
+  - Biografía (opcional)
+  - Fecha de nacimiento
+  - Contactos
+  - Enlaces profesionales
+  - Habilidades
+end note
+
+:Hacer clic en "Completar Registro";
+
+|Sistema|
+:Validar formulario;
+
+if (¿Datos válidos?) then (no)
+  :Mostrar errores;
+  backward:Corregir datos;
+else (sí)
+  fork
+    :Hashear contraseña (bcrypt);
+  fork again
+    :Calcular puntaje de perfil;
+  end fork
+  
+  :Iniciar transacción de BD;
+  
+  fork
+    :Crear usuario en BD;
+  fork again
+    :Marcar invitación como utilizada;
+    :Registrar fecha de utilización;
+  end fork
+  
+  :Confirmar transacción;
+  :Registrar evento en auditoría;
+  :Generar JWT y Refresh Token;
+  :Crear sesión de usuario;
+  :Mostrar mensaje de éxito;
+  :Redirigir al dashboard;
+endif
+
+|Usuario Invitado|
+:Acceder al sistema;
+
+stop
+
+@enduml

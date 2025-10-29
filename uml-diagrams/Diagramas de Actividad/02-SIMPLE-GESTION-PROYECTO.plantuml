@@ -1,0 +1,55 @@
+@startuml SIMPLE-GESTION-PROYECTO
+
+title Gestión de Proyecto (Simplificado)
+
+|Responsable|
+start
+:Crear proyecto;
+
+|Sistema|
+:Guardar proyecto;
+
+|Responsable|
+:Crear etapas\n(Kanban);
+:Agregar miembros\nal equipo;
+
+|Miembro|
+:Crear tareas;
+
+|Sistema|
+:Asignar a usuarios;
+:Notificar asignados;
+
+|Miembro|
+repeat
+  :Trabajar en tarea;
+  :Actualizar estado;
+  :Agregar comentarios;
+repeat while (¿Completada?) is (no)
+->sí;
+
+|Sistema|
+:Calcular progreso;
+
+|Responsable|
+if (¿Crear presupuesto?) then (sí)
+  :Definir monto total;
+  :Registrar gastos;
+  
+  |Sistema|
+  if (¿Sobregasto?) then (sí)
+    :Generar alerta;
+  endif
+endif
+
+|Responsable|
+if (¿Proyecto terminado?) then (sí)
+  |Sistema|
+  :Cambiar estado\na "Completado";
+  :Generar reporte final;
+  :Notificar equipo;
+endif
+
+stop
+
+@enduml

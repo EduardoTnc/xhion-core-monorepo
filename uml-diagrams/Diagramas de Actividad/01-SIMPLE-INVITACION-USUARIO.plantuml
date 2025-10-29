@@ -1,0 +1,51 @@
+@startuml SIMPLE-INVITACION-USUARIO
+
+title Proceso de Invitación de Usuario (Simplificado)
+
+|Administrador|
+start
+:Ingresar datos del\nnuevo usuario;
+:Generar invitación;
+
+|Sistema|
+:Crear token único\n(válido 24h);
+:Generar enlace;
+
+|Administrador|
+:Enviar enlace\npor WhatsApp/Email;
+
+|Usuario Invitado|
+:Acceder al enlace;
+
+|Sistema|
+if (¿Token válido?) then (no)
+  :Mostrar error;
+  stop
+else (sí)
+  :Mostrar formulario;
+endif
+
+|Usuario Invitado|
+:Completar perfil\ny contraseña;
+
+|Sistema|
+:Validar datos;
+
+if (¿Datos correctos?) then (no)
+  :Mostrar errores;
+  stop
+else (sí)
+  fork
+    :Crear usuario;
+  fork again
+    :Marcar invitación\ncomo utilizada;
+  end fork
+  
+  :Generar JWT;
+  :Crear sesión;
+  :Redirigir al dashboard;
+endif
+
+stop
+
+@enduml

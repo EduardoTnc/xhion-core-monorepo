@@ -408,71 +408,72 @@ class Archivo <<entity>> ENTITY_COLOR {
 ' ============================================
 
 ' Departamento
-Departamento "1" -- "0..*" Usuario : jefe >
-Departamento "1" -- "0..*" PuestoTrabajo
-Departamento "1" -- "0..*" Proyecto
-Departamento "1" -- "0..1" ContextoDepartamento
-Departamento "1" -- "0..1" PresupuestoDepartamento
-Departamento "1" -- "0..*" DocumentoDepartamento
-Departamento "1" -- "0..*" Invitacion
+Departamento --> Usuario : jefe
+Departamento --> PuestoTrabajo : contiene
+Departamento --> Proyecto : tiene
+Departamento --> ContextoDepartamento : tiene
+Departamento --> PresupuestoDepartamento : tiene
+Departamento --> DocumentoDepartamento : contiene
+Departamento --> Invitacion : genera
 
 ' Usuario
-Usuario "1" -- "0..*" Usuario : supervisa >
-Usuario "1" -- "0..*" Invitacion : invita >
-Usuario "1" -- "0..*" Sesion
-Usuario "1" -- "0..*" Proyecto : responsable >
-Usuario "1" -- "0..*" ProyectoMiembro
-Usuario "1" -- "0..*" Tarea : asignado >
-Usuario "1" -- "0..*" Tarea : creador >
-Usuario "1" -- "0..*" Comentario
-Usuario "1" -- "0..*" RegistroAuditoria
-Usuario "1" -- "0..*" Archivo : sube >
-Usuario "1" -- "0..*" ContextoOrganizacional : actualiza >
-Usuario "1" -- "0..*" ContextoDepartamento : actualiza >
-Usuario "1" -- "0..*" DocumentoProyecto : crea >
-Usuario "1" -- "0..*" DocumentoDepartamento : crea >
+Usuario --> Usuario : supervisa
+Usuario --> Invitacion : crea
+Usuario --> Sesion : tiene
+Usuario --> Proyecto : responsable de
+Usuario --> ProyectoMiembro : participa en
+Usuario --> Tarea : asignado a
+Usuario --> Tarea : crea
+Usuario --> Comentario : escribe
+Usuario --> RegistroAuditoria : genera
+Usuario --> Archivo : sube
+Usuario --> ContextoOrganizacional : actualiza
+Usuario --> ContextoDepartamento : actualiza
+Usuario --> DocumentoProyecto : crea
+Usuario --> DocumentoDepartamento : crea
 
 ' Rol
-Rol "1" -- "0..*" Usuario
-Rol "1" -- "0..*" RolPermiso
-Rol "1" -- "0..*" Invitacion
+Rol --> Usuario : asignado a
+Rol --> RolPermiso : tiene
+Rol --> Invitacion : asigna
 
 ' PuestoTrabajo
-PuestoTrabajo "1" -- "0..*" Usuario
+PuestoTrabajo --> Usuario : ocupado por
 
 ' Proyecto
-Proyecto "1" -- "0..*" Tarea
-Proyecto "1" -- "0..*" Etapa
-Proyecto "1" -- "0..*" ProyectoMiembro
-Proyecto "1" -- "0..*" DocumentoProyecto
-Proyecto "1" -- "0..1" PresupuestoProyecto
+Proyecto --> Tarea : contiene
+Proyecto --> Etapa : organizado en
+Proyecto --> ProyectoMiembro : tiene
+Proyecto --> DocumentoProyecto : contiene
+Proyecto --> PresupuestoProyecto : tiene
+Proyecto --> Departamento : pertenece a
 
 ' Tarea
-Tarea "1" -- "0..*" Comentario
-Etapa "1" -- "0..*" Tarea
+Tarea --> Comentario : tiene
+Tarea --> Etapa : pertenece a
 
 ' Presupuestos
-PresupuestoDepartamento "1" -- "0..*" MovimientoPresupuestoDepartamento
-PresupuestoProyecto "1" -- "0..*" MovimientoPresupuestoProyecto
+PresupuestoDepartamento --> MovimientoPresupuestoDepartamento : registra
+PresupuestoProyecto --> MovimientoPresupuestoProyecto : registra
 
 ' Permisos
-Permiso "1" -- "0..*" RolPermiso
+Permiso --> RolPermiso : asignado en
 
 ' Archivos
-Archivo "1" -- "0..*" DocumentoProyecto
-Archivo "1" -- "0..*" MovimientoPresupuestoDepartamento
-Archivo "1" -- "0..*" MovimientoPresupuestoProyecto
+Archivo --> DocumentoProyecto : adjunto en
+Archivo --> MovimientoPresupuestoDepartamento : comprobante de
+Archivo --> MovimientoPresupuestoProyecto : comprobante de
 
-' Enumeraciones
-Usuario -- EstadoUsuario
-Proyecto -- EstadoProyecto
-Tarea -- EstadoTarea
-Tarea -- PrioridadTarea
-ProyectoMiembro -- RolProyecto
-DocumentoProyecto -- TipoDocumentoProyecto
-PresupuestoDepartamento -- EstadoPresupuesto
-PresupuestoProyecto -- EstadoPresupuesto
-MovimientoPresupuestoDepartamento -- TipoMovimientoPresupuesto
-MovimientoPresupuestoProyecto -- TipoMovimientoPresupuesto
+' Enumeraciones (Dependencias)
+Usuario ..> EstadoUsuario : <<use>>
+Proyecto ..> EstadoProyecto : <<use>>
+Tarea ..> EstadoTarea : <<use>>
+Tarea ..> PrioridadTarea : <<use>>
+ProyectoMiembro ..> RolProyecto : <<use>>
+DocumentoProyecto ..> TipoDocumentoProyecto : <<use>>
+PresupuestoDepartamento ..> EstadoPresupuesto : <<use>>
+PresupuestoProyecto ..> EstadoPresupuesto : <<use>>
+MovimientoPresupuestoDepartamento ..> TipoMovimientoPresupuesto : <<use>>
+MovimientoPresupuestoProyecto ..> TipoMovimientoPresupuesto : <<use>>
 
 @enduml

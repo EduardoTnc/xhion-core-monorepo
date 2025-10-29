@@ -154,33 +154,43 @@ class ProyectoMiembro <<pivot>> PIVOT_COLOR {
 ' RELACIONES
 ' ============================================
 
-' Proyecto - Usuario
-Proyecto "*" -- "1" Usuario : "responsable >"
-Proyecto "0..*" -- "0..1" Departamento : "pertenece a >"
+' Proyecto - Usuario (Responsable)
+Proyecto --> Usuario : responsable
 
-' Proyecto - Tareas y Etapas
-Proyecto "1" -- "0..*" Tarea : "contiene >"
-Proyecto "1" -- "0..*" Etapa : "organizado en >"
+' Proyecto - Departamento
+Proyecto --> Departamento : pertenece a
 
-' Proyecto - Miembros
-Proyecto "1" -- "0..*" ProyectoMiembro : "tiene >"
-Usuario "1" -- "0..*" ProyectoMiembro : "participa en >"
+' Proyecto - Tarea
+Proyecto --> Tarea : contiene
 
-' Tarea - Relaciones
-Tarea "*" -- "0..1" Etapa : "pertenece a >"
-Tarea "*" -- "0..1" Usuario : "asignado a >"
-Tarea "*" -- "1" Usuario : "creado por >"
-Tarea "1" -- "0..*" Comentario : "tiene >"
+' Proyecto - Etapa
+Proyecto --> Etapa : organizado en
+
+' Proyecto - ProyectoMiembro (Pivot)
+Proyecto --> ProyectoMiembro : tiene
+Usuario --> ProyectoMiembro : participa en
+
+' Tarea - Etapa
+Tarea --> Etapa : pertenece a
+
+' Tarea - Usuario (Asignado)
+Tarea --> Usuario : asignado a
+
+' Tarea - Usuario (Creador)
+Tarea --> Usuario : creado por
+
+' Tarea - Comentario
+Tarea --> Comentario : tiene
 
 ' Comentario - Usuario
-Comentario "*" -- "1" Usuario : "escrito por >"
+Comentario --> Usuario : escrito por
 
-' Enumeraciones
-Proyecto -- EstadoProyecto
-Tarea -- EstadoTarea
-Tarea -- PrioridadTarea
-Etapa -- EstadoEtapa
-ProyectoMiembro -- RolProyecto
+' Enumeraciones (Dependencias)
+Proyecto ..> EstadoProyecto : <<use>>
+Tarea ..> EstadoTarea : <<use>>
+Tarea ..> PrioridadTarea : <<use>>
+Etapa ..> EstadoEtapa : <<use>>
+ProyectoMiembro ..> RolProyecto : <<use>>
 
 note right of Proyecto
   **Proyecto**

@@ -1,0 +1,191 @@
+@startuml ACTIVIDAD-AUTENTICACION
+!theme cerulean-outline
+title XHION CORE - Diagrama de Actividad\nProceso de Autenticación y Gestión de Sesiones
+
+|Usuario|
+start
+:Acceder a la página de login;
+
+|Sistema|
+:Mostrar formulario de autenticación;
+
+|Usuario|
+:Ingresar credenciales;
+note right
+  - Email
+  - Contraseña
+end note
+
+:Hacer clic en "Iniciar Sesión";
+
+|Sistema|
+:Validar formato de datos;
+
+if (¿Formato válido?) then (no)
+  :Mostrar errores de validación;
+  stop
+else (sí)
+  :Buscar usuario por email;
+  
+  if (¿Usuario existe?) then (no)
+    :Registrar intento fallido;
+    :Mostrar error "Credenciales inválidas";
+    stop
+  else (sí)
+    :Verificar contraseña con bcrypt;
+    
+    if (¿Contraseña correcta?) then (no)
+      :Registrar intento fallido;
+      :Incrementar contador de intentos;
+      
+      if (¿Excede límite de intentos?) then (sí)
+        :Bloquear cuenta temporalmente;
+        :Enviar notificación de seguridad;
+      endif
+      
+      :Mostrar error "Credenciales inválidas";
+      stop
+    else (sí)
+      :Verificar estado del usuario;
+      
+      if (¿Usuario activo?) then (no)
+        if (Estado = BLOQUEADO) then (sí)
+          :Mostrar error "Cuenta bloqueada";
+          stop
+        elseif (Estado = SUSPENDIDO) then (sí)
+          :Mostrar error "Cuenta suspendida";
+          stop
+        elseif (Estado = ELIMINADO) then (sí)
+          :Mostrar error "Cuenta no disponible";
+          stop
+        endif
+      endif
+    endif
+  endif
+endif
+
+partition "Generación de Tokens" {
+  |Sistema|
+  fork
+    :Generar Access Token (JWT);
+    note right
+      Payload:
+      - userId
+      - email
+      - rolId
+      - Expiración: 15 minutos
+    end note
+  fork again
+    :Generar Refresh Token;
+    note right
+      - Token único
+      - Expiración: 7 días
+    end note
+  end fork
+  
+  :Hashear Refresh Token;
+  :Capturar metadatos de sesión;
+  note right
+    - User Agent
+    - Dirección IP
+    - Timestamp
+  end note
+  
+  :Crear registro de sesión en BD;
+  :Actualizar fecha de último acceso;
+}
+
+partition "Carga de Permisos" {
+  |Sistema|
+  :Obtener rol del usuario;
+  :Cargar permisos del rol (Eager Loading);
+  note right
+    47 permisos granulares
+    en 10 módulos
+  end note
+  :Cachear permisos en request;
+}
+
+|Sistema|
+:Registrar evento en auditoría;
+note right
+  - Acción: "LOGIN_EXITOSO"
+  - Usuario
+  - IP
+  - Timestamp
+end note
+
+:Enviar tokens al cliente;
+:Redirigir al dashboard;
+
+|Usuario|
+:Acceder al sistema;
+
+partition "Navegación con Sesión Activa" {
+  |Usuario|
+  repeat
+    :Realizar acción en el sistema;
+    
+    |Sistema|
+    :Validar Access Token;
+    
+    if (¿Token válido?) then (sí)
+      :Extraer userId del token;
+      :Validar permisos para la acción;
+      
+      if (¿Tiene permiso?) then (sí)
+        :Ejecutar acción;
+        :Actualizar fecha de último uso de sesión;
+      else (no)
+        :Mostrar error "Sin permisos";
+      endif
+    else (no)
+      if (¿Token expirado?) then (sí)
+        |Usuario|
+        :Solicitar renovación automática;
+        
+        |Sistema|
+        :Validar Refresh Token;
+        
+        if (¿Refresh Token válido?) then (sí)
+          :Generar nuevo Access Token;
+          :Actualizar sesión;
+          :Enviar nuevo token;
+          
+          |Usuario|
+          :Reintentar acción;
+        else (no)
+          :Cerrar sesión;
+          :Redirigir a login;
+          stop
+        endif
+      else (no)
+        :Mostrar error "Token inválido";
+        :Cerrar sesión;
+        stop
+      endif
+    endif
+    
+  repeat while (¿Continuar usando el sistema?) is (sí)
+}
+
+partition "Cierre de Sesión" {
+  |Usuario|
+  :Hacer clic en "Cerrar Sesión";
+  
+  |Sistema|
+  :Invalidar Refresh Token;
+  :Eliminar registro de sesión;
+  :Registrar evento en auditoría;
+  note right
+    - Acción: "LOGOUT"
+    - Usuario
+    - Duración de sesión
+  end note
+  :Limpiar tokens del cliente;
+  :Redirigir a login;
+}
+
+stop
+
+@enduml

@@ -1,0 +1,720 @@
+@startuml MODULO-AUTENTICACION
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Autenticación y Sesiones
+
+actor Invitado as "Usuario\nInvitado"
+actor Usuario as "Usuario\nAutenticado"
+
+package "Autenticación y Sesiones" #LightBlue {
+  (Iniciar Sesión) as UC01
+  (Cerrar Sesión) as UC02
+  (Refrescar Token) as UC03
+  (Gestionar Sesiones) as UC04
+  (Cerrar Sesión Remota) as UC05
+  (Ver Historial) as UC06
+  (Validar Credenciales) as UC07
+  (Generar JWT) as UC08
+}
+
+Invitado --> UC01
+Usuario --> UC02
+Usuario --> UC03
+Usuario --> UC04
+Usuario --> UC05
+Usuario --> UC06
+
+UC01 ..> UC07 : <<include>>
+UC01 ..> UC08 : <<include>>
+UC03 ..> UC08 : <<include>>
+
+note bottom of UC01
+  JWT (15 min) + Refresh (7 días)
+end note
+
+@enduml
+
+@startuml MODULO-USUARIOS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+top to bottom direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Usuarios
+
+actor Invitado as "Usuario\nInvitado"
+actor Admin as "Admin"
+actor SistemaAudit as "Sistema\nAuditoría"
+
+package "Gestión de Usuarios" #LightGreen {
+  (Aceptar Invitación) as UC10
+  (Completar Registro) as UC11
+  (Invitar Usuario) as UC12
+  (Ver Usuarios) as UC14
+  (Editar Usuario) as UC15
+  (Activar/Desactivar) as UC16
+  (Eliminar Usuario) as UC17
+  (Cambiar Rol) as UC18
+  (Ver Estadísticas) as UC19
+  (Validar Token) as UC20
+  (Generar Link) as UC21
+}
+
+Invitado --> UC10
+Invitado --> UC11
+Admin --> UC12
+Admin --> UC14
+Admin --> UC15
+Admin --> UC16
+Admin --> UC17
+Admin --> UC18
+Admin --> UC19
+
+UC10 ..> UC20 : <<include>>
+UC11 ..> UC20 : <<include>>
+UC12 ..> UC21 : <<include>>
+
+UC15 --> SistemaAudit
+UC16 --> SistemaAudit
+UC17 --> SistemaAudit
+UC18 --> SistemaAudit
+
+note bottom of UC12
+  Token válido 24h
+end note
+
+@enduml
+
+@startuml MODULO-ROLES-PERMISOS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Roles y Permisos (RBAC)
+
+actor Admin as "Admin"
+actor SistemaAudit as "Sistema\nAuditoría"
+
+package "Roles y Permisos" #LightYellow {
+  (Crear Rol) as UC30
+  (Editar Rol) as UC31
+  (Eliminar Rol) as UC32
+  (Ver Roles) as UC33
+  (Asignar Permisos) as UC34
+  (Ver Permisos) as UC35
+  (Buscar Permisos) as UC36
+  (Ver Usuarios/Rol) as UC37
+  (Validar Permisos) as UC38
+}
+
+Admin --> UC30
+Admin --> UC31
+Admin --> UC32
+Admin --> UC33
+Admin --> UC34
+Admin --> UC35
+Admin --> UC36
+Admin --> UC37
+
+UC30 --> SistemaAudit
+UC31 --> SistemaAudit
+UC32 --> SistemaAudit
+UC34 --> SistemaAudit
+
+note bottom of UC34
+  47 permisos en 10 módulos
+  Caché O(1)
+end note
+
+@enduml
+
+@startuml MODULO-PROYECTOS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+top to bottom direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Proyectos
+
+actor Usuario as "Usuario"
+actor Miembro as "Miembro"
+actor Responsable as "Responsable"
+actor Admin as "Admin"
+
+Usuario <|-- Miembro
+Miembro <|-- Responsable
+
+package "Gestión de Proyectos" #LightCoral {
+  (Crear Proyecto) as UC50
+  (Ver Proyectos) as UC51
+  (Ver Detalle) as UC52
+  (Editar Proyecto) as UC53
+  (Archivar) as UC54
+  (Eliminar) as UC55
+  (Duplicar) as UC56
+  (Exportar) as UC57
+  (Gestionar Miembros) as UC58
+  (Asignar Responsable) as UC59
+  (Cambiar Estado) as UC60
+  (Ver Estadísticas) as UC61
+  (Filtrar) as UC62
+  (Buscar) as UC63
+}
+
+Responsable --> UC50
+Usuario --> UC51
+Miembro --> UC52
+Responsable --> UC53
+Responsable --> UC54
+Admin --> UC55
+Responsable --> UC56
+Responsable --> UC57
+Responsable --> UC58
+Responsable --> UC59
+Responsable --> UC60
+Usuario --> UC61
+Usuario --> UC62
+Usuario --> UC63
+
+UC52 ..> UC61 : <<include>>
+UC51 ..> UC62 : <<extend>>
+
+@enduml
+
+@startuml MODULO-TAREAS
+
+skinparam defaultFontSize 11
+top to bottom direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Tareas
+
+actor Usuario as "Usuario"
+actor Miembro as "Miembro"
+actor Responsable as "Responsable"
+
+Usuario <|-- Miembro
+Miembro <|-- Responsable
+
+package "Gestión de Tareas" #LightSalmon {
+  (Crear Tarea) as UC70
+  (Ver Tareas) as UC71
+  (Ver Detalle) as UC72
+  (Editar Tarea) as UC73
+  (Eliminar) as UC74
+  (Asignar Tarea) as UC75
+  (Cambiar Estado) as UC76
+  (Cambiar Prioridad) as UC77
+  (Comentar) as UC78
+  (Adjuntar Archivos) as UC79
+  (Mover Etapas) as UC80
+  (Filtrar) as UC81
+  (Buscar) as UC82
+  (Ver Asignadas) as UC83
+  (Ver Kanban) as UC84
+  (Exportar) as UC85
+}
+
+Miembro --> UC70
+Usuario --> UC71
+Miembro --> UC72
+Miembro --> UC73
+Responsable --> UC74
+Responsable --> UC75
+Miembro --> UC76
+Miembro --> UC77
+Miembro --> UC78
+Miembro --> UC79
+Miembro --> UC80
+Usuario --> UC81
+Usuario --> UC82
+Usuario --> UC83
+Usuario --> UC84
+Responsable --> UC85
+
+UC71 ..> UC81 : <<extend>>
+
+note bottom of UC84
+  Kanban Drag & Drop
+end note
+
+@enduml
+
+@startuml MODULO-ETAPAS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Etapas
+
+actor Miembro as "Miembro"
+actor Responsable as "Responsable"
+
+Miembro <|-- Responsable
+
+package "Gestión de Etapas" #Lavender {
+  (Crear Etapa) as UC90
+  (Ver Etapas) as UC91
+  (Editar Etapa) as UC92
+  (Eliminar) as UC93
+  (Reordenar) as UC94
+  (Cambiar Estado) as UC95
+  (Ver Progreso) as UC96
+}
+
+Responsable --> UC90
+Miembro --> UC91
+Responsable --> UC92
+Responsable --> UC93
+Responsable --> UC94
+Responsable --> UC95
+Miembro --> UC96
+
+note bottom of UC94
+  Drag & Drop
+end note
+
+@enduml
+
+@startuml MODULO-DEPARTAMENTOS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+top to bottom direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Departamentos
+
+actor Usuario as "Usuario"
+actor Jefe as "Jefe Depto"
+actor Admin as "Admin"
+
+Usuario <|-- Jefe
+Usuario <|-- Admin
+
+package "Gestión de Departamentos" #LightPink {
+  (Crear Depto) as UC100
+  (Ver Deptos) as UC101
+  (Ver Detalle) as UC102
+  (Editar Depto) as UC103
+  (Eliminar) as UC104
+  (Asignar Jefe) as UC105
+  (Gestionar Empleados) as UC106
+  (Crear Puesto) as UC107
+  (Asignar Puesto) as UC108
+  (Ver Organigrama) as UC109
+  (Ver Proyectos) as UC110
+  (Ver Estadísticas) as UC111
+  (Gestionar Contexto) as UC112
+}
+
+Admin --> UC100
+Usuario --> UC101
+Jefe --> UC102
+Admin --> UC103
+Admin --> UC104
+Admin --> UC105
+Jefe --> UC106
+Jefe --> UC107
+Jefe --> UC108
+Jefe --> UC109
+Jefe --> UC110
+Jefe --> UC111
+Jefe --> UC112
+
+UC102 ..> UC111 : <<include>>
+
+note bottom of UC109
+  Organigrama 5 niveles
+end note
+
+@enduml
+
+@startuml MODULO-PRESUPUESTOS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+top to bottom direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Presupuestos
+
+actor Usuario as "Usuario"
+actor Responsable as "Responsable"
+actor Jefe as "Jefe Depto"
+actor Admin as "Admin"
+
+Usuario <|-- Responsable
+Usuario <|-- Jefe
+Usuario <|-- Admin
+
+package "Gestión de Presupuestos" #LightCyan {
+  (Crear Presup. Depto) as UC120
+  (Crear Presup. Proyecto) as UC121
+  (Ver Presupuestos) as UC122
+  (Editar) as UC123
+  (Eliminar) as UC124
+  (Aprobar) as UC125
+  (Registrar Movimiento) as UC126
+  (Ver Historial) as UC127
+  (Ver Balance) as UC128
+  (Exportar) as UC129
+  (Ver Alertas) as UC130
+}
+
+Jefe --> UC120
+Responsable --> UC121
+Usuario --> UC122
+Jefe --> UC123
+Admin --> UC124
+Admin --> UC125
+Jefe --> UC126
+Usuario --> UC127
+Usuario --> UC128
+Jefe --> UC129
+Jefe --> UC130
+
+note bottom of UC126
+  4 tipos: Asignación,
+  Gasto, Ajuste, Transferencia
+end note
+
+@enduml
+
+@startuml MODULO-CONOCIMIENTO
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Gestión de Conocimiento
+
+actor Usuario as "Usuario"
+actor Admin as "Admin"
+
+Usuario <|-- Admin
+
+package "Gestión de Conocimiento" #LightGoldenRodYellow {
+  (Crear Artículo) as UC140
+  (Ver Artículos) as UC141
+  (Ver Detalle) as UC142
+  (Editar) as UC143
+  (Eliminar) as UC144
+  (Categorizar) as UC145
+  (Buscar) as UC146
+  (Filtrar) as UC147
+  (Compartir) as UC148
+  (Versionar) as UC149
+}
+
+Usuario --> UC140
+Usuario --> UC141
+Usuario --> UC142
+Usuario --> UC143
+Admin --> UC144
+Usuario --> UC145
+Usuario --> UC146
+Usuario --> UC147
+Usuario --> UC148
+Usuario --> UC149
+
+UC141 ..> UC146 : <<extend>>
+
+note bottom of UC140
+  Markdown + Full-text search
+end note
+
+@enduml
+
+@startuml MODULO-DOCUMENTOS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Documentos de Proyecto
+
+actor Miembro as "Miembro"
+actor Responsable as "Responsable"
+
+Miembro <|-- Responsable
+
+package "Documentos de Proyecto" #Thistle {
+  (Crear Documento) as UC160
+  (Ver Documentos) as UC161
+  (Editar) as UC162
+  (Eliminar) as UC163
+  (Categorizar) as UC164
+  (Buscar) as UC165
+  (Filtrar por Tipo) as UC166
+  (Ver Historial) as UC167
+}
+
+Miembro --> UC160
+Miembro --> UC161
+Miembro --> UC162
+Responsable --> UC163
+Miembro --> UC164
+Miembro --> UC165
+Miembro --> UC166
+Miembro --> UC167
+
+note bottom of UC164
+  6 tipos de documentos
+end note
+
+@enduml
+
+@startuml MODULO-AUDITORIA
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Auditoría y Trazabilidad
+
+actor Admin as "Admin"
+actor SistemaAudit as "Sistema\nAuditoría"
+
+package "Auditoría y Trazabilidad" #MistyRose {
+  (Ver Registro) as UC180
+  (Filtrar Eventos) as UC181
+  (Buscar) as UC182
+  (Exportar) as UC183
+  (Ver Detalles) as UC184
+  (Ver por Usuario) as UC185
+  (Ver por Módulo) as UC186
+  (Registrar Evento) as UC187
+}
+
+Admin --> UC180
+Admin --> UC181
+Admin --> UC182
+Admin --> UC183
+Admin --> UC184
+Admin --> UC185
+Admin --> UC186
+
+SistemaAudit --> UC187
+
+note bottom of UC187
+  Registro automático
+end note
+
+@enduml
+
+@startuml MODULO-DASHBOARD
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Dashboard y Estadísticas
+
+actor Usuario as "Usuario"
+actor Admin as "Admin"
+
+Usuario <|-- Admin
+
+package "Dashboard y Estadísticas" #Honeydew {
+  (Ver Dashboard) as UC200
+  (Ver Estadísticas) as UC201
+  (Ver Proyectos Activos) as UC202
+  (Ver Tareas Pendientes) as UC203
+  (Ver Actividad) as UC204
+  (Ver Gráficos) as UC205
+  (Ver Alertas) as UC206
+  (Personalizar) as UC207
+  (Exportar Reportes) as UC208
+}
+
+Usuario --> UC200
+Usuario --> UC201
+Usuario --> UC202
+Usuario --> UC203
+Usuario --> UC204
+Usuario --> UC205
+Usuario --> UC206
+Usuario --> UC207
+Admin --> UC208
+
+note bottom of UC200
+  Personalizable + Tiempo real
+end note
+
+@enduml
+
+@startuml MODULO-CALENDARIO
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Calendario y Planificación
+
+actor Usuario as "Usuario"
+
+package "Calendario y Planificación" #AliceBlue {
+  (Ver Calendario) as UC220
+  (Ver Eventos) as UC221
+  (Crear Evento) as UC222
+  (Editar Evento) as UC223
+  (Eliminar Evento) as UC224
+  (Ver Tareas) as UC225
+  (Ver Hitos) as UC226
+  (Filtrar) as UC227
+  (Sincronizar) as UC228
+}
+
+Usuario --> UC220
+Usuario --> UC221
+Usuario --> UC222
+Usuario --> UC223
+Usuario --> UC224
+Usuario --> UC225
+Usuario --> UC226
+Usuario --> UC227
+Usuario --> UC228
+
+note bottom of UC228
+  Sync: Google, Outlook, iCal
+end note
+
+@enduml
+
+@startuml MODULO-IDEAS
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Ideas e Innovación
+
+actor Usuario as "Usuario"
+actor Responsable as "Responsable"
+actor Admin as "Admin"
+
+Usuario <|-- Responsable
+Usuario <|-- Admin
+
+package "Ideas e Innovación" #LemonChiffon {
+  (Crear Idea) as UC240
+  (Ver Ideas) as UC241
+  (Votar) as UC242
+  (Comentar) as UC243
+  (Editar) as UC244
+  (Eliminar) as UC245
+  (Convertir a Proyecto) as UC246
+  (Categorizar) as UC247
+  (Filtrar) as UC248
+}
+
+Usuario --> UC240
+Usuario --> UC241
+Usuario --> UC242
+Usuario --> UC243
+Usuario --> UC244
+Admin --> UC245
+Responsable --> UC246
+Usuario --> UC247
+Usuario --> UC248
+
+note bottom of UC246
+  Requiere aprobación Admin
+end note
+
+@enduml
+
+@startuml MODULO-CONFIGURACION
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Configuración del Sistema
+
+actor Admin as "Admin"
+
+package "Configuración del Sistema" #Seashell {
+  (Config. Parámetros) as UC260
+  (Gestionar Catálogos) as UC261
+  (Config. Notificaciones) as UC262
+  (Config. Seguridad) as UC263
+  (Ver Logs) as UC264
+  (Gestionar Backups) as UC265
+  (Config. Integraciones) as UC266
+  (Ver Salud Sistema) as UC267
+}
+
+Admin --> UC260
+Admin --> UC261
+Admin --> UC262
+Admin --> UC263
+Admin --> UC264
+Admin --> UC265
+Admin --> UC266
+Admin --> UC267
+
+note bottom of UC266
+  Gemini, Email, S3, Calendar
+end note
+
+@enduml
+
+@startuml MODULO-PERFIL
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Perfil de Usuario
+
+actor Usuario as "Usuario"
+
+package "Perfil de Usuario" #LavenderBlush {
+  (Ver Perfil) as UC280
+  (Editar Perfil) as UC281
+  (Cambiar Contraseña) as UC282
+  (Actualizar Avatar) as UC283
+  (Config. Preferencias) as UC284
+  (Ver Actividad) as UC285
+  (Ver Proyectos Asig.) as UC286
+  (Ver Tareas Asig.) as UC287
+}
+
+Usuario --> UC280
+Usuario --> UC281
+Usuario --> UC282
+Usuario --> UC283
+Usuario --> UC284
+Usuario --> UC285
+Usuario --> UC286
+Usuario --> UC287
+
+note bottom of UC284
+  Tema, Idioma, Notificaciones
+end note
+
+@enduml
+
+@startuml MODULO-IA
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+left to right direction
+
+title XHION CORE - Casos de Uso\nMódulo: Insights con IA (Gemini)
+
+actor Responsable as "Responsable"
+actor Jefe as "Jefe Depto"
+actor Admin as "Admin"
+
+package "Insights con IA" #PowderBlue {
+  (Ver Insights) as UC300
+  (Ver Recomendaciones) as UC301
+  (Analizar Tendencias) as UC302
+  (Predecir Retrasos) as UC303
+  (Optimizar Recursos) as UC304
+  (Generar Reportes) as UC305
+  (Analizar Sentimiento) as UC306
+}
+
+Admin --> UC300
+Responsable --> UC301
+Responsable --> UC302
+Responsable --> UC303
+Jefe --> UC304
+Admin --> UC305
+Jefe --> UC306
+
+note bottom of UC301
+  IA con Gemini API
+end note
+
+@enduml

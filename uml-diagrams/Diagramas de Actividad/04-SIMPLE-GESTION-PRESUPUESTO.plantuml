@@ -1,0 +1,82 @@
+@startuml SIMPLE-GESTION-PRESUPUESTO
+!theme cerulean-outline
+title Gestión de Presupuesto (Simplificado)
+
+|Jefe de Departamento|
+start
+
+if (¿Existe presupuesto?) then (no)
+  :Crear presupuesto;
+  :Definir monto total\ny período;
+  
+  |Sistema|
+  :Inicializar balance;
+endif
+
+|Jefe de Departamento|
+:Registrar movimiento;
+
+|Sistema|
+:Seleccionar tipo;
+
+if (Tipo) then (Asignación)
+  :Aumentar presupuesto;
+elseif (Tipo) then (Gasto)
+  :Reducir disponible;
+  :Categorizar gasto;
+elseif (Tipo) then (Ajuste)
+  :Aplicar corrección;
+else (Transferencia)
+  :Transferir a otro\ndepartamento;
+endif
+
+:Actualizar balance;
+
+if (¿Sobregasto?) then (sí)
+  :Generar alerta;
+  :Notificar jefe\ny administradores;
+endif
+
+|Jefe de Departamento|
+if (¿Ver análisis?) then (sí)
+  |Sistema|
+  fork
+    :Gráfico de gastos\ndiarios;
+  fork again
+    :Distribución por\ncategoría;
+  fork again
+    :Proyección de\ngastos futuros;
+  end fork
+  
+  :Mostrar dashboard;
+  
+  |Jefe de Departamento|
+  if (¿Exportar?) then (sí)
+    |Sistema|
+    :Generar reporte\n(Excel/PDF/CSV);
+  endif
+endif
+
+|Administrador|
+if (¿Requiere aprobación?) then (sí)
+  :Revisar presupuesto;
+  
+  if (¿Aprobar?) then (sí)
+    |Sistema|
+    :Marcar como aprobado;
+    :Notificar jefe;
+  else (no)
+    :Rechazar con\ncomentarios;
+  endif
+endif
+
+|Sistema|
+if (¿Período finalizado?) then (sí)
+  :Cerrar presupuesto;
+  :Generar reporte final;
+  :Archivar;
+endif
+
+stop
+
+@enduml

@@ -1,0 +1,618 @@
+@startuml XHION
+
+title XHION CORE - Diagrama de Casos de Uso\nPlataforma de Productividad Operativa v2.0 (Optimizado)
+
+' ============================================================================
+' CONFIGURACIÓN DE LAYOUT OPTIMIZADO
+' ============================================================================
+!define LAYOUT top to bottom direction
+skinparam packageStyle rectangle
+skinparam linetype ortho
+left to right direction
+
+' ============================================================================
+' ACTORES DEL SISTEMA
+' ============================================================================
+
+actor "Usuario\nInvitado" as Invitado <<Usuario>>
+actor "Usuario\nAutenticado" as Usuario <<Usuario>>
+actor "Miembro de\nProyecto" as Miembro <<Usuario>>
+actor "Responsable\nde Proyecto" as Responsable <<Usuario>>
+actor "Jefe de\nDepartamento" as Jefe <<Usuario>>
+actor "Administrador" as Admin <<Usuario>>
+actor "Sistema de\nAuditoría" as SistemaAudit <<Sistema>>
+actor "Sistema de\nNotificaciones" as SistemaNotif <<Sistema>>
+
+' ============================================================================
+' RELACIONES DE HERENCIA ENTRE ACTORES
+' ============================================================================
+
+Usuario <|-- Miembro
+Miembro <|-- Responsable
+Usuario <|-- Jefe
+Usuario <|-- Admin
+
+' ============================================================================
+' COLUMNA 1: SEGURIDAD Y USUARIOS
+' ============================================================================
+
+together {
+  package "Autenticación y Sesiones" #LightBlue {
+    usecase "Iniciar Sesión" as UC01
+    usecase "Cerrar Sesión" as UC02
+    usecase "Refrescar Token" as UC03
+    usecase "Gestionar Sesiones" as UC04
+    usecase "Cerrar Sesión Remota" as UC05
+    usecase "Ver Historial Sesiones" as UC06
+    usecase "Validar Credenciales" as UC07
+    usecase "Generar JWT" as UC08
+  }
+
+  package "Gestión de Usuarios" #LightGreen {
+    usecase "Aceptar Invitación" as UC10
+    usecase "Completar Registro" as UC11
+    usecase "Invitar Usuario" as UC12
+    usecase "Completar Registro Admin" as UC13
+    usecase "Ver Usuarios" as UC14
+    usecase "Editar Usuario" as UC15
+    usecase "Activar/Desactivar" as UC16
+    usecase "Eliminar Usuario" as UC17
+    usecase "Cambiar Rol Usuario" as UC18
+    usecase "Ver Stats Invitaciones" as UC19
+    usecase "Validar Token Invitación" as UC20
+    usecase "Generar Link Invitación" as UC21
+  }
+
+  package "Roles y Permisos" #LightYellow {
+    usecase "Crear Rol" as UC30
+    usecase "Editar Rol" as UC31
+    usecase "Eliminar Rol" as UC32
+    usecase "Ver Roles" as UC33
+    usecase "Asignar Permisos" as UC34
+    usecase "Ver Permisos Sistema" as UC35
+    usecase "Buscar Permisos" as UC36
+    usecase "Ver Usuarios por Rol" as UC37
+    usecase "Validar Permisos" as UC38
+  }
+}
+
+' ============================================================================
+' COLUMNA 2: GESTIÓN DE PROYECTOS Y TAREAS
+' ============================================================================
+
+together {
+  package "Gestión de Proyectos" #LightCoral {
+    usecase "Crear Proyecto" as UC50
+    usecase "Ver Proyectos" as UC51
+    usecase "Ver Detalle Proyecto" as UC52
+    usecase "Editar Proyecto" as UC53
+    usecase "Archivar Proyecto" as UC54
+    usecase "Eliminar Proyecto" as UC55
+    usecase "Duplicar Proyecto" as UC56
+    usecase "Exportar Datos" as UC57
+    usecase "Gestionar Miembros" as UC58
+    usecase "Asignar Responsable" as UC59
+    usecase "Cambiar Estado" as UC60
+    usecase "Ver Stats Proyecto" as UC61
+    usecase "Filtrar Proyectos" as UC62
+    usecase "Buscar Proyectos" as UC63
+  }
+
+  package "Gestión de Tareas" #LightSalmon {
+    usecase "Crear Tarea" as UC70
+    usecase "Ver Tareas" as UC71
+    usecase "Ver Detalle Tarea" as UC72
+    usecase "Editar Tarea" as UC73
+    usecase "Eliminar Tarea" as UC74
+    usecase "Asignar Tarea" as UC75
+    usecase "Cambiar Estado Tarea" as UC76
+    usecase "Cambiar Prioridad" as UC77
+    usecase "Comentar Tarea" as UC78
+    usecase "Adjuntar Archivos" as UC79
+    usecase "Mover entre Etapas" as UC80
+    usecase "Filtrar Tareas" as UC81
+    usecase "Buscar Tareas" as UC82
+    usecase "Ver Tareas Asignadas" as UC83
+    usecase "Ver Kanban" as UC84
+    usecase "Exportar Tareas" as UC85
+  }
+
+  package "Gestión de Etapas" #Lavender {
+    usecase "Crear Etapa" as UC90
+    usecase "Ver Etapas" as UC91
+    usecase "Editar Etapa" as UC92
+    usecase "Eliminar Etapa" as UC93
+    usecase "Reordenar Etapas" as UC94
+    usecase "Cambiar Estado Etapa" as UC95
+    usecase "Ver Progreso Etapa" as UC96
+  }
+}
+
+' ============================================================================
+' COLUMNA 3: ORGANIZACIÓN Y RECURSOS
+' ============================================================================
+
+together {
+  package "Gestión de Departamentos" #LightPink {
+    usecase "Crear Departamento" as UC100
+    usecase "Ver Departamentos" as UC101
+    usecase "Ver Detalle Depto" as UC102
+    usecase "Editar Departamento" as UC103
+    usecase "Eliminar Departamento" as UC104
+    usecase "Asignar Jefe" as UC105
+    usecase "Gestionar Empleados" as UC106
+    usecase "Crear Puesto" as UC107
+    usecase "Asignar a Puesto" as UC108
+    usecase "Ver Organigrama" as UC109
+    usecase "Ver Proyectos Depto" as UC110
+    usecase "Ver Stats Depto" as UC111
+    usecase "Gestionar Contexto" as UC112
+  }
+
+  package "Gestión de Presupuestos" #LightCyan {
+    usecase "Crear Presup. Depto" as UC120
+    usecase "Crear Presup. Proyecto" as UC121
+    usecase "Ver Presupuestos" as UC122
+    usecase "Editar Presupuesto" as UC123
+    usecase "Eliminar Presupuesto" as UC124
+    usecase "Aprobar Presupuesto" as UC125
+    usecase "Registrar Movimiento" as UC126
+    usecase "Ver Historial Mov." as UC127
+    usecase "Ver Balance" as UC128
+    usecase "Exportar Presupuesto" as UC129
+    usecase "Ver Alertas Presup." as UC130
+  }
+
+  package "Perfil de Usuario" #LavenderBlush {
+    usecase "Ver Perfil" as UC280
+    usecase "Editar Perfil" as UC281
+    usecase "Cambiar Contraseña" as UC282
+    usecase "Actualizar Avatar" as UC283
+    usecase "Config. Preferencias" as UC284
+    usecase "Ver Actividad Personal" as UC285
+    usecase "Ver Proyectos Asig." as UC286
+    usecase "Ver Tareas Asig." as UC287
+  }
+}
+
+' ============================================================================
+' COLUMNA 4: CONOCIMIENTO Y DOCUMENTACIÓN
+' ============================================================================
+
+together {
+  package "Gestión de Conocimiento" #LightGoldenRodYellow {
+    usecase "Crear Artículo" as UC140
+    usecase "Ver Artículos" as UC141
+    usecase "Ver Detalle Artículo" as UC142
+    usecase "Editar Artículo" as UC143
+    usecase "Eliminar Artículo" as UC144
+    usecase "Categorizar Artículo" as UC145
+    usecase "Buscar Conocimiento" as UC146
+    usecase "Filtrar por Categoría" as UC147
+    usecase "Compartir Artículo" as UC148
+    usecase "Versionar Artículo" as UC149
+  }
+
+  package "Documentos de Proyecto" #Thistle {
+    usecase "Crear Doc. Proyecto" as UC160
+    usecase "Ver Docs Proyecto" as UC161
+    usecase "Editar Doc. Proyecto" as UC162
+    usecase "Eliminar Doc. Proyecto" as UC163
+    usecase "Categorizar Doc." as UC164
+    usecase "Buscar Documentos" as UC165
+    usecase "Filtrar por Tipo Doc." as UC166
+    usecase "Ver Historial Versiones" as UC167
+  }
+
+  package "Ideas e Innovación" #LemonChiffon {
+    usecase "Crear Idea" as UC240
+    usecase "Ver Ideas" as UC241
+    usecase "Votar Idea" as UC242
+    usecase "Comentar Idea" as UC243
+    usecase "Editar Idea" as UC244
+    usecase "Eliminar Idea" as UC245
+    usecase "Convertir a Proyecto" as UC246
+    usecase "Categorizar Idea" as UC247
+    usecase "Filtrar Ideas" as UC248
+  }
+}
+
+' ============================================================================
+' COLUMNA 5: MONITOREO Y ANÁLISIS
+' ============================================================================
+
+together {
+  package "Dashboard y Estadísticas" #Honeydew {
+    usecase "Ver Dashboard" as UC200
+    usecase "Ver Stats Generales" as UC201
+    usecase "Ver Proyectos Activos" as UC202
+    usecase "Ver Tareas Pendientes" as UC203
+    usecase "Ver Actividad Reciente" as UC204
+    usecase "Ver Gráficos" as UC205
+    usecase "Ver Alertas Sistema" as UC206
+    usecase "Personalizar Dashboard" as UC207
+    usecase "Exportar Reportes" as UC208
+  }
+
+  package "Auditoría y Trazabilidad" #MistyRose {
+    usecase "Ver Registro Auditoría" as UC180
+    usecase "Filtrar Eventos" as UC181
+    usecase "Buscar en Auditoría" as UC182
+    usecase "Exportar Auditoría" as UC183
+    usecase "Ver Detalles Evento" as UC184
+    usecase "Ver Audit. por Usuario" as UC185
+    usecase "Ver Audit. por Módulo" as UC186
+    usecase "Registrar Evento" as UC187
+  }
+
+  package "Insights con IA" #PowderBlue {
+    usecase "Ver Insights" as UC300
+    usecase "Ver Recomendaciones IA" as UC301
+    usecase "Analizar Tendencias" as UC302
+    usecase "Predecir Retrasos" as UC303
+    usecase "Optimizar Recursos" as UC304
+    usecase "Generar Reportes Auto" as UC305
+    usecase "Analizar Sentimiento" as UC306
+  }
+}
+
+' ============================================================================
+' COLUMNA 6: PLANIFICACIÓN Y CONFIGURACIÓN
+' ============================================================================
+
+together {
+  package "Calendario y Planificación" #AliceBlue {
+    usecase "Ver Calendario" as UC220
+    usecase "Ver Eventos" as UC221
+    usecase "Crear Evento" as UC222
+    usecase "Editar Evento" as UC223
+    usecase "Eliminar Evento" as UC224
+    usecase "Ver Tareas Calendario" as UC225
+    usecase "Ver Hitos Proyecto" as UC226
+    usecase "Filtrar por Tipo" as UC227
+    usecase "Sincronizar Calendario" as UC228
+  }
+
+  package "Configuración del Sistema" #Seashell {
+    usecase "Config. Parámetros" as UC260
+    usecase "Gestionar Catálogos" as UC261
+    usecase "Config. Notificaciones" as UC262
+    usecase "Config. Seguridad" as UC263
+    usecase "Ver Logs Sistema" as UC264
+    usecase "Gestionar Backups" as UC265
+    usecase "Config. Integraciones" as UC266
+    usecase "Ver Salud Sistema" as UC267
+  }
+}
+
+' ============================================================================
+' RELACIONES DE ACTORES CON CASOS DE USO - AUTENTICACIÓN
+' ============================================================================
+
+Invitado --> UC01
+Usuario --> UC02
+Usuario --> UC03
+Usuario --> UC04
+Usuario --> UC05
+Usuario --> UC06
+
+UC01 ..> UC07 : <<include>>
+UC01 ..> UC08 : <<include>>
+UC03 ..> UC08 : <<include>>
+
+' ============================================================================
+' RELACIONES - GESTIÓN DE USUARIOS
+' ============================================================================
+
+Invitado --> UC10
+Invitado --> UC11
+Admin --> UC12
+Admin --> UC13
+Admin --> UC14
+Admin --> UC15
+Admin --> UC16
+Admin --> UC17
+Admin --> UC18
+Admin --> UC19
+
+UC10 ..> UC20 : <<include>>
+UC11 ..> UC20 : <<include>>
+UC12 ..> UC21 : <<include>>
+UC13 ..> UC20 : <<include>>
+
+UC15 --> SistemaAudit : <<notify>>
+UC16 --> SistemaAudit : <<notify>>
+UC17 --> SistemaAudit : <<notify>>
+UC18 --> SistemaAudit : <<notify>>
+
+' ============================================================================
+' RELACIONES - ROLES Y PERMISOS
+' ============================================================================
+
+Admin --> UC30
+Admin --> UC31
+Admin --> UC32
+Admin --> UC33
+Admin --> UC34
+Admin --> UC35
+Admin --> UC36
+Admin --> UC37
+
+UC30 --> SistemaAudit : <<notify>>
+UC31 --> SistemaAudit : <<notify>>
+UC32 --> SistemaAudit : <<notify>>
+UC34 --> SistemaAudit : <<notify>>
+
+' ============================================================================
+' RELACIONES - PROYECTOS
+' ============================================================================
+
+Responsable --> UC50
+Usuario --> UC51
+Miembro --> UC52
+Responsable --> UC53
+Responsable --> UC54
+Admin --> UC55
+Responsable --> UC56
+Responsable --> UC57
+Responsable --> UC58
+Responsable --> UC59
+Responsable --> UC60
+Usuario --> UC61
+Usuario --> UC62
+Usuario --> UC63
+
+UC50 --> SistemaAudit : <<notify>>
+UC53 --> SistemaAudit : <<notify>>
+UC54 --> SistemaAudit : <<notify>>
+UC55 --> SistemaAudit : <<notify>>
+UC58 --> SistemaNotif : <<notify>>
+UC59 --> SistemaNotif : <<notify>>
+
+' ============================================================================
+' RELACIONES - TAREAS
+' ============================================================================
+
+Miembro --> UC70
+Usuario --> UC71
+Miembro --> UC72
+Miembro --> UC73
+Responsable --> UC74
+Responsable --> UC75
+Miembro --> UC76
+Miembro --> UC77
+Miembro --> UC78
+Miembro --> UC79
+Miembro --> UC80
+Usuario --> UC81
+Usuario --> UC82
+Usuario --> UC83
+Usuario --> UC84
+Responsable --> UC85
+
+UC70 --> SistemaNotif : <<notify>>
+UC75 --> SistemaNotif : <<notify>>
+UC76 --> SistemaNotif : <<notify>>
+UC78 --> SistemaNotif : <<notify>>
+
+' ============================================================================
+' RELACIONES - ETAPAS
+' ============================================================================
+
+Responsable --> UC90
+Miembro --> UC91
+Responsable --> UC92
+Responsable --> UC93
+Responsable --> UC94
+Responsable --> UC95
+Miembro --> UC96
+
+' ============================================================================
+' RELACIONES - DEPARTAMENTOS
+' ============================================================================
+
+Admin --> UC100
+Usuario --> UC101
+Jefe --> UC102
+Admin --> UC103
+Admin --> UC104
+Admin --> UC105
+Jefe --> UC106
+Jefe --> UC107
+Jefe --> UC108
+Jefe --> UC109
+Jefe --> UC110
+Jefe --> UC111
+Jefe --> UC112
+
+UC100 --> SistemaAudit : <<notify>>
+UC103 --> SistemaAudit : <<notify>>
+UC104 --> SistemaAudit : <<notify>>
+UC105 --> SistemaNotif : <<notify>>
+UC106 --> SistemaNotif : <<notify>>
+
+' ============================================================================
+' RELACIONES - PRESUPUESTOS
+' ============================================================================
+
+Jefe --> UC120
+Responsable --> UC121
+Usuario --> UC122
+Jefe --> UC123
+Admin --> UC124
+Admin --> UC125
+Jefe --> UC126
+Usuario --> UC127
+Usuario --> UC128
+Jefe --> UC129
+Jefe --> UC130
+
+UC120 --> SistemaAudit : <<notify>>
+UC121 --> SistemaAudit : <<notify>>
+UC125 --> SistemaAudit : <<notify>>
+UC125 --> SistemaNotif : <<notify>>
+UC126 --> SistemaAudit : <<notify>>
+
+' ============================================================================
+' RELACIONES - CONOCIMIENTO
+' ============================================================================
+
+Usuario --> UC140
+Usuario --> UC141
+Usuario --> UC142
+Usuario --> UC143
+Admin --> UC144
+Usuario --> UC145
+Usuario --> UC146
+Usuario --> UC147
+Usuario --> UC148
+Usuario --> UC149
+
+UC140 --> SistemaAudit : <<notify>>
+UC143 --> SistemaAudit : <<notify>>
+UC144 --> SistemaAudit : <<notify>>
+
+' ============================================================================
+' RELACIONES - DOCUMENTOS
+' ============================================================================
+
+Miembro --> UC160
+Miembro --> UC161
+Miembro --> UC162
+Responsable --> UC163
+Miembro --> UC164
+Miembro --> UC165
+Miembro --> UC166
+Miembro --> UC167
+
+' ============================================================================
+' RELACIONES - AUDITORÍA
+' ============================================================================
+
+Admin --> UC180
+Admin --> UC181
+Admin --> UC182
+Admin --> UC183
+Admin --> UC184
+Admin --> UC185
+Admin --> UC186
+
+SistemaAudit --> UC187
+
+' ============================================================================
+' RELACIONES - DASHBOARD
+' ============================================================================
+
+Usuario --> UC200
+Usuario --> UC201
+Usuario --> UC202
+Usuario --> UC203
+Usuario --> UC204
+Usuario --> UC205
+Usuario --> UC206
+Usuario --> UC207
+Admin --> UC208
+
+' ============================================================================
+' RELACIONES - CALENDARIO
+' ============================================================================
+
+Usuario --> UC220
+Usuario --> UC221
+Usuario --> UC222
+Usuario --> UC223
+Usuario --> UC224
+Usuario --> UC225
+Usuario --> UC226
+Usuario --> UC227
+Usuario --> UC228
+
+' ============================================================================
+' RELACIONES - IDEAS
+' ============================================================================
+
+Usuario --> UC240
+Usuario --> UC241
+Usuario --> UC242
+Usuario --> UC243
+Usuario --> UC244
+Admin --> UC245
+Responsable --> UC246
+Usuario --> UC247
+Usuario --> UC248
+
+UC246 --> SistemaNotif : <<notify>>
+
+' ============================================================================
+' RELACIONES - CONFIGURACIÓN
+' ============================================================================
+
+Admin --> UC260
+Admin --> UC261
+Admin --> UC262
+Admin --> UC263
+Admin --> UC264
+Admin --> UC265
+Admin --> UC266
+Admin --> UC267
+
+' ============================================================================
+' RELACIONES - PERFIL
+' ============================================================================
+
+Usuario --> UC280
+Usuario --> UC281
+Usuario --> UC282
+Usuario --> UC283
+Usuario --> UC284
+Usuario --> UC285
+Usuario --> UC286
+Usuario --> UC287
+
+' ============================================================================
+' RELACIONES - IA
+' ============================================================================
+
+Admin --> UC300
+Responsable --> UC301
+Responsable --> UC302
+Responsable --> UC303
+Jefe --> UC304
+Admin --> UC305
+Jefe --> UC306
+
+' ============================================================================
+' RELACIONES EXTEND Y INCLUDE ADICIONALES
+' ============================================================================
+
+UC52 ..> UC61 : <<include>>
+UC102 ..> UC111 : <<include>>
+UC71 ..> UC81 : <<extend>>
+UC51 ..> UC62 : <<extend>>
+UC141 ..> UC146 : <<extend>>
+
+' ============================================================================
+' NOTAS Y RESTRICCIONES
+' ============================================================================
+
+note right of UC38
+  Validación automática
+  en cada operación
+end note
+
+note right of UC187
+  Se ejecuta automáticamente
+  en operaciones críticas
+end note
+
+note bottom of UC246
+  Requiere aprobación
+  de administrador
+end note
+
+note bottom of UC125
+  Requiere permisos
+  especiales
+end note
+
+@enduml

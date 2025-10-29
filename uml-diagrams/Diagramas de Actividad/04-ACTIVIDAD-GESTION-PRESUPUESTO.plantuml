@@ -1,0 +1,265 @@
+@startuml ACTIVIDAD-GESTION-PRESUPUESTO
+!theme cerulean-outline
+title XHION CORE - Diagrama de Actividad\nGestión de Presupuestos y Movimientos
+
+|Jefe de Departamento|
+start
+:Acceder al panel de departamento;
+:Seleccionar tab "Presupuesto";
+
+|Sistema|
+if (¿Existe presupuesto?) then (no)
+  :Mostrar estado vacío;
+  :Mostrar botón "Crear Presupuesto";
+  
+  |Jefe de Departamento|
+  :Hacer clic en "Crear Presupuesto";
+  
+  |Sistema|
+  :Mostrar formulario de creación;
+  
+  |Jefe de Departamento|
+  :Ingresar datos del presupuesto;
+  note right
+    - Monto total
+    - Período (mensual/trimestral/anual)
+    - Fecha inicio
+    - Fecha fin
+    - Descripción
+  end note
+  
+  :Hacer clic en "Crear";
+  
+  |Sistema|
+  :Validar datos;
+  
+  if (¿Datos válidos?) then (no)
+    :Mostrar errores;
+    stop
+  else (sí)
+    :Crear presupuesto en BD;
+    note right
+      - montoTotal
+      - montoGastado = 0
+      - montoDisponible = montoTotal
+      - estado = Activo
+    end note
+    :Registrar en auditoría;
+  endif
+else (sí)
+  :Cargar presupuesto existente;
+  :Mostrar resumen y estadísticas;
+  note right
+    - Monto total
+    - Gastado
+    - Disponible
+    - Porcentaje usado
+    - Gráficos de análisis
+  end note
+endif
+
+partition "Registro de Movimientos" {
+  |Jefe de Departamento|
+  :Hacer clic en "Registrar Movimiento";
+  
+  |Sistema|
+  :Mostrar formulario de movimiento;
+  
+  |Jefe de Departamento|
+  :Seleccionar tipo de movimiento;
+  
+  if (Tipo) then (Asignación)
+    :Ingresar monto adicional;
+    note right
+      Aumenta el presupuesto total
+    end note
+  elseif (Tipo) then (Gasto)
+    :Ingresar monto del gasto;
+    :Seleccionar categoría;
+    note right
+      Categorías:
+      - Salarios
+      - Equipamiento
+      - Marketing
+      - Capacitación
+      - Infraestructura
+    end note
+  elseif (Tipo) then (Ajuste)
+    :Ingresar monto de ajuste;
+    note right
+      Corrección de montos
+      (puede ser + o -)
+    end note
+  else (Transferencia)
+    :Seleccionar departamento destino;
+    :Ingresar monto a transferir;
+  endif
+  
+  :Ingresar descripción;
+  :Adjuntar comprobante (opcional);
+  
+  if (¿Tiene comprobante?) then (sí)
+    |Sistema|
+    :Validar archivo;
+    note right
+      - Tipos permitidos: PDF, JPG, PNG
+      - Tamaño máximo: 5MB
+    end note
+    
+    if (¿Archivo válido?) then (no)
+      :Mostrar error de validación;
+      stop
+    else (sí)
+      :Subir archivo;
+      :Guardar metadatos;
+    endif
+  endif
+  
+  |Jefe de Departamento|
+  :Hacer clic en "Registrar";
+  
+  |Sistema|
+  :Validar movimiento;
+  
+  if (Tipo = Gasto o Transferencia) then (sí)
+    :Verificar disponibilidad;
+    
+    if (¿Monto > Disponible?) then (sí)
+      :Mostrar advertencia de sobregasto;
+      
+      |Jefe de Departamento|
+      if (¿Confirmar sobregasto?) then (no)
+        stop
+      endif
+    endif
+  endif
+  
+  |Sistema|
+  :Iniciar transacción de BD;
+  
+  fork
+    :Crear registro de movimiento;
+  fork again
+    :Actualizar presupuesto;
+    
+    if (Tipo = Asignación) then (sí)
+      :montoTotal += monto;
+      :montoDisponible += monto;
+    elseif (Tipo = Gasto) then (sí)
+      :montoGastado += monto;
+      :montoDisponible -= monto;
+    elseif (Tipo = Ajuste) then (sí)
+      :Aplicar ajuste según signo;
+    else (Transferencia)
+      :montoGastado += monto;
+      :montoDisponible -= monto;
+      :Crear asignación en destino;
+    endif
+  end fork
+  
+  :Confirmar transacción;
+  :Registrar en auditoría;
+  
+  if (¿Sobregasto detectado?) then (sí)
+    :Generar alerta automática;
+    :Notificar a jefe y administradores;
+    note right
+      Alerta cuando:
+      montoGastado > montoTotal
+    end note
+  endif
+}
+
+partition "Análisis y Reportes" {
+  |Jefe de Departamento|
+  :Acceder a vista de análisis;
+  
+  |Sistema|
+  :Cargar movimientos del período;
+  :Calcular métricas;
+  
+  fork
+    :Generar gráfico de gastos diarios;
+  fork again
+    :Generar gráfico por categoría;
+  fork again
+    :Calcular tendencia acumulada;
+  fork again
+    :Proyectar gastos futuros;
+    note right
+      Basado en promedio diario
+      y días restantes
+    end note
+  end fork
+  
+  :Mostrar dashboard analítico;
+  note right
+    - Gastos por categoría
+    - Distribución por tipo
+    - Tendencia temporal
+    - Proyección de cierre
+    - Alertas de sobregasto
+  end note
+  
+  |Jefe de Departamento|
+  if (¿Exportar reporte?) then (sí)
+    :Seleccionar formato;
+    
+    |Sistema|
+    if (Formato = Excel) then (sí)
+      :Generar archivo XLSX;
+      note right
+        - Resumen ejecutivo
+        - Detalle de movimientos
+        - Gráficos
+      end note
+    elseif (Formato = PDF) then (sí)
+      :Generar archivo PDF;
+    else (CSV)
+      :Generar archivo CSV;
+    endif
+    
+    :Descargar archivo;
+  endif
+}
+
+partition "Aprobación de Presupuesto" {
+  |Administrador|
+  if (¿Requiere aprobación?) then (sí)
+    :Revisar presupuesto;
+    :Verificar montos y justificación;
+    
+    if (¿Aprobar?) then (sí)
+      |Sistema|
+      :Cambiar estado a "Aprobado";
+      :Registrar aprobador y fecha;
+      :Notificar a jefe de departamento;
+      :Registrar en auditoría;
+    else (no)
+      :Cambiar estado a "Rechazado";
+      :Agregar comentarios de rechazo;
+      :Notificar a jefe de departamento;
+    endif
+  endif
+}
+
+partition "Cierre de Presupuesto" {
+  |Sistema|
+  if (¿Fecha fin alcanzada?) then (sí)
+    :Cambiar estado a "Cerrado";
+    :Calcular métricas finales;
+    note right
+      - Total asignado
+      - Total gastado
+      - Porcentaje de ejecución
+      - Categorías principales
+    end note
+    :Generar reporte de cierre;
+    :Notificar a jefe y administradores;
+    :Archivar presupuesto;
+  endif
+}
+
+stop
+
+@enduml

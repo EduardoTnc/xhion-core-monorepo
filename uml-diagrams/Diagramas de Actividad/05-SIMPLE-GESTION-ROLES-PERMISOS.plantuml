@@ -1,0 +1,90 @@
+@startuml SIMPLE-GESTION-ROLES-PERMISOS
+
+title Gestión de Roles y Permisos (Simplificado)
+
+|Administrador|
+start
+:Crear nuevo rol;
+
+|Sistema|
+:Guardar rol;
+
+|Administrador|
+:Gestionar permisos\ndel rol;
+
+|Sistema|
+:Mostrar 47 permisos\nen 10 módulos;
+
+|Administrador|
+:Seleccionar permisos;
+note right
+  Módulos:
+  - Proyectos (8)
+  - Tareas (8)
+  - Departamentos (6)
+  - Presupuestos (6)
+  - Usuarios (6)
+  - Roles (5)
+  - Conocimiento (4)
+  - Sistema (3)
+  - Invitaciones (3)
+  - Auditoría (2)
+end note
+
+|Sistema|
+fork
+  :Eliminar permisos\nanteriores;
+fork again
+  :Insertar nuevos\npermisos;
+end fork
+
+:Invalidar caché;
+
+|Administrador|
+:Asignar rol a usuario;
+
+|Sistema|
+:Actualizar rol del usuario;
+:Invalidar sesiones activas;
+:Notificar usuario;
+
+|Usuario|
+:Intentar acción;
+
+|Sistema|
+:Extraer userId del JWT;
+:Obtener rol;
+
+if (¿Permisos en caché?) then (sí)
+  :Recuperar de caché;
+else (no)
+  :Cargar de BD;
+  :Cachear permisos;
+endif
+
+:Verificar permiso\nrequerido;
+
+if (¿Tiene permiso?) then (sí)
+  :Ejecutar acción;
+else (no)
+  :Error 403\n"Sin permisos";
+endif
+
+|Administrador|
+if (¿Eliminar rol?) then (sí)
+  |Sistema|
+  if (¿Tiene usuarios?) then (sí)
+    :Mostrar advertencia;
+    
+    |Administrador|
+    :Reasignar usuarios;
+  endif
+  
+  |Sistema|
+  :Eliminación lógica;
+  :Limpiar permisos;
+endif
+
+stop
+
+@enduml

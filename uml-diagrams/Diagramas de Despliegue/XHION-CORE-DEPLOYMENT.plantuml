@@ -1,0 +1,503 @@
+@startuml XHION-CORE-DEPLOYMENT
+!theme cerulean-outline
+title XHION CORE - Diagrama de Despliegue\nArquitectura de Infraestructura Completa
+
+' ============================================================================
+' CAPA DE CLIENTE
+' ============================================================================
+
+node "Dispositivos Cliente" as ClientDevices {
+  
+  node "Desktop Browser" as Desktop {
+    component "React App" as ReactDesktop {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "styles.css"
+      artifact "Service Worker"
+    }
+  }
+  
+  node "Mobile Browser" as Mobile {
+    component "React App (PWA)" as ReactMobile {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "manifest.json"
+      artifact "Service Worker"
+    }
+  }
+  
+  node "Tablet Browser" as Tablet {
+    component "React App (PWA)" as ReactTablet {
+      artifact "index.html"
+      artifact "main.js"
+    }
+  }
+}
+
+' ============================================================================
+' CAPA DE CDN Y BALANCEO
+' ============================================================================
+
+cloud "Internet" as Internet
+
+node "CDN (Cloudflare)" as CDN {
+  component "Edge Cache" as EdgeCache {
+    artifact "Static Assets"
+    artifact "Images"
+    artifact "Fonts"
+  }
+  
+  component "DDoS Protection" as DDoS
+  component "SSL/TLS Termination" as SSL
+  component "WAF" as WAF
+}
+
+node "Load Balancer" as LB {
+  component "NGINX" as NGINX {
+    artifact "nginx.conf"
+    artifact "SSL Certificates"
+  }
+  
+  component "Health Checks" as HealthCheck
+  component "Rate Limiting" as RateLimit
+}
+
+' ============================================================================
+' CAPA DE APLICACIÓN - FRONTEND
+' ============================================================================
+
+node "Frontend Server (Vercel/Netlify)" as FrontendServer {
+  
+  component "Static File Server" as StaticServer {
+    artifact "HTML/CSS/JS"
+    artifact "Assets"
+    artifact "Source Maps"
+  }
+  
+  component "Build Pipeline" as BuildPipeline {
+    artifact "Vite Build"
+    artifact "TypeScript Compiler"
+    artifact "Asset Optimization"
+  }
+  
+  database "Edge Cache" as FrontendCache {
+    artifact "Cached Pages"
+    artifact "API Responses"
+  }
+}
+
+' ============================================================================
+' CAPA DE APLICACIÓN - BACKEND
+' ============================================================================
+
+node "Backend Server Cluster" as BackendCluster {
+  
+  node "API Server 1" as API1 {
+    component "NestJS Application" as NestJS1 {
+      artifact "main.ts"
+      artifact "Controllers"
+      artifact "Services"
+      artifact "Guards"
+      artifact "Decorators"
+    }
+    
+    component "Prisma Client" as Prisma1 {
+      artifact "Schema"
+      artifact "Migrations"
+      artifact "Generated Client"
+    }
+    
+    component "JWT Handler" as JWT1
+    component "Bcrypt" as Bcrypt1
+  }
+  
+  node "API Server 2" as API2 {
+    component "NestJS Application" as NestJS2 {
+      artifact "main.ts"
+      artifact "Controllers"
+      artifact "Services"
+    }
+    
+    component "Prisma Client" as Prisma2
+    component "JWT Handler" as JWT2
+  }
+  
+  node "API Server 3" as API3 {
+    component "NestJS Application" as NestJS3 {
+      artifact "main.ts"
+      artifact "Controllers"
+      artifact "Services"
+    }
+    
+    component "Prisma Client" as Prisma3
+    component "JWT Handler" as JWT3
+  }
+}
+
+' ============================================================================
+' CAPA DE DATOS
+' ============================================================================
+
+node "Database Server (PostgreSQL)" as DBServer {
+  
+  database "PostgreSQL Primary" as PostgresPrimary {
+    schema "xhion_core_db" {
+      table "usuarios"
+      table "roles"
+      table "permisos"
+      table "proyectos"
+      table "tareas"
+      table "departamentos"
+      table "presupuestos"
+      table "sesiones"
+      table "invitaciones"
+      table "auditoria"
+    }
+  }
+  
+  component "Connection Pool" as ConnectionPool {
+    artifact "Max Connections: 100"
+    artifact "Idle Timeout: 30s"
+  }
+  
+  component "Query Cache" as QueryCache
+}
+
+node "Database Replica (Read-Only)" as DBReplica {
+  database "PostgreSQL Replica" as PostgresReplica {
+    schema "xhion_core_db (replica)"
+  }
+  
+  component "Replication Stream" as Replication
+}
+
+' ============================================================================
+' CAPA DE CACHÉ
+' ============================================================================
+
+node "Cache Server (Redis)" as CacheServer {
+  
+  database "Redis Cluster" as Redis {
+    artifact "Session Cache"
+    artifact "Permissions Cache"
+    artifact "Query Results Cache"
+    artifact "Rate Limit Counters"
+  }
+  
+  component "Redis Sentinel" as Sentinel {
+    artifact "High Availability"
+    artifact "Auto Failover"
+  }
+}
+
+' ============================================================================
+' CAPA DE ALMACENAMIENTO
+' ============================================================================
+
+node "File Storage (AWS S3 / MinIO)" as FileStorage {
+  
+  database "Object Storage" as S3 {
+    folder "avatars/"
+    folder "documents/"
+    folder "attachments/"
+    folder "budgets/"
+    folder "exports/"
+  }
+  
+  component "CDN Integration" as S3CDN
+  component "Backup Policy" as S3Backup {
+    artifact "Daily Snapshots"
+    artifact "30 Days Retention"
+  }
+}
+
+' ============================================================================
+' SERVICIOS EXTERNOS
+' ============================================================================
+
+cloud "External Services" as ExternalServices {
+  
+  node "Gemini API (Google)" as GeminiAPI {
+    component "AI Service" as AIService {
+      artifact "Text Generation"
+      artifact "Summarization"
+      artifact "Context Analysis"
+    }
+  }
+  
+  node "Email Service (SendGrid/SES)" as EmailService {
+    component "SMTP Server" as SMTP {
+      artifact "Transactional Emails"
+      artifact "Notifications"
+    }
+  }
+  
+  node "Monitoring (Sentry)" as Monitoring {
+    component "Error Tracking" as ErrorTracking
+    component "Performance Monitoring" as PerfMonitoring
+  }
+  
+  node "Analytics (Google Analytics)" as Analytics {
+    component "User Tracking" as UserTracking
+    component "Event Tracking" as EventTracking
+  }
+}
+
+' ============================================================================
+' CAPA DE MONITOREO Y LOGS
+' ============================================================================
+
+node "Monitoring & Logging" as MonitoringNode {
+  
+  component "Prometheus" as Prometheus {
+    artifact "Metrics Collection"
+    artifact "Time Series DB"
+  }
+  
+  component "Grafana" as Grafana {
+    artifact "Dashboards"
+    artifact "Alerts"
+  }
+  
+  database "Log Aggregation (ELK)" as ELK {
+    artifact "Elasticsearch"
+    artifact "Logstash"
+    artifact "Kibana"
+  }
+}
+
+' ============================================================================
+' CAPA DE CI/CD
+' ============================================================================
+
+node "CI/CD Pipeline" as CICD {
+  
+  component "GitHub Actions" as GitHubActions {
+    artifact "Build Workflow"
+    artifact "Test Workflow"
+    artifact "Deploy Workflow"
+  }
+  
+  component "Docker Registry" as DockerRegistry {
+    artifact "API Images"
+    artifact "DB Migration Images"
+  }
+  
+  component "Deployment Scripts" as DeployScripts {
+    artifact "deploy-frontend.sh"
+    artifact "deploy-backend.sh"
+    artifact "run-migrations.sh"
+  }
+}
+
+' ============================================================================
+' CAPA DE BACKUP Y DISASTER RECOVERY
+' ============================================================================
+
+node "Backup & DR" as BackupDR {
+  
+  database "Database Backups" as DBBackups {
+    artifact "Daily Full Backups"
+    artifact "Hourly Incremental"
+    artifact "Point-in-Time Recovery"
+  }
+  
+  database "File Backups" as FileBackups {
+    artifact "S3 Versioning"
+    artifact "Cross-Region Replication"
+  }
+  
+  component "Disaster Recovery Plan" as DRPlan {
+    artifact "RTO: 4 hours"
+    artifact "RPO: 1 hour"
+  }
+}
+
+' ============================================================================
+' RELACIONES Y COMUNICACIÓN
+' ============================================================================
+
+' Cliente -> CDN
+Desktop --> Internet : HTTPS
+Mobile --> Internet : HTTPS
+Tablet --> Internet : HTTPS
+
+Internet --> CDN : HTTPS/443
+CDN --> LB : HTTPS/443
+
+' Load Balancer -> Frontend
+LB --> FrontendServer : HTTPS/443
+
+' Frontend -> Backend
+FrontendServer --> LB : REST API\nHTTPS/443
+
+' Load Balancer -> Backend Cluster
+LB --> API1 : HTTP/3000
+LB --> API2 : HTTP/3000
+LB --> API3 : HTTP/3000
+
+' Backend -> Database
+API1 --> PostgresPrimary : TCP/5432\nWrite/Read
+API2 --> PostgresPrimary : TCP/5432\nWrite/Read
+API3 --> PostgresPrimary : TCP/5432\nWrite/Read
+
+API1 --> PostgresReplica : TCP/5432\nRead Only
+API2 --> PostgresReplica : TCP/5432\nRead Only
+API3 --> PostgresReplica : TCP/5432\nRead Only
+
+' Database Replication
+PostgresPrimary --> PostgresReplica : Streaming\nReplication
+
+' Backend -> Cache
+API1 --> Redis : TCP/6379
+API2 --> Redis : TCP/6379
+API3 --> Redis : TCP/6379
+
+' Backend -> File Storage
+API1 --> S3 : HTTPS/443\nS3 API
+API2 --> S3 : HTTPS/443\nS3 API
+API3 --> S3 : HTTPS/443\nS3 API
+
+' Backend -> External Services
+API1 --> GeminiAPI : HTTPS/443\nREST API
+API1 --> EmailService : SMTP/587
+API1 --> Monitoring : HTTPS/443
+
+' Monitoring
+API1 --> Prometheus : HTTP/9090\nMetrics
+API2 --> Prometheus : HTTP/9090\nMetrics
+API3 --> Prometheus : HTTP/9090\nMetrics
+
+Prometheus --> Grafana : HTTP/3000
+
+API1 --> ELK : TCP/5044\nLogs
+API2 --> ELK : TCP/5044\nLogs
+API3 --> ELK : TCP/5044\nLogs
+
+' CI/CD
+GitHubActions --> DockerRegistry : Push Images
+GitHubActions --> API1 : Deploy
+GitHubActions --> FrontendServer : Deploy
+
+' Backups
+PostgresPrimary --> DBBackups : Daily Backup
+S3 --> FileBackups : Replication
+
+' ============================================================================
+' NOTAS Y ESPECIFICACIONES
+' ============================================================================
+
+note right of ClientDevices
+  **Clientes Soportados:**
+  - Chrome 90+
+  - Firefox 88+
+  - Safari 14+
+  - Edge 90+
+  
+  **Características:**
+  - PWA con Service Worker
+  - Offline Mode
+  - Cache First Strategy
+  - Auto-update
+end note
+
+note right of CDN
+  **Cloudflare CDN:**
+  - 200+ Edge Locations
+  - DDoS Protection (L3/L4/L7)
+  - WAF Rules
+  - SSL/TLS 1.3
+  - HTTP/3 Support
+  - Brotli Compression
+end note
+
+note right of LB
+  **NGINX Load Balancer:**
+  - Algorithm: Least Connections
+  - Health Checks: Every 10s
+  - Timeout: 30s
+  - Max Connections: 1000
+  - Rate Limit: 100 req/min per IP
+end note
+
+note right of BackendCluster
+  **NestJS Backend:**
+  - Node.js 20 LTS
+  - TypeScript 5.x
+  - Prisma ORM 5.x
+  - JWT Authentication
+  - RBAC with 47 permissions
+  - Swagger Documentation
+  - Auto-scaling: 1-5 instances
+end note
+
+note right of DBServer
+  **PostgreSQL 16:**
+  - Max Connections: 100
+  - Shared Buffers: 4GB
+  - Effective Cache: 12GB
+  - Work Mem: 64MB
+  - Maintenance Work Mem: 1GB
+  - WAL Level: replica
+  - Checkpoint Timeout: 5min
+end note
+
+note right of Redis
+  **Redis 7.x:**
+  - Max Memory: 4GB
+  - Eviction Policy: allkeys-lru
+  - Persistence: RDB + AOF
+  - Replication: Master-Slave
+  - Sentinel: 3 nodes
+  - TTL: 15min (sessions)
+end note
+
+note right of S3
+  **Object Storage:**
+  - Max File Size: 100MB
+  - Allowed Types: 
+    * Images: jpg, png, webp
+    * Docs: pdf, docx, xlsx
+    * Archives: zip
+  - Encryption: AES-256
+  - Versioning: Enabled
+  - Lifecycle: 90 days
+end note
+
+note right of MonitoringNode
+  **Monitoring Stack:**
+  - Prometheus: Metrics every 15s
+  - Grafana: 20+ Dashboards
+  - ELK: 30 days retention
+  - Alerts: Slack/Email
+  - SLA: 99.9% uptime
+end note
+
+note right of CICD
+  **CI/CD Pipeline:**
+  - Trigger: Git Push
+  - Build Time: ~5 min
+  - Tests: Unit + E2E
+  - Deploy: Blue-Green
+  - Rollback: Automatic
+  - Environments: 
+    * Development
+    * Staging
+    * Production
+end note
+
+note right of BackupDR
+  **Backup Strategy:**
+  - Database: 
+    * Full: Daily 2 AM
+    * Incremental: Hourly
+    * Retention: 30 days
+  - Files:
+    * Versioning: Enabled
+    * Cross-Region: Yes
+  - DR Site: AWS us-west-2
+  - RTO: 4 hours
+  - RPO: 1 hour
+end note
+
+@enduml

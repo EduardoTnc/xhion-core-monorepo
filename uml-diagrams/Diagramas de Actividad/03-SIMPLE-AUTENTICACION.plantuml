@@ -1,0 +1,82 @@
+@startuml SIMPLE-AUTENTICACION
+!theme cerulean-outline
+title Autenticación y Sesiones (Simplificado)
+
+|Usuario|
+start
+:Ingresar email\ny contraseña;
+
+|Sistema|
+:Buscar usuario;
+
+if (¿Usuario existe?) then (no)
+  :Error "Credenciales\ninválidas";
+  stop
+endif
+
+:Verificar contraseña;
+
+if (¿Contraseña correcta?) then (no)
+  :Incrementar intentos\nfallidos;
+  
+  if (¿Excede límite?) then (sí)
+    :Bloquear cuenta;
+  endif
+  
+  :Error "Credenciales\ninválidas";
+  stop
+endif
+
+:Verificar estado;
+
+if (¿Usuario activo?) then (no)
+  :Error "Cuenta\nbloqueada/suspendida";
+  stop
+endif
+
+fork
+  :Generar Access Token\n(JWT - 15 min);
+fork again
+  :Generar Refresh Token\n(7 días);
+end fork
+
+:Crear sesión;
+:Cargar permisos;
+:Redirigir al dashboard;
+
+|Usuario|
+repeat
+  :Realizar acción;
+  
+  |Sistema|
+  :Validar token;
+  
+  if (¿Token válido?) then (sí)
+    :Verificar permisos;
+    
+    if (¿Tiene permiso?) then (sí)
+      :Ejecutar acción;
+    else (no)
+      :Error 403;
+    endif
+  else (no)
+    if (¿Token expirado?) then (sí)
+      :Renovar con\nRefresh Token;
+    else (no)
+      :Cerrar sesión;
+      stop
+    endif
+  endif
+  
+repeat while (¿Continuar?) is (sí)
+
+|Usuario|
+:Cerrar sesión;
+
+|Sistema|
+:Invalidar tokens;
+:Eliminar sesión;
+
+stop
+
+@enduml
