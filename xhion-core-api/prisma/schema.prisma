@@ -268,6 +268,9 @@ model Usuario {
   presupuestosProyectoCreados   PresupuestoProyecto[]     @relation("PresupuestosProyectoCreados")
   movimientosPresupuestoDepartamento MovimientoPresupuestoDepartamento[] @relation("MovimientosPresupuestoDepartamento")
   movimientosPresupuestoProyecto MovimientoPresupuestoProyecto[] @relation("MovimientosPresupuestoProyecto")
+  ideasCreadas                  Idea[]                    @relation("IdeasCreadas")
+  votosIdeas                    VotoIdea[]                @relation("VotosIdeas")
+  comentariosIdeas              ComentarioIdea[]          @relation("ComentariosIdeas")
 }
 
 /// Invitaciones para nuevos usuarios.
@@ -920,4 +923,76 @@ model MovimientoPresupuestoProyecto {
   @@index([presupuestoProyectoId])
   @@index([tipo])
   @@index([fechaMovimiento])
+}
+
+// --- SISTEMA DE IDEAS ---
+
+enum CategoriaIdea {
+  Feature      // Nueva funcionalidad
+  Improvement  // Mejora
+  Innovation   // Innovación
+}
+
+enum EstadoIdea {
+  Evaluating     // En evaluación
+  Approved       // Aprobada
+  InDevelopment  // En desarrollo
+  Implemented    // Implementada
+  Rejected       // Rechazada
+}
+
+/// Ideas del buzón de sugerencias con análisis de IA
+model Idea {
+  id            String        @id @default(uuid()) @db.Uuid
+  titulo        String        @db.VarChar(200)
+  descripcion   String
+  categoria     CategoriaIdea
+  estado        EstadoIdea    @default(Evaluating)
+  autorId       String        @db.Uuid
+  aiScore       Int?          // Score de IA (0-100)
+  aiInsight     String?       // Insight generado por IA
+  tags          String[]      // Array de tags
+  fechaCreacion DateTime      @default(now())
+  fechaActualizacion DateTime  @updatedAt
+  
+  autor         Usuario       @relation("IdeasCreadas", fields: [autorId], references: [id], onDelete: Cascade)
+  votos         VotoIdea[]
+  comentarios   ComentarioIdea[]
+  
+  @@index([autorId])
+  @@index([categoria])
+  @@index([estado])
+  @@index([fechaCreacion])
+}
+
+/// Votos de usuarios en ideas
+model VotoIdea {
+  id            String   @id @default(uuid()) @db.Uuid
+  ideaId        String   @db.Uuid
+  usuarioId     String   @db.Uuid
+  fechaVoto     DateTime @default(now())
+  
+  idea          Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation("VotosIdeas", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@unique([ideaId, usuarioId]) // Un usuario solo puede votar una vez por idea
+  @@index([ideaId])
+  @@index([usuarioId])
+}
+
+/// Comentarios en ideas
+model ComentarioIdea {
+  id            String   @id @default(uuid()) @db.Uuid
+  ideaId        String   @db.Uuid
+  usuarioId     String   @db.Uuid
+  contenido     String
+  fechaCreacion DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+  
+  idea          Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation("ComentariosIdeas", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([ideaId])
+  @@index([usuarioId])
+  @@index([fechaCreacion])
 }

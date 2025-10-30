@@ -9,6 +9,7 @@ import { X, Sparkles, Loader2 } from "lucide-react"
 
 interface GenerateIdeaModalProps {
   onClose: () => void
+  onSuccess?: () => void
 }
 
 export function GenerateIdeaModal({ onClose }: GenerateIdeaModalProps) {

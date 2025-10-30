@@ -1,96 +1,40 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Plus, Sparkles, TrendingUp, Lightbulb, Target, Zap, Filter } from "lucide-react"
+import { Search, Plus, Sparkles, TrendingUp, Lightbulb, Target, Zap, Filter, Loader2 } from "lucide-react"
 import { IdeaCard } from "./idea-card"
 import { GenerateIdeaModal } from "./generate-idea-modal"
+import { CreateIdeaModal } from "./create-idea-modal"
+import { useIdeasStore } from "@/store/ideasStore"
 
-const ideas = [
-  {
-    id: 1,
-    title: "Sistema de notificaciones en tiempo real",
-    description:
-      "Implementar un sistema de notificaciones push que permita a los usuarios recibir actualizaciones instantáneas sobre cambios en proyectos y tareas.",
-    category: "feature",
-    status: "evaluating",
-    votes: 24,
-    comments: 8,
-    author: { name: "Ana García", avatar: "/diverse-woman-portrait.png" },
-    aiScore: 92,
-    aiInsight: "Alta viabilidad técnica. Impacto positivo en engagement del usuario.",
-    tags: ["UX", "Real-time", "Engagement"],
-    createdAt: "Hace 2 días",
-  },
-  {
-    id: 2,
-    title: "Integración con herramientas de IA generativa",
-    description:
-      "Permitir que los usuarios generen contenido automáticamente usando modelos de lenguaje para descripciones de tareas y documentación.",
-    category: "innovation",
-    status: "approved",
-    votes: 45,
-    comments: 15,
-    author: { name: "Carlos Ruiz", avatar: "/man.jpg" },
-    aiScore: 88,
-    aiInsight: "Diferenciador competitivo. Requiere inversión en infraestructura.",
-    tags: ["IA", "Automatización", "Productividad"],
-    createdAt: "Hace 5 días",
-  },
-  {
-    id: 3,
-    title: "Dashboard personalizable con widgets",
-    description:
-      "Permitir a cada usuario personalizar su dashboard arrastrando y soltando widgets según sus necesidades específicas.",
-    category: "improvement",
-    status: "in-development",
-    votes: 38,
-    comments: 12,
-    author: { name: "María López", avatar: "/diverse-woman-portrait.png" },
-    aiScore: 85,
-    aiInsight: "Mejora significativa en UX. Complejidad técnica moderada.",
-    tags: ["UX", "Personalización", "Dashboard"],
-    createdAt: "Hace 1 semana",
-  },
-  {
-    id: 4,
-    title: "Modo offline con sincronización automática",
-    description:
-      "Permitir trabajar sin conexión y sincronizar automáticamente los cambios cuando se recupere la conectividad.",
-    category: "feature",
-    status: "evaluating",
-    votes: 31,
-    comments: 6,
-    author: { name: "Juan Pérez", avatar: "/man.jpg" },
-    aiScore: 78,
-    aiInsight: "Útil para usuarios móviles. Requiere arquitectura de datos robusta.",
-    tags: ["Mobile", "Sync", "Offline"],
-    createdAt: "Hace 3 días",
-  },
-  {
-    id: 5,
-    title: "Análisis predictivo de riesgos en proyectos",
-    description:
-      "Usar machine learning para predecir posibles retrasos o problemas en proyectos basándose en datos históricos.",
-    category: "innovation",
-    status: "evaluating",
-    votes: 52,
-    comments: 20,
-    author: { name: "Ana García", avatar: "/diverse-woman-portrait.png" },
-    aiScore: 95,
-    aiInsight: "Alto valor estratégico. Requiere datos históricos suficientes.",
-    tags: ["IA", "Analytics", "Predicción"],
-    createdAt: "Hace 4 días",
-  },
-]
 
 export function IdeasView() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+
+  const { ideas, estadisticas, isLoading, fetchIdeas, fetchEstadisticas } = useIdeasStore()
+
+  useEffect(() => {
+    loadIdeas()
+    fetchEstadisticas()
+  }, [])
+
+  useEffect(() => {
+    loadIdeas()
+  }, [filterCategory, filterStatus, searchQuery])
+
+  const loadIdeas = () => {
+    const categoria = filterCategory !== "all" ? filterCategory : undefined
+    const estado = filterStatus !== "all" ? filterStatus : undefined
+    const busqueda = searchQuery || undefined
+    fetchIdeas(categoria, estado, busqueda)
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -108,7 +52,7 @@ export function IdeasView() {
               <Sparkles className="h-4 w-4" />
               Generar con IA
             </Button>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4" />
               Nueva Idea
             </Button>
@@ -133,9 +77,9 @@ export function IdeasView() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las categorías</SelectItem>
-              <SelectItem value="feature">Nueva funcionalidad</SelectItem>
-              <SelectItem value="improvement">Mejora</SelectItem>
-              <SelectItem value="innovation">Innovación</SelectItem>
+              <SelectItem value="Feature">Nueva funcionalidad</SelectItem>
+              <SelectItem value="Improvement">Mejora</SelectItem>
+              <SelectItem value="Innovation">Innovación</SelectItem>
             </SelectContent>
           </Select>
 
@@ -145,11 +89,11 @@ export function IdeasView() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los estados</SelectItem>
-              <SelectItem value="evaluating">En evaluación</SelectItem>
-              <SelectItem value="approved">Aprobada</SelectItem>
-              <SelectItem value="in-development">En desarrollo</SelectItem>
-              <SelectItem value="implemented">Implementada</SelectItem>
-              <SelectItem value="rejected">Rechazada</SelectItem>
+              <SelectItem value="Evaluating">En evaluación</SelectItem>
+              <SelectItem value="Approved">Aprobada</SelectItem>
+              <SelectItem value="InDevelopment">En desarrollo</SelectItem>
+              <SelectItem value="Implemented">Implementada</SelectItem>
+              <SelectItem value="Rejected">Rechazada</SelectItem>
             </SelectContent>
           </Select>
 
@@ -167,7 +111,7 @@ export function IdeasView() {
               <Lightbulb className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-foreground">127</p>
+              <p className="text-2xl font-semibold text-foreground">{estadisticas?.total || 0}</p>
               <p className="text-xs text-muted-foreground">Total de ideas</p>
             </div>
           </div>
@@ -176,7 +120,7 @@ export function IdeasView() {
               <Target className="h-5 w-5 text-chart-2" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-foreground">23</p>
+              <p className="text-2xl font-semibold text-foreground">{estadisticas?.porEstado?.Evaluating || 0}</p>
               <p className="text-xs text-muted-foreground">En evaluación</p>
             </div>
           </div>
@@ -185,7 +129,7 @@ export function IdeasView() {
               <Zap className="h-5 w-5 text-chart-3" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-foreground">15</p>
+              <p className="text-2xl font-semibold text-foreground">{estadisticas?.porEstado?.InDevelopment || 0}</p>
               <p className="text-xs text-muted-foreground">En desarrollo</p>
             </div>
           </div>
@@ -194,7 +138,7 @@ export function IdeasView() {
               <TrendingUp className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-foreground">89</p>
+              <p className="text-2xl font-semibold text-foreground">{estadisticas?.porEstado?.Implemented || 0}</p>
               <p className="text-xs text-muted-foreground">Implementadas</p>
             </div>
           </div>
@@ -203,15 +147,32 @@ export function IdeasView() {
 
       {/* Ideas grid */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {ideas.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : ideas.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Lightbulb className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No hay ideas aún</h3>
+            <p className="text-sm text-muted-foreground mb-4">Sé el primero en compartir una idea innovadora</p>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Idea
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {ideas.map((idea) => (
+              <IdeaCard key={idea.id} idea={idea} onUpdate={loadIdeas} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Generate Idea Modal */}
-      {showGenerateModal && <GenerateIdeaModal onClose={() => setShowGenerateModal(false)} />}
+      {/* Modals */}
+      {showGenerateModal && <GenerateIdeaModal onClose={() => setShowGenerateModal(false)} onSuccess={loadIdeas} />}
+      {showCreateModal && <CreateIdeaModal open={showCreateModal} onOpenChange={setShowCreateModal} onSuccess={loadIdeas} />}
     </div>
   )
 }

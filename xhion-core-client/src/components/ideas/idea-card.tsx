@@ -3,33 +3,50 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ThumbsUp, MessageSquare, Sparkles, MoreVertical } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ThumbsUp, MessageSquare, Sparkles, MoreVertical, Edit, Trash2 } from "lucide-react"
+import { useIdeasStore } from "@/store/ideasStore"
+import { useAuthStore } from "@/store/authStore"
+import type { Idea } from "@/services/ideasService"
+import { formatDistanceToNow } from "date-fns"
+import { es } from "date-fns/locale"
 
 interface IdeaCardProps {
-  idea: {
-    id: number
-    title: string
-    description: string
-    category: string
-    status: string
-    votes: number
-    comments: number
-    author: { name: string; avatar: string }
-    aiScore: number
-    aiInsight: string
-    tags: string[]
-    createdAt: string
-  }
+  idea: Idea
+  onUpdate?: () => void
 }
 
-export function IdeaCard({ idea }: IdeaCardProps) {
+export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
+  const { votarIdea, eliminarIdea } = useIdeasStore()
+  const { user } = useAuthStore()
+
+  const isAuthor = user?.id === idea.autorId
+
+  const handleVote = async () => {
+    await votarIdea(idea.id)
+    if (onUpdate) onUpdate()
+  }
+
+  const handleDelete = async () => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar esta idea?")) {
+      await eliminarIdea(idea.id)
+      if (onUpdate) onUpdate()
+    }
+  }
+
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case "feature":
+      case "Feature":
         return "bg-chart-1/10 text-chart-1 border-chart-1/20"
-      case "improvement":
+      case "Improvement":
         return "bg-chart-2/10 text-chart-2 border-chart-2/20"
-      case "innovation":
+      case "Innovation":
         return "bg-chart-3/10 text-chart-3 border-chart-3/20"
       default:
         return "bg-muted text-muted-foreground"
@@ -38,15 +55,15 @@ export function IdeaCard({ idea }: IdeaCardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "evaluating":
+      case "Evaluating":
         return "border-amber-500/20 bg-amber-500/10 text-amber-600"
-      case "approved":
+      case "Approved":
         return "border-green-500/20 bg-green-500/10 text-green-600"
-      case "in-development":
+      case "InDevelopment":
         return "border-blue-500/20 bg-blue-500/10 text-blue-600"
-      case "implemented":
+      case "Implemented":
         return "border-green-500/20 bg-green-500/10 text-green-600"
-      case "rejected":
+      case "Rejected":
         return "border-red-500/20 bg-red-500/10 text-red-600"
       default:
         return "border-border bg-muted text-muted-foreground"
@@ -55,19 +72,36 @@ export function IdeaCard({ idea }: IdeaCardProps) {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "evaluating":
+      case "Evaluating":
         return "En evaluación"
-      case "approved":
+      case "Approved":
         return "Aprobada"
-      case "in-development":
+      case "InDevelopment":
         return "En desarrollo"
-      case "implemented":
+      case "Implemented":
         return "Implementada"
-      case "rejected":
+      case "Rejected":
         return "Rechazada"
       default:
         return status
     }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "Feature":
+        return "Nueva funcionalidad"
+      case "Improvement":
+        return "Mejora"
+      case "Innovation":
+        return "Innovación"
+      default:
+        return category
+    }
+  }
+
+  const formatDate = (date: string) => {
+    return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
   }
 
   return (
@@ -75,25 +109,38 @@ export function IdeaCard({ idea }: IdeaCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-foreground leading-tight">{idea.title}</h3>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{idea.description}</p>
+          <h3 className="text-base font-semibold text-foreground leading-tight">{idea.titulo}</h3>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{idea.descripcion}</p>
         </div>
-        <Button variant="ghost" size="icon" className="flex-shrink-0">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+        {isAuthor && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="flex-shrink-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Tags */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={getCategoryColor(idea.category)}>
-          {idea.category === "feature"
-            ? "Nueva funcionalidad"
-            : idea.category === "improvement"
-              ? "Mejora"
-              : "Innovación"}
+        <Badge variant="outline" className={getCategoryColor(idea.categoria)}>
+          {getCategoryLabel(idea.categoria)}
         </Badge>
-        <Badge variant="outline" className={getStatusColor(idea.status)}>
-          {getStatusLabel(idea.status)}
+        <Badge variant="outline" className={getStatusColor(idea.estado)}>
+          {getStatusLabel(idea.estado)}
         </Badge>
         {idea.tags.map((tag) => (
           <Badge key={tag} variant="secondary" className="text-xs">
@@ -103,40 +150,49 @@ export function IdeaCard({ idea }: IdeaCardProps) {
       </div>
 
       {/* AI Insight */}
-      <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
-        <div className="flex items-start gap-2">
-          <Sparkles className="h-4 w-4 flex-shrink-0 text-primary mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-xs font-medium text-primary">Análisis IA</span>
-              <Badge variant="secondary" className="text-xs">
-                Score: {idea.aiScore}
-              </Badge>
+      {idea.aiInsight && (
+        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-start gap-2">
+            <Sparkles className="h-4 w-4 flex-shrink-0 text-primary mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-xs font-medium text-primary">Análisis IA</span>
+                {idea.aiScore && (
+                  <Badge variant="secondary" className="text-xs">
+                    Score: {idea.aiScore}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{idea.aiInsight}</p>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{idea.aiInsight}</p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <div className="mt-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Avatar className="h-6 w-6">
-            <AvatarImage src={idea.author.avatar || "/placeholder.svg"} alt={idea.author.name} />
-            <AvatarFallback>{idea.author.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={idea.autor.avatarUrl || "/placeholder.svg"} alt={idea.autor.nombreCompleto} />
+            <AvatarFallback>{idea.autor.nombreCompleto.charAt(0)}</AvatarFallback>
           </Avatar>
-          <span className="text-xs text-muted-foreground">{idea.author.name}</span>
+          <span className="text-xs text-muted-foreground">{idea.autor.nombreCompleto}</span>
           <span className="text-xs text-muted-foreground">·</span>
-          <span className="text-xs text-muted-foreground">{idea.createdAt}</span>
+          <span className="text-xs text-muted-foreground">{formatDate(idea.fechaCreacion)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2">
+          <Button 
+            variant={idea.hasVoted ? "default" : "ghost"} 
+            size="sm" 
+            className="gap-1.5 h-8 px-2"
+            onClick={handleVote}
+          >
             <ThumbsUp className="h-3.5 w-3.5" />
-            <span className="text-xs">{idea.votes}</span>
+            <span className="text-xs">{idea._count.votos}</span>
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2">
             <MessageSquare className="h-3.5 w-3.5" />
-            <span className="text-xs">{idea.comments}</span>
+            <span className="text-xs">{idea._count.comentarios}</span>
           </Button>
         </div>
       </div>
