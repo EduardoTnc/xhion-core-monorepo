@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -64,6 +65,9 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
       <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Detalles del Usuario</DialogTitle>
+          <DialogDescription>
+            Información completa del usuario y su configuración en el sistema
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">

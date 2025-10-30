@@ -424,6 +424,11 @@ export function UsersView() {
         onOpenChange={setIsInviteModalOpen}
       />
 
+      <InvitationsStatsModal
+        open={isStatsModalOpen}
+        onOpenChange={setIsStatsModalOpen}
+      />
+
       {selectedUserId && (
         <>
           <UserDetailsModal
@@ -436,11 +441,6 @@ export function UsersView() {
             userId={selectedUserId}
             open={isChangeRoleModalOpen}
             onOpenChange={setIsChangeRoleModalOpen}
-          />
-
-          <InvitationsStatsModal
-            open={isStatsModalOpen}
-            onOpenChange={setIsStatsModalOpen}
           />
         </>
       )}

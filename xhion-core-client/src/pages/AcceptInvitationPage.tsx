@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, AlertCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { DatePickerBirth } from '@/components/ui/date-picker-birth';
+import { Loader2, AlertCircle, ArrowRight, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { toast } from 'sonner';
@@ -41,12 +42,15 @@ export default function AcceptInvitationPage() {
   const [isValidating, setIsValidating] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const token = searchParams.get('token');
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     setError,
     watch,
@@ -231,13 +235,30 @@ export default function AcceptInvitationPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">Crear Contraseña *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo 8 caracteres"
-                    {...register("password")}
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Mínimo 8 caracteres"
+                      {...register("password")}
+                      disabled={isSubmitting}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                   {errors.password ? (
                     <p className="text-xs text-destructive">{errors.password.message}</p>
                   ) : (
@@ -247,13 +268,30 @@ export default function AcceptInvitationPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirmar Contraseña *</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Repite tu contraseña"
-                    {...register("confirmPassword")}
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Repite tu contraseña"
+                      {...register("confirmPassword")}
+                      disabled={isSubmitting}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                   {errors.confirmPassword && (
                     <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
                   )}
@@ -293,11 +331,20 @@ export default function AcceptInvitationPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
-                  <Input
-                    id="fechaNacimiento"
-                    type="date"
-                    {...register("fechaNacimiento")}
-                    disabled={isSubmitting}
+                  <Controller
+                    name="fechaNacimiento"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePickerBirth
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => {
+                          field.onChange(date ? date.toISOString().split('T')[0] : '')
+                        }}
+                        placeholder="Selecciona tu fecha de nacimiento"
+                        disabled={isSubmitting}
+                        maxDate={new Date()} // No permitir fechas futuras
+                      />
+                    )}
                   />
                 </div>
 

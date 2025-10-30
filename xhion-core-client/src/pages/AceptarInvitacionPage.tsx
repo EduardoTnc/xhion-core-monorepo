@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { DatePickerBirth } from "@/components/ui/date-picker-birth"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle2, XCircle, UserPlus, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
@@ -50,6 +51,7 @@ export default function AceptarInvitacionPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegistroFormData>({
     resolver: zodResolver(registroSchema),
@@ -249,11 +251,20 @@ export default function AceptarInvitacionPage() {
             {/* Fecha de Nacimiento (Opcional) */}
             <div className="space-y-2">
               <Label htmlFor="fechaNacimiento">Fecha de Nacimiento (Opcional)</Label>
-              <Input
-                id="fechaNacimiento"
-                type="date"
-                {...register("fechaNacimiento")}
-                disabled={isSubmitting}
+              <Controller
+                name="fechaNacimiento"
+                control={control}
+                render={({ field }) => (
+                  <DatePickerBirth
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => {
+                      field.onChange(date ? date.toISOString().split('T')[0] : '')
+                    }}
+                    placeholder="Selecciona tu fecha de nacimiento"
+                    disabled={isSubmitting}
+                    maxDate={new Date()}
+                  />
+                )}
               />
             </div>
 

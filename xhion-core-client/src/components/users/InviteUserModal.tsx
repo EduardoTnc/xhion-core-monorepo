@@ -23,6 +23,7 @@ import {
 import { Loader2, Copy, Check, UserPlus, Link as LinkIcon, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { useRoleStore } from "../../store/roleStore"
+import { useAuthStore } from "../../store/authStore"
 import { CompleteRegistrationModal } from "./CompleteRegistrationModal"
 import apiClient from "../../api/axios"
 
@@ -43,6 +44,7 @@ interface InviteUserModalProps {
 
 export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserModalProps) {
   const { rolesCompletos, fetchInitialData } = useRoleStore()
+  const { user: currentUser } = useAuthStore()
   const [step, setStep] = useState<"form" | "success">("form")
   const [invitationUrl, setInvitationUrl] = useState("")
   const [invitationToken, setInvitationToken] = useState("")
@@ -82,8 +84,11 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
   // Enviar invitación
   const onSubmit = async (data: InviteFormData) => {
     try {
-      // Obtener usuario actual del localStorage o contexto
-      const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+      // Validar que el usuario actual exista
+      if (!currentUser?.id) {
+        toast.error("No se pudo identificar el usuario actual. Por favor, inicia sesión nuevamente.")
+        return
+      }
       
       const response = await apiClient.post("/invitaciones", {
         ...data,
@@ -233,17 +238,21 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
               <div className="space-y-2">
                 <Label>Enlace de Invitación</Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={invitationUrl}
-                    readOnly
-                    className="font-mono text-sm"
-                  />
+                  <div className="relative flex-1 min-w-0">
+                    <Input
+                      value={invitationUrl}
+                      readOnly
+                      className="font-mono text-xs pr-2 truncate"
+                      title={invitationUrl}
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     onClick={handleCopy}
                     className="shrink-0"
+                    title="Copiar enlace"
                   >
                     {copied ? (
                       <Check className="h-4 w-4 text-green-600" />
@@ -252,6 +261,9 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
                     )}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Haz clic en el botón para copiar el enlace completo
+                </p>
               </div>
 
               {/* Información adicional */}

@@ -28,42 +28,6 @@ constructor(private readonly invitacionesService: InvitacionesService) {}
     return this.invitacionesService.create(createInvitacionDto);
   }
 
-  @Get(':token')
-  @ApiOperation({ summary: 'Obtener invitación por token' })
-  @ApiResponse({ status: 200, description: 'Invitación encontrada' })
-  @ApiResponse({ status: 400, description: 'Invitación no válida' })
-  findByToken(@Param('token') token: string) {
-    return this.invitacionesService.findByToken(token);
-  }
-
-  @Post('aceptar')
-  @ApiOperation({ summary: 'Aceptar invitación - Usuario completa su registro' })
-  @ApiResponse({ status: 201, description: 'Registro completado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Invitación no válida o expirada' })
-  @Auditar('ACEPTAR_INVITACION')
-  aceptarInvitacion(@Body() dto: AceptarInvitacionDto, @Req() req: Request & { auditUsuarioId?: string; auditDetalles?: string }) {
-    req.auditUsuarioId = undefined; // Usuario aún no existe
-    req.auditDetalles = JSON.stringify({ email: dto.token.substring(0, 10) + '...' });
-    return this.invitacionesService.aceptarInvitacion(dto);
-  }
-
-  @Post('completar-por-admin')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequiresPermission('usuarios.crear')
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Completar registro por administrador' })
-  @ApiResponse({ status: 201, description: 'Usuario registrado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Invitación no válida o expirada' })
-  @Auditar('COMPLETAR_REGISTRO_POR_ADMIN')
-  completarRegistroPorAdmin(
-    @Body() dto: CompletarRegistroPorAdminDto,
-    @Req() req: Request & { user?: any; auditUsuarioId?: string; auditDetalles?: string }
-  ) {
-    req.auditUsuarioId = req.user?.id ?? null;
-    req.auditDetalles = JSON.stringify({ token: dto.token.substring(0, 10) + '...' });
-    return this.invitacionesService.completarRegistroPorAdmin(dto);
-  }
-
   @Get('estadisticas')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequiresPermission('invitaciones.ver')
@@ -98,6 +62,42 @@ constructor(private readonly invitacionesService: InvitacionesService) {}
   })
   obtenerEstadisticas() {
     return this.invitacionesService.obtenerEstadisticas();
+  }
+
+  @Get(':token')
+  @ApiOperation({ summary: 'Obtener invitación por token' })
+  @ApiResponse({ status: 200, description: 'Invitación encontrada' })
+  @ApiResponse({ status: 400, description: 'Invitación no válida' })
+  findByToken(@Param('token') token: string) {
+    return this.invitacionesService.findByToken(token);
+  }
+
+  @Post('aceptar')
+  @ApiOperation({ summary: 'Aceptar invitación - Usuario completa su registro' })
+  @ApiResponse({ status: 201, description: 'Registro completado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Invitación no válida o expirada' })
+  @Auditar('ACEPTAR_INVITACION')
+  aceptarInvitacion(@Body() dto: AceptarInvitacionDto, @Req() req: Request & { auditUsuarioId?: string; auditDetalles?: string }) {
+    req.auditUsuarioId = undefined; // Usuario aún no existe
+    req.auditDetalles = JSON.stringify({ email: dto.token.substring(0, 10) + '...' });
+    return this.invitacionesService.aceptarInvitacion(dto);
+  }
+
+  @Post('completar-por-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiresPermission('usuarios.crear')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Completar registro por administrador' })
+  @ApiResponse({ status: 201, description: 'Usuario registrado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Invitación no válida o expirada' })
+  @Auditar('COMPLETAR_REGISTRO_POR_ADMIN')
+  completarRegistroPorAdmin(
+    @Body() dto: CompletarRegistroPorAdminDto,
+    @Req() req: Request & { user?: any; auditUsuarioId?: string; auditDetalles?: string }
+  ) {
+    req.auditUsuarioId = req.user?.id ?? null;
+    req.auditDetalles = JSON.stringify({ token: dto.token.substring(0, 10) + '...' });
+    return this.invitacionesService.completarRegistroPorAdmin(dto);
   }
 
 }

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import {
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { DatePickerBirth } from "@/components/ui/date-picker-birth"
 import { Loader2, CheckCircle2, Eye, EyeOff, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import apiClient from "../../api/axios"
@@ -57,6 +58,7 @@ export function CompleteRegistrationModal({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<CompleteRegistrationFormData>({
@@ -182,26 +184,43 @@ export function CompleteRegistrationModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Fecha de Nacimiento */}
             <div className="space-y-2">
               <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
-              <Input
-                id="fechaNacimiento"
-                type="date"
-                {...register("fechaNacimiento")}
-                disabled={isSubmitting}
+              <Controller
+                name="fechaNacimiento"
+                control={control}
+                render={({ field }) => (
+                  <DatePickerBirth
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => {
+                      field.onChange(date ? date.toISOString().split('T')[0] : '')
+                    }}
+                    placeholder="Selecciona fecha de nacimiento"
+                    disabled={isSubmitting}
+                    maxDate={new Date()} // No permitir fechas futuras
+                  />
+                )}
               />
             </div>
 
             {/* Fecha de Ingreso */}
             <div className="space-y-2">
               <Label htmlFor="fechaIngreso">Fecha de Ingreso</Label>
-              <Input
-                id="fechaIngreso"
-                type="date"
-                {...register("fechaIngreso")}
-                disabled={isSubmitting}
+              <Controller
+                name="fechaIngreso"
+                control={control}
+                render={({ field }) => (
+                  <DatePickerBirth
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => {
+                      field.onChange(date ? date.toISOString().split('T')[0] : '')
+                    }}
+                    placeholder="Selecciona fecha de ingreso"
+                    disabled={isSubmitting}
+                  />
+                )}
               />
             </div>
           </div>
