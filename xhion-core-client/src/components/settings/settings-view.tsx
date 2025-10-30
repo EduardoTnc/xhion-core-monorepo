@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
+import { DatePickerSingle } from "@/components/ui/date-picker-single"
 import { 
   User, Bell, Shield, Palette, Globe, Save, Upload, Loader2, 
   Eye, EyeOff, Download, Trash2, LogOut, Smartphone, Monitor, FileText
@@ -29,8 +31,18 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export function SettingsView() {
-  const [activeTab, setActiveTab] = useState("profile")
+  const [searchParams] = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') || 'profile'
+  const [activeTab, setActiveTab] = useState(tabFromUrl)
   const { user, setUser } = useAuthStore()
+  
+  // Actualizar tab cuando cambie el parámetro de URL
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && ['profile', 'notifications', 'security', 'appearance', 'system'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
   const { preferences, notifications, updatePreferences, updateNotifications } = useSettingsStore()
   const { theme, setTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -65,6 +77,9 @@ export function SettingsView() {
   // Estados de eliminación de cuenta
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deletePassword, setDeletePassword] = useState("")
+  
+  // Estados de confirmación de cerrar sesión
+  const [sessionToTerminate, setSessionToTerminate] = useState<string | null>(null)
 
   // Cargar sesiones al abrir la pestaña de seguridad
   useEffect(() => {
@@ -115,12 +130,50 @@ export function SettingsView() {
   const handleSaveProfile = async () => {
     setIsProfileLoading(true)
     try {
-      const updatedUser = await settingsService.updateProfile(profileData)
+      // Limpiar y validar datos antes de enviar
+      const dataToSend: any = {}
+      
+      // Solo incluir campos que tienen valor
+      if (profileData.nombreCompleto?.trim()) {
+        dataToSend.nombreCompleto = profileData.nombreCompleto.trim()
+      }
+      
+      if (profileData.biografia?.trim()) {
+        dataToSend.biografia = profileData.biografia.trim()
+      }
+      
+      // Validar y formatear fechas correctamente
+      if (profileData.fechaNacimiento) {
+        try {
+          const fecha = new Date(profileData.fechaNacimiento)
+          if (!isNaN(fecha.getTime())) {
+            dataToSend.fechaNacimiento = fecha.toISOString()
+          }
+        } catch (e) {
+          console.error("Error al procesar fecha de nacimiento:", e)
+        }
+      }
+      
+      if (profileData.fechaIngreso) {
+        try {
+          const fecha = new Date(profileData.fechaIngreso)
+          if (!isNaN(fecha.getTime())) {
+            dataToSend.fechaIngreso = fecha.toISOString()
+          }
+        } catch (e) {
+          console.error("Error al procesar fecha de ingreso:", e)
+        }
+      }
+      
+      console.log("Datos a enviar:", dataToSend)
+      
+      const updatedUser = await settingsService.updateProfile(dataToSend)
       setUser(updatedUser)
       toast.success("Perfil actualizado correctamente")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al actualizar perfil:", error)
-      toast.error("Error al actualizar el perfil")
+      const errorMessage = error?.response?.data?.message || "Error al actualizar el perfil"
+      toast.error(errorMessage)
     } finally {
       setIsProfileLoading(false)
     }
@@ -157,10 +210,12 @@ export function SettingsView() {
     try {
       await settingsService.terminateSession(sessionId)
       toast.success("Sesión cerrada correctamente")
+      setSessionToTerminate(null)
       loadSessions()
     } catch (error) {
       console.error("Error al cerrar sesión:", error)
       toast.error("Error al cerrar la sesión")
+      setSessionToTerminate(null)
     }
   }
 
@@ -351,20 +406,22 @@ export function SettingsView() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
-                    <Input
-                      id="fechaNacimiento"
-                      type="date"
-                      value={profileData.fechaNacimiento ? new Date(profileData.fechaNacimiento).toISOString().split('T')[0] : ''}
-                      onChange={(e) => setProfileData({ ...profileData, fechaNacimiento: e.target.value })}
+                    <DatePickerSingle
+                      date={profileData.fechaNacimiento ? new Date(profileData.fechaNacimiento) : undefined}
+                      onSelect={(date) => setProfileData({ ...profileData, fechaNacimiento: date?.toISOString() || '' })}
+                      placeholder="Seleccionar fecha de nacimiento"
+                      fromYear={1950}
+                      toYear={new Date().getFullYear() - 18}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="fechaIngreso">Fecha de Ingreso</Label>
-                    <Input
-                      id="fechaIngreso"
-                      type="date"
-                      value={profileData.fechaIngreso ? new Date(profileData.fechaIngreso).toISOString().split('T')[0] : ''}
-                      onChange={(e) => setProfileData({ ...profileData, fechaIngreso: e.target.value })}
+                    <DatePickerSingle
+                      date={profileData.fechaIngreso ? new Date(profileData.fechaIngreso) : undefined}
+                      onSelect={(date) => setProfileData({ ...profileData, fechaIngreso: date?.toISOString() || '' })}
+                      placeholder="Seleccionar fecha de ingreso"
+                      fromYear={2000}
+                      toYear={new Date().getFullYear()}
                     />
                   </div>
                 </div>
@@ -686,31 +743,78 @@ export function SettingsView() {
               ) : (
                 <div className="space-y-3">
                   {sessions.map((session) => (
-                    <div key={session.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
-                      <div className="flex items-center gap-3">
-                        {session.userAgent?.includes("Mobile") ? (
-                          <Smartphone className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <Monitor className="h-5 w-5 text-muted-foreground" />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {session.userAgent || "Navegador desconocido"}
+                    <div 
+                      key={session.id} 
+                      className={`flex items-center justify-between rounded-lg border p-4 transition-all ${
+                        session.isCurrentSession 
+                          ? 'border-primary border-2 bg-primary/10 shadow-md' 
+                          : 'border-border bg-muted/30 hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        {/* Icono */}
+                        <div className={`p-2 rounded-lg ${
+                          session.isCurrentSession ? 'bg-primary/20' : 'bg-muted'
+                        }`}>
+                          {session.userAgent?.includes("Mobile") ? (
+                            <Smartphone className={`h-6 w-6 ${
+                              session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
+                            }`} />
+                          ) : (
+                            <Monitor className={`h-6 w-6 ${
+                              session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
+                            }`} />
+                          )}
+                        </div>
+                        
+                        {/* Información */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
                             {session.isCurrentSession && (
-                              <span className="ml-2 text-xs text-primary">(Sesión actual)</span>
+                              <span className="inline-flex items-center rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-sm">
+                                ● SESIÓN ACTUAL - ESTE NAVEGADOR
+                              </span>
                             )}
+                          </div>
+                          <p className={`text-sm font-medium truncate ${
+                            session.isCurrentSession ? 'text-primary font-semibold' : 'text-foreground'
+                          }`}>
+                            {session.userAgent || "Navegador desconocido"}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {session.ip} · {new Date(session.lastActivity).toLocaleString("es-MX")}
-                          </p>
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium">IP:</span> {session.ip}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium">Última actividad:</span> {new Date(session.lastActivity).toLocaleString("es-MX", {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium">Creada:</span> {new Date(session.createdAt).toLocaleString("es-MX", {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
+                      
+                      {/* Botón Cerrar */}
                       {!session.isCurrentSession && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-2"
-                          onClick={() => handleTerminateSession(session.id)}
+                          className="gap-2 ml-4"
+                          onClick={() => setSessionToTerminate(session.id)}
                         >
                           <LogOut className="h-3 w-3" />
                           Cerrar
@@ -910,6 +1014,28 @@ export function SettingsView() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Eliminar cuenta permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog de Confirmación de Cerrar Sesión */}
+      <AlertDialog open={!!sessionToTerminate} onOpenChange={(open) => !open && setSessionToTerminate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar esta sesión?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de cerrar una sesión activa. El dispositivo asociado será desconectado
+              y deberá iniciar sesión nuevamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => sessionToTerminate && handleTerminateSession(sessionToTerminate)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cerrar sesión
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

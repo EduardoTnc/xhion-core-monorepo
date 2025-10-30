@@ -1,5 +1,5 @@
 @startuml XHION-CORE-DEPLOYMENT
-!theme cerulean-outline
+
 title XHION CORE - Diagrama de Despliegue\nArquitectura de Infraestructura Completa
 
 ' ============================================================================

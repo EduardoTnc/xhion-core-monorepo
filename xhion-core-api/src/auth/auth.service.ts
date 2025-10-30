@@ -45,6 +45,7 @@ export class AuthService {
       id: sessionId,
       usuarioId: user.id,
       refreshTokenHash,
+      accessToken: tokens.accessToken,
       userAgent,
       direccionIp: ip,
     });
@@ -72,6 +73,7 @@ export class AuthService {
 
     await this.sesionesService.updateSession(sessionId, {
       refreshTokenHash: newRefreshHash,
+      accessToken: tokens.accessToken,
       userAgent,
       direccionIp: ip,
     });

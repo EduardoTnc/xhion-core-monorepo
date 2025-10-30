@@ -1,0 +1,145 @@
+@startuml XHION-CORE-AWS-SIMPLE
+
+title Diagrama de Despliegue - XHION CORE (AWS Serverless)\nReact + Vite + NestJS + Prisma + PostgreSQL
+
+skinparam {
+  backgroundColor #FFFFFF
+  shadowing false
+  defaultFontName Arial
+  defaultFontSize 11
+  
+  node {
+    BackgroundColor #F5F5F5
+    BorderColor #333333
+    BorderThickness 2
+    FontSize 12
+    FontStyle bold
+  }
+  
+  component {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    BorderThickness 1.5
+    FontSize 10
+  }
+  
+  database {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    BorderThickness 1.5
+  }
+}
+
+' ============================================================================
+' CLIENTE
+' ============================================================================
+
+node "Navegador Web\n(Chrome/Edge/Safari)" as Browser {
+  component "React App\n(TypeScript + Vite)" as ReactApp
+}
+
+' ============================================================================
+' CDN
+' ============================================================================
+
+node "AWS CloudFront\n(CDN Global)" as CloudFront {
+  component "Distribución\nHTTPS/SSL" as CDN
+}
+
+' ============================================================================
+' FRONTEND STORAGE
+' ============================================================================
+
+node "AWS S3\n(Static Hosting)" as S3Frontend {
+  component "Build Output\nHTML/CSS/JS" as StaticFiles
+}
+
+' ============================================================================
+' API GATEWAY
+' ============================================================================
+
+node "AWS API Gateway" as APIGateway {
+  component "REST API\nRoutes + Auth" as RestAPI
+  component "WebSocket API\nReal-time" as WebSocketAPI
+}
+
+' ============================================================================
+' LAMBDA FUNCTIONS
+' ============================================================================
+
+node "AWS Lambda Functions" as Lambda {
+  component "Backend API\nNestJS + Prisma\n(Node.js 20)" as NestJSApp
+  component "WebSocket Handler\nonConnect/onDisconnect" as WSHandler
+}
+
+' ============================================================================
+' DATABASES
+' ============================================================================
+
+node "AWS RDS Aurora Serverless" as RDS {
+  database "PostgreSQL 15\nAuto-scaling\n0.5-16 ACU" as PostgreSQL
+}
+
+node "AWS DynamoDB" as DynamoDB {
+  database "WebSocket\nConnections" as WSConnections
+}
+
+' ============================================================================
+' FILE STORAGE
+' ============================================================================
+
+node "AWS S3\n(File Storage)" as S3Files {
+  component "Uploads\nAvatars/Documents" as Uploads
+}
+
+' ============================================================================
+' RELACIONES
+' ============================================================================
+
+Browser --> CloudFront : HTTPS
+CloudFront --> S3Frontend : Origin Request
+Browser --> APIGateway : API Requests\n(HTTPS)
+
+APIGateway --> NestJSApp : Invoke Lambda
+APIGateway --> WSHandler : WebSocket Events
+
+NestJSApp --> PostgreSQL : Prisma ORM\n(CRUD Operations)
+WSHandler --> WSConnections : Store Connections
+NestJSApp --> Uploads : Upload/Download
+
+' ============================================================================
+' NOTAS
+' ============================================================================
+
+note right of CloudFront
+  **CDN Global**
+  - 200+ Edge Locations
+  - Cache automático
+  - SSL/TLS incluido
+end note
+
+note right of Lambda
+  **Serverless Backend**
+  - Auto-scaling
+  - Pay per invocation
+  - 0 mantenimiento
+end note
+
+note right of RDS
+  **Auto-scaling DB**
+  - Se pausa cuando inactivo
+  - Ahorro del 70%
+  - Backup automático
+end note
+
+note bottom
+  **Stack Tecnológico:**
+  Frontend: React + TypeScript + Vite + Tailwind CSS + Zustand
+  Backend: NestJS + TypeScript + Prisma ORM + Passport.js (JWT)
+  Database: PostgreSQL 15 (Aurora Serverless)
+  Real-time: WebSocket API + DynamoDB
+  
+  **Escalabilidad:** Automática e infinita
+end note
+
+@enduml

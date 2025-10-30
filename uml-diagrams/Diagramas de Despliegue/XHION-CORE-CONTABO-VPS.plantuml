@@ -1,0 +1,500 @@
+@startuml XHION-CORE-CONTABO-VPS
+
+title XHION CORE - Diagrama de Despliegue Contabo VPS\nArquitectura Tradicional en Cloud VPS
+
+' ============================================================================
+' ESTILOS Y CONFIGURACIÓN
+' ============================================================================
+
+skinparam {
+  backgroundColor #FEFEFE
+  shadowing false
+  
+  node {
+    BackgroundColor #E8F5E9
+    BorderColor #388E3C
+    FontColor #1B5E20
+    FontSize 12
+    FontStyle bold
+  }
+  
+  component {
+    BackgroundColor #FFFFFF
+    BorderColor #66BB6A
+    FontColor #2E7D32
+    FontSize 11
+  }
+  
+  artifact {
+    BackgroundColor #FFF9C4
+    BorderColor #F57F17
+    FontColor #F57F17
+    FontSize 10
+  }
+  
+  database {
+    BackgroundColor #E1F5FE
+    BorderColor #0277BD
+    FontColor #01579B
+    FontSize 11
+  }
+  
+  cloud {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #4A148C
+  }
+  
+  rectangle {
+    BackgroundColor #FCE4EC
+    BorderColor #C2185B
+    FontColor #880E4F
+  }
+}
+
+' ============================================================================
+' CAPA DE CLIENTE
+' ============================================================================
+
+node "Dispositivos Cliente" as ClientDevices {
+  
+  node "Desktop Browser" as Desktop {
+    component "React App" as ReactDesktop {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "styles.css"
+      artifact "Service Worker"
+    }
+  }
+  
+  node "Mobile Browser" as Mobile {
+    component "React App (PWA)" as ReactMobile {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "manifest.json"
+      artifact "Service Worker"
+    }
+  }
+  
+  node "Tablet Browser" as Tablet {
+    component "React App" as ReactTablet {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "styles.css"
+    }
+  }
+}
+
+' ============================================================================
+' CAPA DE DNS Y CDN (OPCIONAL)
+' ============================================================================
+
+cloud "Cloudflare" as Cloudflare {
+  component "DNS Management" as DNS {
+    artifact "xhion-core.com"
+    artifact "A Record → VPS IP"
+    artifact "CNAME → www"
+  }
+  
+  component "CDN & Security" as CDN {
+    artifact "Global CDN"
+    artifact "DDoS Protection"
+    artifact "SSL/TLS Certificate"
+    artifact "Web Application Firewall"
+  }
+  
+  rectangle "Optimización" as CFOptimization {
+    artifact "Auto Minify: JS/CSS/HTML"
+    artifact "Brotli Compression"
+    artifact "Cache Everything"
+    artifact "Always Online"
+  }
+}
+
+' ============================================================================
+' SERVIDOR CONTABO VPS
+' ============================================================================
+
+node "Contabo VPS\nUbuntu 22.04 LTS\n8 vCPU / 16GB RAM / 400GB SSD" as ContaboVPS {
+  
+  ' ========== NGINX REVERSE PROXY ==========
+  component "NGINX\nReverse Proxy & Web Server" as NGINX {
+    artifact "Port 80 (HTTP)"
+    artifact "Port 443 (HTTPS)"
+    artifact "SSL Certificate (Let's Encrypt)"
+    artifact "Gzip Compression"
+  }
+  
+  rectangle "NGINX Configuration" as NGINXConfig {
+    artifact "Static Files: /var/www/xhion-core"
+    artifact "API Proxy: localhost:3000"
+    artifact "WebSocket Proxy: localhost:3000"
+    artifact "Rate Limiting: 100 req/min"
+  }
+  
+  ' ========== DOCKER CONTAINERS ==========
+  node "Docker Engine" as Docker {
+    
+    ' Frontend Container
+    component "Frontend Container\nNGINX Alpine" as FrontendContainer {
+      artifact "React Build Output"
+      artifact "Static Assets"
+      artifact "Service Worker"
+      artifact "Port: 8080"
+    }
+    
+    ' Backend Container
+    component "Backend Container\nNode.js 20 Alpine" as BackendContainer {
+      artifact "NestJS Application"
+      artifact "Prisma ORM"
+      artifact "WebSocket Server"
+      artifact "Port: 3000"
+    }
+    
+    ' Database Container
+    database "PostgreSQL Container\nPostgreSQL 15 Alpine" as PostgreSQLContainer {
+      artifact "xhion_core_db"
+      artifact "Port: 5432"
+      artifact "Volume: /var/lib/postgresql/data"
+    }
+    
+    ' Redis Container
+    database "Redis Container\nRedis 7 Alpine" as RedisContainer {
+      artifact "Session Storage"
+      artifact "Cache Layer"
+      artifact "WebSocket State"
+      artifact "Port: 6379"
+    }
+    
+    rectangle "Docker Network" as DockerNetwork {
+      artifact "Network: xhion-core-network"
+      artifact "Type: Bridge"
+      artifact "Internal Communication"
+    }
+  }
+  
+  ' ========== VOLUMES Y STORAGE ==========
+  node "Docker Volumes" as Volumes {
+    component "Persistent Storage" as Storage {
+      artifact "postgres-data"
+      artifact "redis-data"
+      artifact "uploads-data"
+      artifact "logs-data"
+    }
+  }
+  
+  ' ========== MONITORING ==========
+  component "Monitoring Stack" as Monitoring {
+    artifact "PM2 Process Manager"
+    artifact "Docker Stats"
+    artifact "NGINX Access Logs"
+    artifact "Application Logs"
+  }
+  
+  ' ========== BACKUP ==========
+  component "Backup System" as Backup {
+    artifact "PostgreSQL Dumps (Daily)"
+    artifact "Volume Snapshots (Weekly)"
+    artifact "Configuration Backups"
+    artifact "Retention: 30 days"
+  }
+}
+
+' ============================================================================
+' ALMACENAMIENTO EXTERNO (OPCIONAL)
+' ============================================================================
+
+cloud "AWS S3 / Backblaze B2" as ExternalStorage {
+  component "Object Storage" as ObjectStorage {
+    artifact "User Avatars"
+    artifact "Document Uploads"
+    artifact "Export Files"
+    artifact "Database Backups"
+  }
+  
+  rectangle "Storage Config" as StorageConfig {
+    artifact "Encryption: AES-256"
+    artifact "Lifecycle: 90 days"
+    artifact "CDN Integration"
+  }
+}
+
+' ============================================================================
+' CI/CD PIPELINE
+' ============================================================================
+
+node "GitHub Actions" as CICD {
+  component "CI/CD Pipeline" as Pipeline {
+    artifact "1. Build Frontend (Vite)"
+    artifact "2. Build Backend (NestJS)"
+    artifact "3. Build Docker Images"
+    artifact "4. Push to Docker Hub"
+    artifact "5. SSH to VPS"
+    artifact "6. Pull Images"
+    artifact "7. Docker Compose Up"
+    artifact "8. Run Migrations"
+    artifact "9. Health Check"
+  }
+  
+  rectangle "Deployment Strategy" as DeployStrategy {
+    artifact "Zero-Downtime Deployment"
+    artifact "Blue-Green Strategy"
+    artifact "Automatic Rollback"
+  }
+}
+
+' ============================================================================
+' SEGURIDAD
+' ============================================================================
+
+rectangle "Security Layer" as Security {
+  component "Firewall (UFW)" as Firewall {
+    artifact "Allow: 22 (SSH)"
+    artifact "Allow: 80 (HTTP)"
+    artifact "Allow: 443 (HTTPS)"
+    artifact "Deny: All Others"
+  }
+  
+  component "Fail2Ban" as Fail2Ban {
+    artifact "SSH Brute Force Protection"
+    artifact "NGINX Rate Limit"
+    artifact "Ban Time: 1 hour"
+  }
+  
+  component "SSL/TLS" as SSL {
+    artifact "Let's Encrypt Certificate"
+    artifact "Auto-renewal (Certbot)"
+    artifact "TLS 1.3"
+    artifact "HSTS Enabled"
+  }
+}
+
+' ============================================================================
+' CONFIGURACIÓN DEL SISTEMA
+' ============================================================================
+
+rectangle "System Configuration" as SystemConfig {
+  component "OS Optimization" as OSConfig {
+    artifact "Swap: 4GB"
+    artifact "File Descriptors: 65535"
+    artifact "TCP Tuning"
+    artifact "Kernel Parameters"
+  }
+  
+  component "Scheduled Tasks" as Cron {
+    artifact "Daily DB Backup (2:00 AM)"
+    artifact "Weekly Log Rotation"
+    artifact "SSL Certificate Renewal"
+    artifact "Docker Cleanup"
+  }
+}
+
+' ============================================================================
+' RELACIONES Y FLUJOS
+' ============================================================================
+
+' Cliente → Cloudflare
+Desktop --> Cloudflare : HTTPS
+Mobile --> Cloudflare : HTTPS
+Tablet --> Cloudflare : HTTPS
+
+' Cloudflare → VPS
+Cloudflare --> NGINX : HTTPS (443)
+
+' NGINX → Docker Containers
+NGINX --> FrontendContainer : Serve Static Files
+NGINX --> BackendContainer : Proxy API Requests\n(Port 3000)
+NGINX --> BackendContainer : WebSocket Upgrade
+
+' Backend → Database
+BackendContainer --> PostgreSQLContainer : Prisma ORM\n(Port 5432)
+
+' Backend → Redis
+BackendContainer --> RedisContainer : Cache & Sessions\n(Port 6379)
+
+' Backend → External Storage
+BackendContainer --> ObjectStorage : Upload/Download Files
+
+' Docker Network
+FrontendContainer -[hidden]- DockerNetwork
+BackendContainer -[hidden]- DockerNetwork
+PostgreSQLContainer -[hidden]- DockerNetwork
+RedisContainer -[hidden]- DockerNetwork
+
+' Volumes
+PostgreSQLContainer --> Storage : Persist Data
+RedisContainer --> Storage : Persist Data
+BackendContainer --> Storage : Store Uploads
+
+' Backup
+PostgreSQLContainer --> Backup : Daily Dumps
+Storage --> ObjectStorage : Offsite Backup
+
+' Monitoring
+BackendContainer --> Monitoring : Application Logs
+NGINX --> Monitoring : Access Logs
+Docker --> Monitoring : Container Stats
+
+' Security
+NGINX --> SSL : SSL Termination
+ContaboVPS --> Firewall : Network Rules
+ContaboVPS --> Fail2Ban : Intrusion Prevention
+
+' CI/CD
+CICD --> ContaboVPS : SSH Deploy
+CICD --> Docker : Pull & Deploy Images
+CICD --> BackendContainer : Run Migrations
+
+' ============================================================================
+' NOTAS Y ESPECIFICACIONES
+' ============================================================================
+
+note right of Cloudflare
+  **Cloudflare (Opcional)**
+  - Plan Free disponible
+  - CDN global incluido
+  - SSL gratuito
+  - DDoS protection
+  - Ahorro de ancho de banda: 60%
+end note
+
+note right of ContaboVPS
+  **Contabo VPS Cloud VPS M**
+  - 8 vCPU Cores
+  - 16 GB RAM
+  - 400 GB SSD Storage
+  - 32 TB Traffic
+  - Costo: €8.99/mes (~$9.50)
+  - Ubicación: EU/US
+  - 99.9% Uptime SLA
+end note
+
+note right of Docker
+  **Docker Compose Stack**
+  - Multi-container orchestration
+  - Isolated networks
+  - Volume management
+  - Easy scaling
+  - Version control
+  
+  **Comandos:**
+  - Start: docker-compose up -d
+  - Stop: docker-compose down
+  - Logs: docker-compose logs -f
+  - Scale: docker-compose up -d --scale backend=3
+end note
+
+note right of PostgreSQLContainer
+  **PostgreSQL 15**
+  - ACID compliant
+  - JSON support
+  - Full-text search
+  - Replication ready
+  - Backup: pg_dump daily
+  
+  **Optimización:**
+  - shared_buffers: 4GB
+  - effective_cache_size: 12GB
+  - max_connections: 200
+end note
+
+note right of RedisContainer
+  **Redis 7**
+  - In-memory cache
+  - Session storage
+  - WebSocket state
+  - Pub/Sub for real-time
+  
+  **Configuración:**
+  - maxmemory: 2GB
+  - maxmemory-policy: allkeys-lru
+  - persistence: AOF + RDB
+end note
+
+note bottom of CICD
+  **Despliegue Automatizado**
+  
+  1. Push to main branch
+  2. GitHub Actions triggered
+  3. Build & Test
+  4. Build Docker images
+  5. Push to Docker Hub
+  6. SSH to Contabo VPS
+  7. Pull latest images
+  8. Docker Compose up
+  9. Run migrations
+  10. Health check
+  11. Rollback if failed
+  
+  Tiempo total: ~8-10 minutos
+end note
+
+note right of Security
+  **Seguridad Multicapa**
+  
+  **Nivel 1: Cloudflare**
+  - WAF (Web Application Firewall)
+  - DDoS Protection
+  - Rate Limiting
+  
+  **Nivel 2: VPS Firewall**
+  - UFW (Uncomplicated Firewall)
+  - Only ports 22, 80, 443
+  
+  **Nivel 3: Fail2Ban**
+  - Brute force protection
+  - Auto-ban malicious IPs
+  
+  **Nivel 4: Application**
+  - JWT Authentication
+  - CORS Configuration
+  - Input Validation
+end note
+
+' ============================================================================
+' LEYENDA
+' ============================================================================
+
+legend right
+  **Arquitectura Contabo VPS**
+  
+  **Ventajas:**
+  ✅ Costo predecible (~$10/mes)
+  ✅ Control total del servidor
+  ✅ Sin límites de requests
+  ✅ Recursos dedicados
+  ✅ Fácil de debuggear
+  
+  **Desventajas:**
+  ⚠️ Requiere mantenimiento
+  ⚠️ Escalado manual
+  ⚠️ Single point of failure
+  ⚠️ Backup manual
+  
+  **Costos Mensuales:**
+  - Contabo VPS M: $9.50
+  - Cloudflare: $0 (Free)
+  - Domain: $12/año (~$1/mes)
+  - Backblaze B2: $5-10 (opcional)
+  - **Total: $10-20/mes**
+  
+  **Capacidad:**
+  - ~1000 usuarios concurrentes
+  - ~10,000 requests/min
+  - ~100GB uploads storage
+  - ~500GB database
+  
+  **Tecnologías:**
+  - OS: Ubuntu 22.04 LTS
+  - Reverse Proxy: NGINX
+  - Containers: Docker + Docker Compose
+  - Frontend: React + Vite
+  - Backend: NestJS + Prisma
+  - Database: PostgreSQL 15
+  - Cache: Redis 7
+  - CDN: Cloudflare (opcional)
+  - SSL: Let's Encrypt
+  - Monitoring: PM2 + Docker Stats
+end legend
+
+@enduml

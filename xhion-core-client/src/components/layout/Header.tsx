@@ -1,4 +1,4 @@
-import { Search, Bell, Activity, User, Moon, Sun, LogOut, BadgeCheck, ChevronsUpDown, Settings as SettingsIcon } from "lucide-react"
+import { Search, Bell, Activity, User, Moon, Sun, LogOut, ChevronsUpDown, Palette, Shield, Globe } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,11 +21,22 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function Header() {
   const navigate = useNavigate()
   const location = useLocation()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
 
@@ -56,6 +67,7 @@ export function Header() {
     } finally {
       // Limpiar el estado local
       logout()
+      setShowLogoutDialog(false)
       toast.success('Sesión cerrada exitosamente')
       navigate('/login', { replace: true })
     }
@@ -188,21 +200,29 @@ export function Header() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => navigate('/perfil')}>
+                <DropdownMenuItem onClick={() => navigate('/configuraciones?tab=profile')}>
                   <User className="mr-2 h-4 w-4" />
-                  Mi Perfil
+                  Perfil
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/configuraciones')}>
-                  <SettingsIcon className="mr-2 h-4 w-4" />
-                  Configuración
+                <DropdownMenuItem onClick={() => navigate('/configuraciones?tab=notifications')}>
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notificaciones
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BadgeCheck className="mr-2 h-4 w-4" />
-                  Cuenta
+                <DropdownMenuItem onClick={() => navigate('/configuraciones?tab=security')}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Seguridad
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/configuraciones?tab=appearance')}>
+                  <Palette className="mr-2 h-4 w-4" />
+                  Apariencia
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/configuraciones?tab=system')}>
+                  <Globe className="mr-2 h-4 w-4" />
+                  Sistema
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={() => setShowLogoutDialog(true)} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Cerrar sesión
               </DropdownMenuItem>
@@ -213,6 +233,27 @@ export function Header() {
 
       {/* AI Search Modal */}
       <AISearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de cerrar tu sesión. Deberás iniciar sesión nuevamente para acceder al sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

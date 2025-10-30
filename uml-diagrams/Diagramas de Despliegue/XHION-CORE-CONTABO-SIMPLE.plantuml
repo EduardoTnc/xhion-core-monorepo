@@ -1,0 +1,130 @@
+@startuml XHION-CORE-CONTABO-SIMPLE
+
+title Diagrama de Despliegue - XHION CORE (Contabo VPS)\nReact + Vite + NestJS + Prisma + PostgreSQL
+
+skinparam {
+  backgroundColor #FFFFFF
+  shadowing false
+  defaultFontName Arial
+  defaultFontSize 11
+  
+  node {
+    BackgroundColor #F5F5F5
+    BorderColor #333333
+    BorderThickness 2
+    FontSize 12
+    FontStyle bold
+  }
+  
+  component {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    BorderThickness 1.5
+    FontSize 10
+  }
+  
+  database {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    BorderThickness 1.5
+  }
+}
+
+' ============================================================================
+' CLIENTE
+' ============================================================================
+
+node "Navegador Web\n(Chrome/Edge/Safari)" as Browser {
+  component "React App\n(TypeScript + Vite)" as ReactApp
+}
+
+' ============================================================================
+' CDN (OPCIONAL)
+' ============================================================================
+
+node "Cloudflare\n(CDN + Security)" as Cloudflare {
+  component "CDN Global\nDDoS Protection\nSSL/TLS" as CDN
+}
+
+' ============================================================================
+' SERVIDOR VPS
+' ============================================================================
+
+node "Contabo VPS Cloud M\n8 vCPU / 16GB RAM / 400GB SSD\nUbuntu 22.04 LTS" as VPS {
+  
+  component "NGINX\nReverse Proxy\nSSL (Let's Encrypt)" as NGINX
+  
+  node "Docker Containers" as Docker {
+    
+    component "Frontend Container\nReact Build\n(NGINX Alpine)" as FrontendContainer
+    
+    component "Backend Container\nNestJS + Prisma\n(Node.js 20 Alpine)" as BackendContainer
+    
+    database "PostgreSQL 15\nContainer\n(Alpine)" as PostgreSQLContainer
+    
+    database "Redis 7\nCache + Sessions\n(Alpine)" as RedisContainer
+  }
+}
+
+' ============================================================================
+' EXTERNAL STORAGE (OPCIONAL)
+' ============================================================================
+
+node "Backblaze B2 / AWS S3\n(Opcional)" as ExternalStorage {
+  component "File Storage\nUploads + Backups" as FileStorage
+}
+
+' ============================================================================
+' RELACIONES
+' ============================================================================
+
+Browser --> Cloudflare : HTTPS
+Cloudflare --> NGINX : HTTPS (443)
+
+NGINX --> FrontendContainer : Serve Static Files
+NGINX --> BackendContainer : Proxy API\n(Port 3000)
+
+BackendContainer --> PostgreSQLContainer : Prisma ORM\n(Port 5432)
+BackendContainer --> RedisContainer : Cache/Sessions\n(Port 6379)
+BackendContainer --> FileStorage : Upload/Download\n(Opcional)
+
+' ============================================================================
+' NOTAS
+' ============================================================================
+
+note right of Cloudflare
+  **CDN + Seguridad**
+  - Plan Free disponible
+  - DDoS protection
+  - SSL gratuito
+  - Ahorro 60% bandwidth
+end note
+
+note right of Docker
+  **Docker Compose**
+  - Orquestación simple
+  - Aislamiento de containers
+  - Fácil escalado
+  - Backup automático
+end note
+
+note right of PostgreSQLContainer
+  **PostgreSQL**
+  - Persistent volumes
+  - Backup diario (2 AM)
+  - Optimizado para 16GB RAM
+end note
+
+note top
+  **Stack Tecnológico:**
+  Frontend: React + TypeScript + Vite + Tailwind CSS + Zustand
+  Backend: NestJS + TypeScript + Prisma ORM + Passport.js (JWT)
+  Database: PostgreSQL 15
+  Cache: Redis 7
+  Reverse Proxy: NGINX
+  Containers: Docker + Docker Compose
+  
+  **Capacidad:** ~1000 usuarios concurrentes
+end note
+
+@enduml

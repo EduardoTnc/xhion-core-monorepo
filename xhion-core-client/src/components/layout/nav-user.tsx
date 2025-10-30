@@ -1,131 +1,35 @@
-import {
-  BadgeCheck,
-  ChevronsUpDown,
-  LogOut,
-  Settings,
-  User,
-} from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Plus } from "lucide-react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar"
-import { useAuthStore } from "@/store/authStore"
-import { authService } from "@/services/authService"
-import { toast } from "sonner"
+import { CreateProjectModal } from "@/components/modals/create-project-modal"
 
 export function NavUser() {
-  const { isMobile } = useSidebar()
-  const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout()
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    } finally {
-      logout()
-      toast.success('Sesión cerrada exitosamente')
-      navigate('/login', { replace: true })
-    }
-  }
-
-  const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
-  if (!user) return null
+  const [showCreateProject, setShowCreateProject] = useState(false)
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
-                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                  {getUserInitials(user.nombreCompleto)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.nombreCompleto}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {user.email}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
+    <>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <Button
+            onClick={() => setShowCreateProject(true)}
+            className="w-full gap-2"
+            size="lg"
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
-                  <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                    {getUserInitials(user.nombreCompleto)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.nombreCompleto}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
-                  </span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => navigate('/perfil')}>
-                <User className="mr-2 h-4 w-4" />
-                Mi Perfil
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/configuraciones')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Configuración
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BadgeCheck className="mr-2 h-4 w-4" />
-                Cuenta
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleLogout}
-              className="text-destructive focus:text-destructive"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Cerrar sesión
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+            <Plus className="h-4 w-4" />
+            Nuevo Proyecto
+          </Button>
+        </SidebarMenuItem>
+      </SidebarMenu>
+
+      {/* Modal de Crear Proyecto */}
+      <CreateProjectModal
+        open={showCreateProject}
+        onOpenChange={setShowCreateProject}
+      />
+    </>
   )
 }

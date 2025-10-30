@@ -1,0 +1,482 @@
+@startuml XHION-CORE-AWS-SERVERLESS
+
+title XHION CORE - Diagrama de Despliegue AWS Serverless\nArquitectura Serverless Completa en AWS
+
+' ============================================================================
+' ESTILOS Y CONFIGURACIÓN
+' ============================================================================
+
+skinparam {
+  backgroundColor #FEFEFE
+  shadowing false
+  
+  node {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #0D47A1
+    FontSize 12
+    FontStyle bold
+  }
+  
+  component {
+    BackgroundColor #FFFFFF
+    BorderColor #42A5F5
+    FontColor #1565C0
+    FontSize 11
+  }
+  
+  artifact {
+    BackgroundColor #FFF9C4
+    BorderColor #F57F17
+    FontColor #F57F17
+    FontSize 10
+  }
+  
+  database {
+    BackgroundColor #C8E6C9
+    BorderColor #388E3C
+    FontColor #1B5E20
+    FontSize 11
+  }
+  
+  cloud {
+    BackgroundColor #E1F5FE
+    BorderColor #0277BD
+    FontColor #01579B
+  }
+  
+  rectangle {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #4A148C
+  }
+}
+
+' ============================================================================
+' CAPA DE CLIENTE
+' ============================================================================
+
+node "Dispositivos Cliente" as ClientDevices {
+  
+  node "Desktop Browser" as Desktop {
+    component "React App" as ReactDesktop {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "styles.css"
+      artifact "Service Worker"
+    }
+  }
+  
+  node "Mobile Browser" as Mobile {
+    component "React App (PWA)" as ReactMobile {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "manifest.json"
+      artifact "Service Worker"
+    }
+  }
+  
+  node "Tablet Browser" as Tablet {
+    component "React App" as ReactTablet {
+      artifact "index.html"
+      artifact "main.js"
+      artifact "styles.css"
+    }
+  }
+}
+
+' ============================================================================
+' CAPA DE CDN Y DISTRIBUCIÓN
+' ============================================================================
+
+cloud "AWS CloudFront" as CloudFront {
+  component "CDN Global" as CDN {
+    artifact "Edge Locations\n(200+ worldwide)"
+    artifact "Cache Layer"
+    artifact "SSL/TLS Certificate"
+    artifact "DDoS Protection"
+  }
+  
+  rectangle "Configuración" as CFConfig {
+    artifact "Origin: S3 Bucket"
+    artifact "Compression: Gzip/Brotli"
+    artifact "Cache TTL: 1 hour"
+    artifact "Custom Domain"
+  }
+}
+
+' ============================================================================
+' CAPA DE ALMACENAMIENTO ESTÁTICO
+' ============================================================================
+
+node "AWS S3" as S3 {
+  component "S3 Bucket\nxhion-core-frontend" as S3Bucket {
+    artifact "Build Output" as BuildOutput {
+      artifact "index.html"
+      artifact "assets/main-[hash].js"
+      artifact "assets/main-[hash].css"
+      artifact "assets/images/*"
+      artifact "manifest.json"
+      artifact "sw.js"
+    }
+  }
+  
+  rectangle "Configuración S3" as S3Config {
+    artifact "Static Website Hosting: Enabled"
+    artifact "Versioning: Enabled"
+    artifact "Public Access: Blocked"
+    artifact "CloudFront Only Access"
+  }
+}
+
+' ============================================================================
+' CAPA DE API GATEWAY
+' ============================================================================
+
+cloud "AWS API Gateway" as APIGateway {
+  component "REST API" as RestAPI {
+    artifact "GET /api/v1/proyectos"
+    artifact "POST /api/v1/tareas"
+    artifact "PATCH /api/v1/usuarios"
+    artifact "DELETE /api/v1/sesiones/:id"
+  }
+  
+  component "WebSocket API" as WebSocketAPI {
+    artifact "$connect"
+    artifact "$disconnect"
+    artifact "$default"
+    artifact "sendMessage"
+  }
+  
+  rectangle "Seguridad API" as APISecurity {
+    artifact "JWT Authorizer"
+    artifact "CORS Configuration"
+    artifact "Rate Limiting"
+    artifact "API Keys"
+  }
+}
+
+' ============================================================================
+' CAPA DE FUNCIONES SERVERLESS
+' ============================================================================
+
+node "AWS Lambda" as Lambda {
+  
+  component "Auth Functions" as AuthLambda {
+    artifact "login.handler"
+    artifact "register.handler"
+    artifact "refreshToken.handler"
+    artifact "logout.handler"
+  }
+  
+  component "Proyectos Functions" as ProyectosLambda {
+    artifact "getProyectos.handler"
+    artifact "createProyecto.handler"
+    artifact "updateProyecto.handler"
+    artifact "deleteProyecto.handler"
+  }
+  
+  component "Tareas Functions" as TareasLambda {
+    artifact "getTareas.handler"
+    artifact "createTarea.handler"
+    artifact "updateTarea.handler"
+    artifact "deleteTarea.handler"
+  }
+  
+  component "Usuarios Functions" as UsuariosLambda {
+    artifact "getUsuarios.handler"
+    artifact "updatePerfil.handler"
+    artifact "uploadAvatar.handler"
+  }
+  
+  component "WebSocket Functions" as WSLambda {
+    artifact "onConnect.handler"
+    artifact "onDisconnect.handler"
+    artifact "sendMessage.handler"
+    artifact "broadcast.handler"
+  }
+  
+  rectangle "Runtime Config" as LambdaConfig {
+    artifact "Runtime: Node.js 20.x"
+    artifact "Memory: 512 MB"
+    artifact "Timeout: 30s"
+    artifact "Environment: Production"
+  }
+}
+
+' ============================================================================
+' CAPA DE BASE DE DATOS
+' ============================================================================
+
+database "AWS RDS Aurora Serverless\nPostgreSQL 15" as RDS {
+  component "Database Cluster" as DBCluster {
+    artifact "xhion_core_db"
+    artifact "Auto-scaling: 0.5-16 ACU"
+    artifact "Auto-pause: 5 min"
+  }
+  
+  rectangle "Tablas Principales" as Tables {
+    artifact "usuarios"
+    artifact "proyectos"
+    artifact "tareas"
+    artifact "departamentos"
+    artifact "sesiones"
+    artifact "roles"
+    artifact "permisos"
+  }
+  
+  rectangle "Configuración RDS" as RDSConfig {
+    artifact "Engine: Aurora PostgreSQL"
+    artifact "Version: 15.4"
+    artifact "Backup: Automated Daily"
+    artifact "Encryption: AES-256"
+  }
+}
+
+database "AWS DynamoDB" as DynamoDB {
+  component "WebSocket Connections" as WSConnections {
+    artifact "connectionId (PK)"
+    artifact "userId"
+    artifact "timestamp"
+    artifact "metadata"
+  }
+  
+  component "Real-time Messages" as RTMessages {
+    artifact "messageId (PK)"
+    artifact "connectionId"
+    artifact "payload"
+    artifact "timestamp"
+  }
+  
+  rectangle "Configuración DynamoDB" as DynamoConfig {
+    artifact "Billing: On-Demand"
+    artifact "TTL: 24 hours"
+    artifact "Streams: Enabled"
+  }
+}
+
+' ============================================================================
+' CAPA DE ALMACENAMIENTO DE ARCHIVOS
+' ============================================================================
+
+node "AWS S3" as S3Files {
+  component "S3 Bucket\nxhion-core-uploads" as UploadsB {
+    artifact "avatars/"
+    artifact "documents/"
+    artifact "attachments/"
+    artifact "exports/"
+  }
+  
+  rectangle "Configuración Uploads" as UploadConfig {
+    artifact "Lifecycle: 90 days"
+    artifact "Encryption: SSE-S3"
+    artifact "Versioning: Enabled"
+    artifact "CORS: Configured"
+  }
+}
+
+' ============================================================================
+' CAPA DE MONITOREO Y LOGS
+' ============================================================================
+
+cloud "AWS CloudWatch" as CloudWatch {
+  component "Logs" as Logs {
+    artifact "Lambda Logs"
+    artifact "API Gateway Logs"
+    artifact "Application Logs"
+  }
+  
+  component "Metrics" as Metrics {
+    artifact "Invocations"
+    artifact "Errors"
+    artifact "Duration"
+    artifact "Throttles"
+  }
+  
+  component "Alarms" as Alarms {
+    artifact "High Error Rate"
+    artifact "High Latency"
+    artifact "Low Availability"
+  }
+}
+
+' ============================================================================
+' CAPA DE SEGURIDAD
+' ============================================================================
+
+rectangle "AWS IAM" as IAM {
+  component "Roles & Policies" as Roles {
+    artifact "Lambda Execution Role"
+    artifact "API Gateway Role"
+    artifact "S3 Access Policy"
+    artifact "RDS Access Policy"
+  }
+}
+
+rectangle "AWS Secrets Manager" as Secrets {
+  component "Secrets" as SecretStore {
+    artifact "JWT_SECRET"
+    artifact "JWT_REFRESH_SECRET"
+    artifact "DATABASE_URL"
+    artifact "AWS_ACCESS_KEYS"
+  }
+}
+
+' ============================================================================
+' CAPA DE CI/CD
+' ============================================================================
+
+node "GitHub Actions" as CICD {
+  component "CI/CD Pipeline" as Pipeline {
+    artifact "Build Frontend"
+    artifact "Deploy to S3"
+    artifact "Invalidate CloudFront"
+    artifact "Package Lambda Functions"
+    artifact "Deploy via Serverless Framework"
+    artifact "Run Migrations"
+  }
+}
+
+' ============================================================================
+' RELACIONES Y FLUJOS
+' ============================================================================
+
+' Cliente → CDN
+Desktop --> CloudFront : HTTPS
+Mobile --> CloudFront : HTTPS
+Tablet --> CloudFront : HTTPS
+
+' CDN → S3
+CloudFront --> S3Bucket : Origin Request
+CloudFront --> APIGateway : API Requests
+
+' API Gateway → Lambda
+APIGateway --> AuthLambda : Invoke
+APIGateway --> ProyectosLambda : Invoke
+APIGateway --> TareasLambda : Invoke
+APIGateway --> UsuariosLambda : Invoke
+APIGateway --> WSLambda : WebSocket Events
+
+' Lambda → RDS
+AuthLambda --> DBCluster : Query
+ProyectosLambda --> DBCluster : Query
+TareasLambda --> DBCluster : Query
+UsuariosLambda --> DBCluster : Query
+
+' Lambda → DynamoDB
+WSLambda --> WSConnections : Read/Write
+WSLambda --> RTMessages : Read/Write
+
+' Lambda → S3 Files
+UsuariosLambda --> UploadsB : Upload/Download
+
+' Lambda → Secrets
+AuthLambda --> SecretStore : Get Secrets
+ProyectosLambda --> SecretStore : Get Secrets
+
+' Monitoring
+Lambda --> Logs : Write Logs
+APIGateway --> Logs : Write Logs
+Lambda --> Metrics : Send Metrics
+
+' CI/CD
+CICD --> S3Bucket : Deploy Frontend
+CICD --> Lambda : Deploy Functions
+CICD --> DBCluster : Run Migrations
+
+' Security
+IAM --> Lambda : Permissions
+IAM --> APIGateway : Permissions
+IAM --> S3Bucket : Permissions
+
+' ============================================================================
+' NOTAS Y COSTOS ESTIMADOS
+' ============================================================================
+
+note right of CloudFront
+  **CloudFront CDN**
+  - 200+ Edge Locations
+  - Latencia < 50ms global
+  - Costo: ~$0.085/GB
+  - Free Tier: 1TB/mes
+end note
+
+note right of S3Bucket
+  **S3 Static Hosting**
+  - Alta disponibilidad (99.99%)
+  - Versionado habilitado
+  - Costo: ~$0.023/GB
+  - Free Tier: 5GB
+end note
+
+note right of Lambda
+  **Lambda Functions**
+  - Auto-scaling infinito
+  - Pay per invocation
+  - Costo: $0.20/1M requests
+  - Free Tier: 1M requests/mes
+end note
+
+note right of RDS
+  **Aurora Serverless**
+  - Auto-scaling: 0.5-16 ACU
+  - Auto-pause cuando inactivo
+  - Costo: ~$0.06/ACU-hour
+  - Ahorro: 70% vs RDS tradicional
+end note
+
+note right of DynamoDB
+  **DynamoDB**
+  - Latencia < 10ms
+  - Escalado automático
+  - Costo: $1.25/millón writes
+  - Free Tier: 25GB storage
+end note
+
+note bottom of CICD
+  **Despliegue Automatizado**
+  1. Push to main branch
+  2. Build & Test
+  3. Deploy Frontend to S3
+  4. Deploy Backend to Lambda
+  5. Invalidate CloudFront Cache
+  6. Run Database Migrations
+  
+  Tiempo total: ~5 minutos
+end note
+
+' ============================================================================
+' LEYENDA
+' ============================================================================
+
+legend right
+  **Arquitectura AWS Serverless**
+  
+  **Ventajas:**
+  ✅ Escalado automático infinito
+  ✅ Pago por uso (sin servidores ociosos)
+  ✅ Alta disponibilidad (99.99%)
+  ✅ Bajo mantenimiento
+  ✅ Seguridad gestionada por AWS
+  
+  **Costos Estimados (Producción):**
+  - CloudFront: $50-100/mes
+  - S3: $5-10/mes
+  - Lambda: $20-50/mes
+  - RDS Aurora: $30-80/mes
+  - DynamoDB: $10-25/mes
+  - **Total: $115-265/mes**
+  
+  **Free Tier (Desarrollo):**
+  - Primeros 12 meses: ~$0-20/mes
+  
+  **Tecnologías:**
+  - Frontend: React + Vite
+  - Backend: NestJS + Serverless Framework
+  - Database: PostgreSQL (Aurora)
+  - Real-time: WebSocket API + DynamoDB
+  - CDN: CloudFront
+  - Storage: S3
+end legend
+
+@enduml

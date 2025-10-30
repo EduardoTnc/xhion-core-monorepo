@@ -5,12 +5,14 @@ interface CreateSessionInput {
   id: string;
   usuarioId: string;
   refreshTokenHash: string;
+  accessToken: string;
   userAgent?: string | null;
   direccionIp?: string | null;
 }
 
 interface UpdateSessionInput {
   refreshTokenHash: string;
+  accessToken: string;
   userAgent?: string | null;
   direccionIp?: string | null;
 }
@@ -25,8 +27,10 @@ export class SesionesService {
         id: input.id,
         usuarioId: input.usuarioId,
         refreshTokenHash: input.refreshTokenHash,
+        accessToken: input.accessToken,
         userAgent: input.userAgent ?? null,
         direccionIp: input.direccionIp ?? null,
+        fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
       },
     });
   }
@@ -42,8 +46,10 @@ export class SesionesService {
       where: { id: sessionId },
       data: {
         refreshTokenHash: input.refreshTokenHash,
+        accessToken: input.accessToken,
         userAgent: input.userAgent ?? null,
         direccionIp: input.direccionIp ?? null,
+        fechaUltimoUso: new Date(),
       },
     });
   }

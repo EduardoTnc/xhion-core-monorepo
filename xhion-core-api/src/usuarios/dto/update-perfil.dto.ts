@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsISO8601, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, IsDateString } from 'class-validator';
 
 export class UpdatePerfilDto {
   @ApiPropertyOptional({
@@ -27,7 +27,7 @@ export class UpdatePerfilDto {
     example: '1990-05-15T00:00:00.000Z',
   })
   @IsOptional()
-  @IsISO8601({}, { message: 'La fecha de nacimiento debe ser una fecha válida en formato ISO 8601' })
+  @IsDateString({}, { message: 'La fecha de nacimiento debe ser una fecha válida' })
   fechaNacimiento?: string;
 
   @ApiPropertyOptional({
@@ -35,6 +35,6 @@ export class UpdatePerfilDto {
     example: '2020-01-10T00:00:00.000Z',
   })
   @IsOptional()
-  @IsISO8601({}, { message: 'La fecha de ingreso debe ser una fecha válida en formato ISO 8601' })
+  @IsDateString({}, { message: 'La fecha de ingreso debe ser una fecha válida' })
   fechaIngreso?: string;
 }

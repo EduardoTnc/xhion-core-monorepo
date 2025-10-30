@@ -138,9 +138,9 @@ export function Sidebar() {
         </SidebarContent>
 
         {/* Footer with User Info */}
-        <SidebarFooter>
+        {/* <SidebarFooter>
           <NavUser />
-        </SidebarFooter>
+        </SidebarFooter> */}
         
         <SidebarRail />
       </SidebarContainer>
