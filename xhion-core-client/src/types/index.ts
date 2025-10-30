@@ -301,8 +301,19 @@ export interface Clasificacion {
 
 // Tipo para el estado del usuario en el store de Zustand
 export interface AuthUser extends UsuarioSimple {
+    email: string;
     rol: string; // Simplificamos a solo el nombre del rol
     permisos: string[]; // Un array con los nombres de las acciones permitidas
+    biografia?: string | null;
+    fechaNacimiento?: string | null;
+    fechaIngreso?: string | null;
+    archivoCvId?: string | null;
+    puestoTrabajo?: {
+        id: string;
+        nombre: string;
+    } | null;
+    supervisor?: UsuarioSimple | null;
+    puntajePerfilCompleto?: number;
 }
 
 // Tipo para el payload de un JWT decodificado

@@ -17,6 +17,7 @@ import IdeasPage from './pages/IdeasPage'
 import AuditPage from './pages/AuditPage'
 import CalendarPage from './pages/CalendarPage'
 import SettingsPage from './pages/SettingsPage'
+import ProfilePage from './pages/ProfilePage'
 import TasksPage from './pages/TasksPage'
 import UsuariosPage from './pages/UsuariosPage'
 
@@ -53,6 +54,7 @@ function AppContent() {
             <Route path="proyectos" element={<ProjectsPage />} />
             <Route path="usuarios" element={<UsuariosPage />} />
             <Route path="roles" element={<RolesPage />} />
+            <Route path="perfil" element={<ProfilePage />} />
             <Route path="perfil/sesiones" element={<SessionsPage />} />
             <Route path="configuraciones" element={<SettingsPage />} />
             <Route path="tareas" element={<TasksPage />} />

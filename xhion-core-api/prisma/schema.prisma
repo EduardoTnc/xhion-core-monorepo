@@ -14,14 +14,18 @@ model Sesion {
   id               String    @id @default(uuid()) @db.Uuid
   usuarioId        String    @db.Uuid
   refreshTokenHash String    @unique @db.VarChar(255)
+  accessToken      String?   @unique @db.VarChar(500) // Token de acceso para identificar sesión actual
   userAgent        String?   @map("user_agent")
   direccionIp      String?   @map("direccion_ip") @db.VarChar(45)
   fechaCreacion    DateTime  @default(now())
   fechaUltimoUso   DateTime  @updatedAt
+  fechaExpiracion  DateTime  @default(dbgenerated("NOW() + INTERVAL '7 days'")) // Fecha de expiración del refresh token (7 días por defecto)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@map("sesiones")
+  @@index([usuarioId])
+  @@index([fechaExpiracion])
 }
 
 // Configura la conexión a tu base de datos.
@@ -572,20 +576,21 @@ model CatalogoConfiguracion {
   valorPorDefecto      String
   rolMinimoRequeridoId String                @db.Uuid
 
-  rolMinimoRequerido Rol                    @relation(fields: [rolMinimoRequeridoId], references: [id])
-  valoresUsuario     ConfiguracionUsuario[]
+  rolMinimoRequerido Rol @relation(fields: [rolMinimoRequeridoId], references: [id])
 }
 
 /// Almacena el valor personalizado para una configuración por usuario.
 model ConfiguracionUsuario {
-  usuarioId       String @db.Uuid
-  configuracionId String @db.Uuid
-  valor           String
+  id              String   @id @default(uuid()) @db.Uuid
+  usuarioId       String   @db.Uuid
+  preferencias    Json?    // Preferencias de UI (tema, idioma, etc.)
+  notificaciones  Json?    // Configuración de notificaciones
+  fechaCreacion   DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
 
-  usuario       Usuario               @relation(fields: [usuarioId], references: [id])
-  configuracion CatalogoConfiguracion @relation(fields: [configuracionId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  @@id([usuarioId, configuracionId])
+  @@unique([usuarioId])
 }
 
 // --- MODULO: ANALITICA Y DASHBOARDS ---

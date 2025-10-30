@@ -1,12 +1,14 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Le dice a NestJS que escuche las señales de apagado (Aplicación Global)
   // y que llame a los métodos onModuleDestroy, etc.
@@ -33,6 +35,11 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
+  });
+
+  // Servir archivos estáticos (uploads de avatar y CV)
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
   });
 
   // Configuración de Swagger/OpenAPI (Aplicación Global)
