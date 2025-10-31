@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,6 +14,9 @@ import {
 import { ThumbsUp, MessageSquare, Sparkles, MoreVertical, Edit, Trash2 } from "lucide-react"
 import { useIdeasStore } from "@/store/ideasStore"
 import { useAuthStore } from "@/store/authStore"
+import { EditIdeaModal } from "./edit-idea-modal"
+import { DeleteIdeaDialog } from "./delete-idea-dialog"
+import { IdeaDetailsModal } from "./idea-details-modal"
 import type { Idea } from "@/services/ideasService"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
@@ -23,21 +27,22 @@ interface IdeaCardProps {
 }
 
 export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
-  const { votarIdea, eliminarIdea } = useIdeasStore()
+  const { votarIdea } = useIdeasStore()
   const { user } = useAuthStore()
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const isAuthor = user?.id === idea.autorId
 
-  const handleVote = async () => {
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation() // Evitar que se abra el modal al votar
     await votarIdea(idea.id)
     if (onUpdate) onUpdate()
   }
 
-  const handleDelete = async () => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta idea?")) {
-      await eliminarIdea(idea.id)
-      if (onUpdate) onUpdate()
-    }
+  const handleCardClick = () => {
+    setShowDetailsModal(true)
   }
 
   const getCategoryColor = (category: string) => {
@@ -48,6 +53,8 @@ export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
         return "bg-chart-2/10 text-chart-2 border-chart-2/20"
       case "Innovation":
         return "bg-chart-3/10 text-chart-3 border-chart-3/20"
+      case "Recommendation":
+        return "bg-amber-500/10 text-amber-600 border-amber-500/20"
       default:
         return "bg-muted text-muted-foreground"
     }
@@ -95,6 +102,8 @@ export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
         return "Mejora"
       case "Innovation":
         return "Innovación"
+      case "Recommendation":
+        return "Recomendación"
       default:
         return category
     }
@@ -105,7 +114,11 @@ export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
   }
 
   return (
-    <div className="group rounded-lg border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md">
+    <>
+      <div 
+        className="group rounded-lg border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md cursor-pointer"
+        onClick={handleCardClick}
+      >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -114,18 +127,18 @@ export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
         </div>
         {isAuthor && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="flex-shrink-0">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowDeleteDialog(true); }} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar
               </DropdownMenuItem>
@@ -196,6 +209,32 @@ export function IdeaCard({ idea, onUpdate }: IdeaCardProps) {
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Modales - FUERA del div de la card */}
+      <IdeaDetailsModal
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
+        ideaId={idea.id}
+        onUpdate={onUpdate}
+      />
+      
+      {isAuthor && (
+        <>
+          <EditIdeaModal
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            idea={idea}
+            onSuccess={onUpdate}
+          />
+          <DeleteIdeaDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+            idea={idea}
+            onSuccess={onUpdate}
+          />
+        </>
+      )}
+    </>
   )
 }

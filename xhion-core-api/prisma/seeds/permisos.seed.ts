@@ -306,6 +306,50 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
     descripcion: 'Permite cancelar invitaciones pendientes',
     modulo: 'Invitaciones',
   },
+
+  // ========================================
+  // MÓDULO: IDEAS Y RECOMENDACIONES
+  // ========================================
+  {
+    nombreAccion: 'ideas.crear',
+    descripcion: 'Permite crear nuevas ideas y recomendaciones',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.ver',
+    descripcion: 'Permite ver ideas y recomendaciones del sistema',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.editar',
+    descripcion: 'Permite editar ideas propias',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.eliminar',
+    descripcion: 'Permite eliminar ideas propias',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.votar',
+    descripcion: 'Permite votar por ideas de otros usuarios',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.comentar',
+    descripcion: 'Permite agregar comentarios a ideas',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.moderar',
+    descripcion: 'Permite moderar, aprobar o rechazar ideas (administradores)',
+    modulo: 'Ideas',
+  },
+  {
+    nombreAccion: 'ideas.cambiar_estado',
+    descripcion: 'Permite cambiar el estado de ideas (evaluación, aprobada, implementada)',
+    modulo: 'Ideas',
+  },
 ];
 
 /**

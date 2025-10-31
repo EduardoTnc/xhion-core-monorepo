@@ -19,6 +19,11 @@ interface IdeasState {
   votarIdea: (id: string) => Promise<void>;
   fetchEstadisticas: () => Promise<void>;
   clearIdeaActual: () => void;
+  
+  // Comentarios
+  obtenerComentarios: (ideaId: string) => Promise<any[]>;
+  crearComentario: (ideaId: string, data: { contenido: string }) => Promise<any>;
+  eliminarComentario: (comentarioId: string) => Promise<void>;
 }
 
 export const useIdeasStore = create<IdeasState>((set) => ({
@@ -155,5 +160,60 @@ export const useIdeasStore = create<IdeasState>((set) => ({
 
   clearIdeaActual: () => {
     set({ ideaActual: null });
+  },
+
+  // Comentarios
+  obtenerComentarios: async (ideaId: string) => {
+    try {
+      const comentarios = await ideasService.obtenerComentarios(ideaId);
+      return comentarios;
+    } catch (error: any) {
+      toast.error('Error al cargar comentarios');
+      throw error;
+    }
+  },
+
+  crearComentario: async (ideaId: string, data: { contenido: string }) => {
+    try {
+      const comentario = await ideasService.crearComentario(ideaId, data.contenido);
+      
+      // Actualizar contador de comentarios localmente
+      set((state) => ({
+        ideas: state.ideas.map((idea) =>
+          idea.id === ideaId
+            ? {
+                ...idea,
+                _count: {
+                  ...idea._count,
+                  comentarios: idea._count.comentarios + 1,
+                },
+              }
+            : idea
+        ),
+        ideaActual: state.ideaActual?.id === ideaId
+          ? {
+              ...state.ideaActual,
+              _count: {
+                ...state.ideaActual._count,
+                comentarios: state.ideaActual._count.comentarios + 1,
+              },
+            }
+          : state.ideaActual,
+      }));
+
+      return comentario;
+    } catch (error: any) {
+      toast.error('Error al crear comentario');
+      throw error;
+    }
+  },
+
+  eliminarComentario: async (comentarioId: string) => {
+    try {
+      await ideasService.eliminarComentario(comentarioId);
+    } catch (error: any) {
+      toast.error('Error al eliminar comentario');
+      throw error;
+    }
   },
 }));

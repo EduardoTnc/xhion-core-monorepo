@@ -447,6 +447,66 @@ export const MODULOS_PERMISOS: ModuloPermisos[] = [
       },
     ],
   },
+
+  // ========================================
+  // MÓDULO: IDEAS Y RECOMENDACIONES
+  // ========================================
+  {
+    id: 'ideas',
+    nombre: 'Ideas y Recomendaciones',
+    descripcion: 'Gestión de ideas y recomendaciones de empleados',
+    icon: 'Lightbulb',
+    permisos: [
+      {
+        nombreAccion: 'ideas.crear',
+        descripcion: 'Crear nuevas ideas y recomendaciones',
+        modulo: 'Ideas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'ideas.ver',
+        descripcion: 'Ver ideas y recomendaciones',
+        modulo: 'Ideas',
+        categoria: 'Lectura',
+      },
+      {
+        nombreAccion: 'ideas.editar',
+        descripcion: 'Editar ideas propias',
+        modulo: 'Ideas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'ideas.eliminar',
+        descripcion: 'Eliminar ideas propias',
+        modulo: 'Ideas',
+        categoria: 'Eliminación',
+      },
+      {
+        nombreAccion: 'ideas.votar',
+        descripcion: 'Votar por ideas de otros usuarios',
+        modulo: 'Ideas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'ideas.comentar',
+        descripcion: 'Agregar comentarios a ideas',
+        modulo: 'Ideas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'ideas.moderar',
+        descripcion: 'Moderar, aprobar o rechazar ideas',
+        modulo: 'Ideas',
+        categoria: 'Gestión',
+      },
+      {
+        nombreAccion: 'ideas.cambiar_estado',
+        descripcion: 'Cambiar estado de ideas',
+        modulo: 'Ideas',
+        categoria: 'Gestión',
+      },
+    ],
+  },
 ];
 
 /**

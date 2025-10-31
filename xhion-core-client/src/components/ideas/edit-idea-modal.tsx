@@ -1,5 +1,7 @@
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+"use client"
+
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -8,22 +10,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { X, Loader2 } from "lucide-react"
 import { useIdeasStore } from "@/store/ideasStore"
+import { toast } from "sonner"
+import type { Idea } from "@/services/ideasService"
 
-interface CreateIdeaModalProps {
+interface EditIdeaModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  idea: Idea
   onSuccess?: () => void
 }
 
-export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaModalProps) {
-  const [titulo, setTitulo] = useState("")
-  const [descripcion, setDescripcion] = useState("")
-  const [categoria, setCategoria] = useState<"Feature" | "Improvement" | "Innovation" | "Recommendation">("Feature")
-  const [tags, setTags] = useState<string[]>([])
+export function EditIdeaModal({ open, onOpenChange, idea, onSuccess }: EditIdeaModalProps) {
+  const [titulo, setTitulo] = useState(idea.titulo)
+  const [descripcion, setDescripcion] = useState(idea.descripcion)
+  const [categoria, setCategoria] = useState<"Feature" | "Improvement" | "Innovation" | "Recommendation">(idea.categoria)
+  const [tags, setTags] = useState<string[]>(idea.tags || [])
   const [newTag, setNewTag] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { crearIdea } = useIdeasStore()
+  const { actualizarIdea } = useIdeasStore()
+
+  // Actualizar estado cuando cambia la idea
+  useEffect(() => {
+    setTitulo(idea.titulo)
+    setDescripcion(idea.descripcion)
+    setCategoria(idea.categoria)
+    setTags(idea.tags || [])
+  }, [idea])
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -33,36 +46,33 @@ export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaMod
   }
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
+    setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!titulo.trim() || !descripcion.trim()) {
+      toast.error("Por favor completa todos los campos requeridos")
       return
     }
 
     setIsSubmitting(true)
+
     try {
-      await crearIdea({
+      await actualizarIdea(idea.id, {
         titulo: titulo.trim(),
         descripcion: descripcion.trim(),
         categoria,
         tags,
       })
-      
-      // Reset form
-      setTitulo("")
-      setDescripcion("")
-      setCategoria("Feature")
-      setTags([])
-      setNewTag("")
-      
+
+      toast.success("Idea actualizada correctamente")
       onOpenChange(false)
-      if (onSuccess) onSuccess()
-    } catch (error) {
-      console.error("Error al crear idea:", error)
+      onSuccess?.()
+    } catch (error: any) {
+      console.error("Error al actualizar idea:", error)
+      toast.error(error.response?.data?.message || "Error al actualizar la idea")
     } finally {
       setIsSubmitting(false)
     }
@@ -72,25 +82,20 @@ export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaMod
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nueva Idea</DialogTitle>
-          <DialogDescription>
-            Comparte tu idea innovadora con el equipo
-          </DialogDescription>
+          <DialogTitle>Editar Idea</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Título */}
           <div className="space-y-2">
             <Label htmlFor="titulo">Título *</Label>
             <Input
               id="titulo"
-              placeholder="Ej: Mejor experiencia de compra de smartphones en la tienda física"
+              placeholder="Título de tu idea..."
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              maxLength={200}
               required
             />
-            <p className="text-xs text-muted-foreground">{titulo.length}/200 caracteres</p>
           </div>
 
           {/* Descripción */}
@@ -147,35 +152,25 @@ export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaMod
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="gap-1">
                     {tag}
-                    <button
-                      type="button"
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive"
                       onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    />
                   </Badge>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || !titulo.trim() || !descripcion.trim()}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creando...
-                </>
-              ) : (
-                "Crear Idea"
-              )}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar Cambios
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

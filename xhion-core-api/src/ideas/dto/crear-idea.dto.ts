@@ -13,7 +13,9 @@ export class CrearIdeaDto {
   descripcion: string;
 
   @ApiProperty({ enum: CategoriaIdea, description: 'Categoría de la idea' })
-  @IsEnum(CategoriaIdea)
+  @IsEnum(CategoriaIdea, {
+    message: 'La categoría debe ser Feature, Improvement, Innovation o Recommendation',
+  })
   categoria: CategoriaIdea;
 
   @ApiPropertyOptional({ description: 'Score de IA (0-100)', minimum: 0, maximum: 100 })

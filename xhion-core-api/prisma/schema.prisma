@@ -928,9 +928,10 @@ model MovimientoPresupuestoProyecto {
 // --- SISTEMA DE IDEAS ---
 
 enum CategoriaIdea {
-  Feature      // Nueva funcionalidad
-  Improvement  // Mejora
-  Innovation   // Innovación
+  Feature        // Nueva funcionalidad
+  Improvement    // Mejora
+  Innovation     // Innovación
+  Recommendation // Recomendación
 }
 
 enum EstadoIdea {

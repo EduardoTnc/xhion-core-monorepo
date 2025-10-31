@@ -4,7 +4,7 @@ export interface Idea {
   id: string;
   titulo: string;
   descripcion: string;
-  categoria: 'Feature' | 'Improvement' | 'Innovation';
+  categoria: 'Feature' | 'Improvement' | 'Innovation' | 'Recommendation';
   estado: 'Evaluating' | 'Approved' | 'InDevelopment' | 'Implemented' | 'Rejected';
   autorId: string;
   aiScore?: number;
@@ -28,7 +28,7 @@ export interface Idea {
 export interface CrearIdeaDto {
   titulo: string;
   descripcion: string;
-  categoria: 'Feature' | 'Improvement' | 'Innovation';
+  categoria: 'Feature' | 'Improvement' | 'Innovation' | 'Recommendation';
   aiScore?: number;
   aiInsight?: string;
   tags?: string[];
@@ -37,7 +37,7 @@ export interface CrearIdeaDto {
 export interface ActualizarIdeaDto {
   titulo?: string;
   descripcion?: string;
-  categoria?: 'Feature' | 'Improvement' | 'Innovation';
+  categoria?: 'Feature' | 'Improvement' | 'Innovation' | 'Recommendation';
   estado?: 'Evaluating' | 'Approved' | 'InDevelopment' | 'Implemented' | 'Rejected';
   aiScore?: number;
   aiInsight?: string;
