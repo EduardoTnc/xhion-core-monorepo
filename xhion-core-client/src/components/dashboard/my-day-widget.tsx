@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from "lucide-react"
 import { useTimelineStore } from "@/store/timelineStore"
+import { CreateTaskQuickModal } from "./create-task-quick-modal"
 import { cn } from "@/lib/utils"
 
 /**
@@ -28,6 +29,8 @@ export function MyDayWidget() {
     isLoadingMyDay,
     fetchMyDayData 
   } = useTimelineStore()
+
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
 
   useEffect(() => {
     fetchMyDayData()
@@ -154,7 +157,11 @@ export function MyDayWidget() {
 
         {/* Acciones */}
         <div className="flex-shrink-0 space-y-2">
-          <Button size="sm" className="w-full gap-2">
+          <Button 
+            size="sm" 
+            className="w-full gap-2"
+            onClick={() => setShowCreateTaskModal(true)}
+          >
             <Plus className="h-4 w-4" />
             Nueva Tarea
           </Button>
@@ -187,6 +194,15 @@ export function MyDayWidget() {
           </div>
         )}
       </CardContent>
+
+      {/* Modal de Creación Rápida de Tareas */}
+      <CreateTaskQuickModal
+        open={showCreateTaskModal}
+        onOpenChange={setShowCreateTaskModal}
+        onSuccess={() => {
+          fetchMyDayData()
+        }}
+      />
     </Card>
   )
 }

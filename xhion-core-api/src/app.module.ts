@@ -16,6 +16,7 @@ import { ConocimientoModule } from './conocimiento/conocimiento.module';
 import { DepartamentosModule } from './departamentos/departamentos.module';
 import { PresupuestosModule } from './presupuestos/presupuestos.module';
 import { IdeasModule } from './ideas/ideas.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { IdeasModule } from './ideas/ideas.module';
     ConocimientoModule,
     PresupuestosModule,
     IdeasModule,
+    DashboardModule,
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)

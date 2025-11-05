@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Progress } from "@/components/ui/progress"
 import {
   Tooltip,
   TooltipContent,
@@ -14,24 +13,20 @@ import {
 } from "@/components/ui/tooltip"
 import { 
   Calendar,
-  ZoomIn,
-  ZoomOut,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   DollarSign,
   Users,
   Sparkles,
   TrendingUp,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   Target
 } from "lucide-react"
 import { useTimelineStore } from "@/store/timelineStore"
 import type { ProyectoTimeline } from "@/services/timelineService"
+import { ProjectDetailModal } from "./project-detail-modal"
 import { cn } from "@/lib/utils"
-import { format, differenceInDays, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
+import { format, differenceInDays, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isToday, isSameDay } from "date-fns"
 import { es } from "date-fns/locale"
 
 /**
@@ -50,8 +45,9 @@ export function LiveTimelineWidget() {
   } = useTimelineStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [scrollPosition, setScrollPosition] = useState(0)
   const [hoveredProyecto, setHoveredProyecto] = useState<string | null>(null)
+  const [selectedProyecto, setSelectedProyecto] = useState<ProyectoTimeline | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
 
   useEffect(() => {
     fetchTimelineData()
@@ -65,24 +61,70 @@ export function LiveTimelineWidget() {
 
     switch (vistaZoom) {
       case 'semanal':
-        inicio = addDays(startOfWeek(hoy, { locale: es }), -14) // 2 semanas antes
-        fin = addDays(endOfWeek(hoy, { locale: es }), 28) // 4 semanas después
+        inicio = addDays(startOfWeek(hoy, { locale: es }), -7) // 1 semana antes
+        fin = addDays(endOfWeek(hoy, { locale: es }), 21) // 3 semanas después
         break
       case 'mensual':
-        inicio = addDays(startOfMonth(hoy), -30) // 1 mes antes
-        fin = addDays(endOfMonth(hoy), 60) // 2 meses después
+        inicio = addDays(startOfMonth(hoy), -15) // 15 días antes
+        fin = addDays(endOfMonth(hoy), 45) // 1.5 meses después
         break
       case 'trimestral':
-        inicio = addDays(hoy, -90) // 3 meses antes
-        fin = addDays(hoy, 180) // 6 meses después
+        inicio = addDays(startOfMonth(hoy), -30) // 1 mes antes
+        fin = addDays(endOfMonth(hoy), 120) // 4 meses después
         break
       default:
-        inicio = addDays(hoy, -30)
-        fin = addDays(hoy, 60)
+        inicio = addDays(hoy, -15)
+        fin = addDays(hoy, 45)
     }
 
     return { inicio, fin }
   }
+
+  // Generar marcadores de fecha según la vista
+  const generarMarcadoresFecha = () => {
+    const { inicio, fin } = getRangoFechas()
+    const marcadores: { fecha: Date; label: string; tipo: 'dia' | 'semana' | 'mes' }[] = []
+
+    switch (vistaZoom) {
+      case 'semanal':
+        // Mostrar cada día
+        const dias = eachDayOfInterval({ start: inicio, end: fin })
+        dias.forEach((dia) => {
+          marcadores.push({
+            fecha: dia,
+            label: format(dia, 'd MMM', { locale: es }),
+            tipo: 'dia'
+          })
+        })
+        break
+      case 'mensual':
+        // Mostrar cada semana
+        const semanas = eachWeekOfInterval({ start: inicio, end: fin }, { locale: es })
+        semanas.forEach((semana) => {
+          marcadores.push({
+            fecha: semana,
+            label: format(semana, 'd MMM', { locale: es }),
+            tipo: 'semana'
+          })
+        })
+        break
+      case 'trimestral':
+        // Mostrar cada mes
+        const meses = eachMonthOfInterval({ start: inicio, end: fin })
+        meses.forEach((mes) => {
+          marcadores.push({
+            fecha: mes,
+            label: format(mes, 'MMM yyyy', { locale: es }),
+            tipo: 'mes'
+          })
+        })
+        break
+    }
+
+    return marcadores
+  }
+
+  const marcadoresFecha = generarMarcadoresFecha()
 
   const { inicio: fechaInicio, fin: fechaFin } = getRangoFechas()
   const totalDias = differenceInDays(fechaFin, fechaInicio)
@@ -255,6 +297,10 @@ export function LiveTimelineWidget() {
                           )}
                           onMouseEnter={() => setHoveredProyecto(proyecto.id)}
                           onMouseLeave={() => setHoveredProyecto(null)}
+                          onClick={() => {
+                            setSelectedProyecto(proyecto)
+                            setShowDetailModal(true)
+                          }}
                         >
                           {/* Header del Proyecto */}
                           <div className="flex items-start justify-between gap-2 mb-2">
@@ -419,6 +465,13 @@ export function LiveTimelineWidget() {
           </div>
         </div>
       </CardContent>
+
+      {/* Modal de Detalle de Proyecto */}
+      <ProjectDetailModal
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        proyecto={selectedProyecto}
+      />
     </Card>
   )
 }

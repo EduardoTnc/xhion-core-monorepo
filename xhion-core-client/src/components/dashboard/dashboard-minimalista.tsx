@@ -1,53 +1,43 @@
 "use client"
 
-import { LiveTimelineWidget } from "./live-timeline-widget"
+import { GanttChartWidget } from "./gantt-chart-widget"
 import { MyDayWidget } from "./my-day-widget"
 import { TeamLoadWidget } from "./team-load-widget"
 import { AIAssistantWidget } from "./ai-assistant-widget"
 
 /**
- * Dashboard Minimalista
+ * Dashboard Minimalista - Responsive
  * 
- * Dashboard principal con 4 widgets estratégicos que proporcionan
- * visión de pájaro completa de todos los proyectos y el equipo.
+ * Layout principal del dashboard con los 4 widgets estratégicos
+ * Optimizado para todas las pantallas (móvil, tablet, desktop)
  * 
- * Filosofía: "Menos es Más - Visión de Pájaro Total"
- * 
- * Widgets:
- * 1. Cronograma Vivo (70% espacio) - Timeline maestro con toda la información
- * 2. Mi Día (15% espacio) - Centro de comando personal
- * 3. Equipo (15% espacio) - Mapa de carga en tiempo real
- * 4. Asistente IA (full width) - Sugerencias inteligentes y búsqueda
+ * CORREGIDO: Sin superposiciones, alturas fijas y responsive completo
  */
 export function DashboardMinimalista() {
   return (
-    <div className="p-4 md:p-6 lg:p-8 h-full">
-      {/* Header */}
-      <div className="mb-4 md:mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-          Dashboard Principal
-        </h2>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Visión de pájaro completa - Pasado, Presente y Futuro
-        </p>
-      </div>
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      {/* Contenedor con scroll */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+          {/* Fila 1: Diagrama de Gantt - Altura fija */}
+          <div className="h-[500px] sm:h-[550px] md:h-[600px]">
+            <GanttChartWidget />
+          </div>
 
-      {/* Grid Principal */}
-      <div className="grid gap-4 md:gap-6 h-[calc(100%-5rem)]">
-        {/* Fila 1: Cronograma Vivo (Principal) */}
-        <div className="row-span-2">
-          <LiveTimelineWidget />
-        </div>
+          {/* Fila 2: Mi Día + Equipo - Stack en móvil, Grid en desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+            <div className="h-[280px] sm:h-[300px] md:h-[320px]">
+              <MyDayWidget />
+            </div>
+            <div className="h-[280px] sm:h-[300px] md:h-[320px]">
+              <TeamLoadWidget />
+            </div>
+          </div>
 
-        {/* Fila 2: Mi Día + Equipo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <MyDayWidget />
-          <TeamLoadWidget />
-        </div>
-
-        {/* Fila 3: Asistente IA (Full Width) */}
-        <div className="min-h-[300px]">
-          <AIAssistantWidget />
+          {/* Fila 3: Asistente IA - Full Width */}
+          <div className="h-[300px] sm:h-[320px] md:h-[350px]">
+            <AIAssistantWidget />
+          </div>
         </div>
       </div>
     </div>
