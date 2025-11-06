@@ -55,14 +55,21 @@ import {
 import { es } from "date-fns/locale"
 
 /**
- * Diagrama de Gantt Profesional - Nivel Empresarial
+ * Diagrama de Gantt Profesional - Nivel Empresarial v2.0
+ * 
+ * NUEVO: Organización por Departamentos
+ * - Proyectos agrupados jerárquicamente por departamento
+ * - Expand/collapse por departamento y proyecto
+ * - Estadísticas agregadas (total proyectos, progreso promedio)
+ * - Separadores visuales entre departamentos
+ * - Sincronización perfecta sidebar-timeline
  * 
  * Funcionalidades avanzadas:
  * - Zoom con Ctrl/Cmd + Scroll (0.25x - 4x)
  * - Navegación temporal con flechas
  * - Scroll horizontal infinito
  * - Drag to scroll
- * - Expand/collapse jerárquico
+ * - Expand/collapse jerárquico (departamentos + proyectos)
  * - Tooltips avanzados
  * - Modo fullscreen
  * - Atajos de teclado
@@ -74,6 +81,7 @@ import { es } from "date-fns/locale"
  * - Zoom dinámico
  * - Drag & drop (preparado)
  * - Tooltips informativos
+ * - Agrupación por departamentos
  */
 export function GanttChartWidget() {
   const { 
@@ -89,6 +97,7 @@ export function GanttChartWidget() {
   const [selectedProyecto, setSelectedProyecto] = useState<ProyectoTimeline | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [expandedProyectos, setExpandedProyectos] = useState<Set<string>>(new Set())
+  const [expandedDepartamentos, setExpandedDepartamentos] = useState<Set<string>>(new Set())
   
   // Estados profesionales
   const [zoomLevel, setZoomLevel] = useState(1) // 0.25 - 4
@@ -375,6 +384,37 @@ export function GanttChartWidget() {
     setExpandedProyectos(newExpanded)
   }
 
+  // Toggle expand/collapse departamento
+  const toggleDepartamento = (departamentoId: string) => {
+    const newExpanded = new Set(expandedDepartamentos)
+    if (newExpanded.has(departamentoId)) {
+      newExpanded.delete(departamentoId)
+    } else {
+      newExpanded.add(departamentoId)
+    }
+    setExpandedDepartamentos(newExpanded)
+  }
+
+  // Agrupar proyectos por departamento
+  const proyectosPorDepartamento = useMemo(() => {
+    const grupos = new Map<string, { departamento: { id: string; nombre: string }; proyectos: ProyectoTimeline[] }>()
+    
+    timelineData?.proyectos.forEach((proyecto) => {
+      const deptId = proyecto.departamento.id
+      if (!grupos.has(deptId)) {
+        grupos.set(deptId, {
+          departamento: proyecto.departamento,
+          proyectos: []
+        })
+      }
+      grupos.get(deptId)!.proyectos.push(proyecto)
+    })
+    
+    return Array.from(grupos.values()).sort((a, b) => 
+      a.departamento.nombre.localeCompare(b.departamento.nombre)
+    )
+  }, [timelineData])
+
   // Drag to scroll handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!ganttScrollRef.current) return
@@ -450,7 +490,7 @@ export function GanttChartWidget() {
               <div>
                 <h3 className="text-base font-semibold text-foreground">Diagrama de Gantt Profesional</h3>
                 <p className="text-[10px] text-muted-foreground hidden sm:block">
-                  {timelineData.proyectos.length} proyectos • {format(fechaBase, 'MMMM yyyy', { locale: es })}
+                  {proyectosPorDepartamento.length} departamentos • {timelineData.proyectos.length} proyectos • {format(fechaBase, 'MMMM yyyy', { locale: es })}
                 </p>
               </div>
             </div>
@@ -642,23 +682,22 @@ export function GanttChartWidget() {
               <span className="text-xs font-semibold text-foreground">Proyectos</span>
             </div>
 
-            {/* Lista de proyectos */}
+            {/* Lista de proyectos agrupados por departamento */}
             <ScrollArea className="h-[calc(100%-2.5rem)]">
-              <div className="p-2 space-y-1">
-                {timelineData.proyectos.map((proyecto) => {
-                  const isExpanded = expandedProyectos.has(proyecto.id)
-                  const isHovered = hoveredProyecto === proyecto.id
+              <div className="p-2 space-y-2">
+                {proyectosPorDepartamento.map((grupo) => {
+                  const isDeptExpanded = expandedDepartamentos.has(grupo.departamento.id)
+                  const totalProyectos = grupo.proyectos.length
+                  const progresoPromedio = Math.round(
+                    grupo.proyectos.reduce((sum, p) => sum + p.progreso, 0) / totalProyectos
+                  )
 
                   return (
-                    <div key={proyecto.id}>
+                    <div key={grupo.departamento.id} className="space-y-1">
+                      {/* Header del Departamento */}
                       <div
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
-                          isHovered && "bg-accent"
-                        )}
-                        onMouseEnter={() => setHoveredProyecto(proyecto.id)}
-                        onMouseLeave={() => setHoveredProyecto(null)}
-                        onClick={() => toggleProyecto(proyecto.id)}
+                        className="flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors bg-muted/50 hover:bg-muted"
+                        onClick={() => toggleDepartamento(grupo.departamento.id)}
                       >
                         <Button
                           variant="ghost"
@@ -666,55 +705,114 @@ export function GanttChartWidget() {
                           className="h-4 w-4 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
-                            toggleProyecto(proyecto.id)
+                            toggleDepartamento(grupo.departamento.id)
                           }}
                         >
-                          {isExpanded ? (
-                            <ChevronDown className="h-3 w-3" />
+                          {isDeptExpanded ? (
+                            <ChevronDown className="h-3.5 w-3.5" />
                           ) : (
-                            <ChevronRight className="h-3 w-3" />
+                            <ChevronRight className="h-3.5 w-3.5" />
                           )}
                         </Button>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground line-clamp-1">
-                            {proyecto.nombre}
+                          <p className="text-xs font-semibold text-foreground">
+                            {grupo.departamento.nombre}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[10px] text-muted-foreground">
-                              {proyecto.progreso}%
+                              {totalProyectos} proyecto{totalProyectos !== 1 ? 's' : ''}
                             </span>
-                            {proyecto.alertas.length > 0 && (
-                              <Badge variant="outline" className="h-3 px-1 text-[8px] bg-orange-500/10 text-orange-600 border-orange-500/20">
-                                {proyecto.alertas.length}
-                              </Badge>
-                            )}
+                            <span className="text-[10px] text-muted-foreground">•</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {progresoPromedio}% promedio
+                            </span>
                           </div>
                         </div>
 
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          getSaludColor(proyecto.salud)
-                        )} />
+                        <Badge variant="secondary" className="h-4 px-1.5 text-[9px]">
+                          {totalProyectos}
+                        </Badge>
                       </div>
 
-                      {/* Hitos expandidos */}
-                      {isExpanded && proyecto.hitos.length > 0 && (
-                        <div className="ml-6 mt-1 space-y-1">
-                          {proyecto.hitos.map((hito, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-2 p-1.5 rounded-sm bg-background/50"
-                            >
-                              <div className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                hito.completado ? "bg-green-500" : "bg-yellow-500"
-                              )} />
-                              <span className="text-[10px] text-muted-foreground line-clamp-1">
-                                {hito.nombre}
-                              </span>
-                            </div>
-                          ))}
+                      {/* Proyectos del Departamento */}
+                      {isDeptExpanded && (
+                        <div className="ml-4 space-y-1">
+                          {grupo.proyectos.map((proyecto) => {
+                            const isExpanded = expandedProyectos.has(proyecto.id)
+                            const isHovered = hoveredProyecto === proyecto.id
+
+                            return (
+                              <div key={proyecto.id}>
+                                <div
+                                  className={cn(
+                                    "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
+                                    isHovered && "bg-accent"
+                                  )}
+                                  onMouseEnter={() => setHoveredProyecto(proyecto.id)}
+                                  onMouseLeave={() => setHoveredProyecto(null)}
+                                  onClick={() => toggleProyecto(proyecto.id)}
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-4 w-4 p-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleProyecto(proyecto.id)
+                                    }}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-3 w-3" />
+                                    ) : (
+                                      <ChevronRight className="h-3 w-3" />
+                                    )}
+                                  </Button>
+
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-foreground line-clamp-1">
+                                      {proyecto.nombre}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {proyecto.progreso}%
+                                      </span>
+                                      {proyecto.alertas.length > 0 && (
+                                        <Badge variant="outline" className="h-3 px-1 text-[8px] bg-orange-500/10 text-orange-600 border-orange-500/20">
+                                          {proyecto.alertas.length}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className={cn(
+                                    "w-2 h-2 rounded-full",
+                                    getSaludColor(proyecto.salud)
+                                  )} />
+                                </div>
+
+                                {/* Hitos expandidos */}
+                                {isExpanded && proyecto.hitos.length > 0 && (
+                                  <div className="ml-6 mt-1 space-y-1">
+                                    {proyecto.hitos.map((hito, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex items-center gap-2 p-1.5 rounded-sm bg-background/50"
+                                      >
+                                        <div className={cn(
+                                          "w-1.5 h-1.5 rounded-full",
+                                          hito.completado ? "bg-green-500" : "bg-yellow-500"
+                                        )} />
+                                        <span className="text-[10px] text-muted-foreground line-clamp-1">
+                                          {hito.nombre}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -846,9 +944,22 @@ export function GanttChartWidget() {
                       />
                     )}
 
-                    {/* Barras de proyectos */}
-                    <div className="relative p-2 space-y-1">
-                    {timelineData.proyectos.map((proyecto) => {
+                    {/* Barras de proyectos agrupadas por departamento */}
+                    <div className="relative p-2 space-y-2">
+                    {proyectosPorDepartamento.map((grupo) => {
+                      const isDeptExpanded = expandedDepartamentos.has(grupo.departamento.id)
+                      
+                      return (
+                        <div key={grupo.departamento.id} className="space-y-1">
+                          {/* Línea separadora de departamento */}
+                          {isDeptExpanded && (
+                            <div className="h-6 flex items-center">
+                              <div className="h-px flex-1 bg-border" />
+                            </div>
+                          )}
+                          
+                          {/* Proyectos del departamento */}
+                          {isDeptExpanded && grupo.proyectos.map((proyecto) => {
                       const { left, width, duracionDias } = calcularPosicionProyecto(proyecto)
                       const isHovered = hoveredProyecto === proyecto.id
                       const isExpanded = expandedProyectos.has(proyecto.id)
@@ -987,6 +1098,9 @@ export function GanttChartWidget() {
                               })}
                             </div>
                           )}
+                        </div>
+                      )
+                    })}
                         </div>
                       )
                     })}

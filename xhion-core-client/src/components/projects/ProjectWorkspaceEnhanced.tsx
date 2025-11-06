@@ -10,6 +10,7 @@ import { TaskListView } from "./TaskListView";
 import { TaskTableView } from "./TaskTableView";
 import { TaskTimelineViewEnhanced } from "./TaskTimelineViewEnhanced";
 import { ProjectDocumentsManager } from "./ProjectDocumentsManager";
+import { ProjectInfoSection } from "./ProjectInfoSection";
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "./TaskFilters";
 import { ExportMenu } from "./ExportMenu";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
@@ -286,13 +287,49 @@ export function ProjectWorkspaceEnhanced({
               />
             </div>
 
-            {/* Stage Timeline */}
-            <StageTimeline
+            {/* Project Info Section - 3 Widgets */}
+            <ProjectInfoSection
               etapas={etapas}
+              miembros={miembros?.map((m) => ({
+                usuarioId: m.usuarioId,
+                usuario: {
+                  id: m.usuario?.id || '',
+                  nombre: m.usuario?.nombreCompleto || '',
+                  email: m.usuario?.email || '',
+                  avatar: m.usuario?.avatarUrl,
+                },
+                rol: m.rol,
+              })) || []}
+              archivos={[]} // TODO: Implementar store de archivos
               onCreateEtapa={() => setShowCreateEtapaModal(true)}
               onEditEtapa={(etapa) => {
                 setEtapaToEdit(etapa);
                 setShowCreateEtapaModal(true);
+              }}
+              onDeleteEtapa={(_etapaId) => {
+                // TODO: Implementar eliminación de etapa
+                toast.success("Etapa eliminada");
+              }}
+              onAddMiembro={() => setShowAddMiembroModal(true)}
+              onRemoveMiembro={(_usuarioId) => {
+                // TODO: Implementar eliminación de miembro
+                toast.success("Miembro removido del proyecto");
+              }}
+              onUploadFile={(files) => {
+                // TODO: Implementar subida de archivos
+                toast.success(`${files.length} archivo(s) subido(s)`);
+              }}
+              onDownloadFile={(archivo) => {
+                // TODO: Implementar descarga de archivo
+                toast.success(`Descargando ${archivo.nombre}`);
+              }}
+              onDeleteFile={(_archivoId) => {
+                // TODO: Implementar eliminación de archivo
+                toast.success("Archivo eliminado");
+              }}
+              onViewFile={(archivo) => {
+                // TODO: Implementar vista previa de archivo
+                toast.info(`Abriendo ${archivo.nombre}`);
               }}
             />
 
@@ -326,7 +363,7 @@ export function ProjectWorkspaceEnhanced({
             </div>
 
             {/* Task Views */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-auto">
               {viewMode === "kanban" && (
                 <TaskKanbanViewDnD
                   tareas={filteredTareas}

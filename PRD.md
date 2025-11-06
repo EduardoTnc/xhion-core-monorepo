@@ -1,10 +1,11 @@
 # **Product Requirement Document (PRD): XHION Core**
 
 -   **Producto:** XHION Core
--   **Versión del Documento:** 1.0
--   **Fecha:** 18 de Setiembre de 2025
--   **Autor:** Ingeniero de Software Senior (en colaboración con el Propietario del Producto)
--   **Estado:** **Aprobado para Desarrollo**
+-   **Versión del Documento:** 2.0 (Actualizada)
+-   **Fecha Inicial:** 18 de Septiembre de 2025
+-   **Última Actualización:** 6 de Noviembre de 2025
+-   **Autor:** Eduardo Tanca (Full Stack Developer)
+-   **Estado:** **En Desarrollo Activo (85% Completado)**
 
 ## 1. Visión del Producto
 
@@ -39,69 +40,186 @@ La organización opera actualmente con una gestión descentralizada, resultando 
     -   **Objetivos:** Gestionar el ciclo de vida de los usuarios de forma segura, asegurar que cada rol tenga los permisos adecuados y mantener la integridad del sistema.
     -   **Frustraciones:** Procesos de onboarding y offboarding manuales y propensos a errores, falta de un registro de auditoría centralizado.
 
-## 5. Alcance del Proyecto (Versión 1.0)
+## 5. Alcance del Proyecto (Versión 2.0 - Actualizada)
 
-### Funcionalidades **INCLUIDAS** en la v1.0 (MVP y expansiones iniciales):
+### Funcionalidades **COMPLETADAS** 
 
--   Sistema de invitación y autenticación segura (JWT).
--   Gestión completa de perfiles de usuario.
--   CRUD completo para Proyectos y Tareas.
--   Tablero Kanban interactivo (Drag & Drop).
--   Comentarios y adjuntos en tareas.
--   Módulo de Gamificación (Puntos, Logros, Clasificaciones).
--   Dashboards personalizables con widgets basados en roles.
--   Funcionalidades de IA: Creación de proyectos desde plantillas.
--   Panel de configuración de la plataforma por usuario.
--   Registro de auditoría básico.
+#### Core del Sistema
+-   Sistema de invitación con enlace mágico y autenticación segura (JWT con refresh tokens)
+-   Gestión completa de perfiles de usuario (avatar, bio, habilidades, enlaces profesionales)
+-   CRUD completo para Proyectos y Tareas con etapas personalizables
+-   Tablero Kanban interactivo con Drag & Drop (@hello-pangea/dnd)
+-   Vista Timeline con zoom (8 niveles) y scroll infinito
+-   Comentarios en tareas (adjuntos preparados)
+-   Filtros avanzados y búsqueda en tiempo real
+-   Exportación de datos (PDF, Excel, CSV)
+-   Atajos de teclado (12 shortcuts)
+-   PWA con modo offline
 
-### Funcionalidades **EXCLUIDAS** de la v1.0 (Para futuras versiones):
+#### Gestión Organizacional
+-   Módulo de Departamentos completo (CRUD, empleados, puestos, estadísticas)
+-   Sistema de Presupuestos (departamentos y proyectos con movimientos)
+-   Análisis de presupuestos con 6 tipos de gráficos
+-   Comparativas mensuales y proyecciones automáticas
+-   Base de Conocimiento (contexto organizacional, contexto por departamento, documentos)
 
--   Módulo de mensajería interna en tiempo real.
--   Funcionalidades avanzadas de IA (resumen de tareas, consulta en lenguaje natural).
--   Aplicación móvil nativa.
--   Portal para clientes externos.
--   Módulo financiero (presupuestos, seguimiento de tiempo).
--   Integraciones con herramientas de terceros (Google Calendar, etc.).
+#### Administración y Seguridad
+-   Sistema de Roles y Permisos Granulares (RBAC con 47 permisos en 10 módulos)
+-   Gestión de usuarios con invitaciones
+-   Configuración personalizable por usuario
+-   Gestión de sesiones activas
+-   Registro de auditoría (backend básico)
 
-## 6. Requisitos Funcionales Detallados (User Stories para Kanban)
+#### Dashboard e Ideas
+-   Dashboards personalizables con 7 widgets (react-grid-layout)
+-   Widget Gantt Chart interactivo con zoom y scroll infinito
+-   Sistema de Ideas con votación y conversión a proyectos
+-   Panel de configuración completo
 
-### ÉPICA 1: Núcleo, Autenticación y Perfiles
--   **Como Admin, quiero** invitar a nuevos usuarios a la plataforma mediante un enlace mágico enviado a su email para asegurar un onboarding controlado.
--   **Como nuevo usuario, quiero** usar el enlace de invitación para acceder a una página donde pueda establecer mi contraseña y activar mi cuenta.
--   **Como usuario, quiero** poder iniciar sesión con mi email y contraseña de forma segura.
--   **Como usuario, quiero** que mi sesión persista entre recargas del navegador pero que expire después de un tiempo razonable por seguridad.
--   **Como usuario, quiero** poder cerrar mi sesión.
--   **Como usuario, quiero** poder ver y editar la información de mi perfil (nombre, biografía, avatar, contactos, enlaces profesionales).
--   **Como usuario, quiero** poder añadir y gestionar mis habilidades en mi perfil.
+#### Componentes de Fecha
+-   DatePicker, DateRangePicker, DateTimePicker
+-   ChartDateRangePicker para análisis
+-   Localización completa en español
 
-### ÉPICA 2: Gestión de Proyectos y Tareas
--   **Como Gerente, quiero** crear un proyecto definiendo su nombre, descripción, responsable y departamento.
--   **Como Gerente, quiero** que la IA me asista durante la creación del proyecto, generando una estructura de tareas inicial basada en mi descripción y en plantillas.
--   **Como Gerente, quiero** poder guardar una estructura de proyecto exitosa como una nueva plantilla de IA para reutilizarla.
--   **Como usuario, quiero** ver una lista de todos los proyectos a los que tengo acceso.
--   **Como miembro de un proyecto, quiero** ver todas las tareas en un tablero Kanban con columnas (`Por Hacer`, `En Progreso`, `Hecho`).
--   **Como miembro de un proyecto, quiero** poder crear una nueva tarea, asignarle un título, descripción, responsable y fecha de vencimiento.
--   **Como miembro de un proyecto, quiero** poder mover tareas entre columnas mediante arrastrar y soltar para actualizar su estado.
--   **Como usuario, quiero** poder hacer clic en una tarea para abrir una vista detallada.
--   **Como usuario, quiero** poder añadir comentarios y adjuntar archivos a una tarea.
+### Funcionalidades **EN DESARROLLO** 
 
-### ÉPICA 3: Gamificación
--   **Como usuario, quiero** ganar puntos por acciones clave (ej. completar una tarea a tiempo, completar mi perfil).
--   **Como usuario, quiero** ver mi total de puntos en mi perfil y un historial de cómo los he ganado.
--   **Como usuario, quiero** desbloquear logros (insignias) al alcanzar hitos importantes (ej. "Primer Proyecto Completado", "Colaborador Activo").
--   **Como usuario, quiero** ver una página de clasificación (leaderboard) para ver mi posición en comparación con otros, de forma semanal y mensual.
+#### Inteligencia Artificial
+-   Búsqueda semántica con IA (RF-IA01)
+-   Generación de proyectos con IA (RF-IA02)
+-   Análisis de riesgos con IA (RF-IA03)
+-   Sugerencias de calendario con IA (RF-IA05)
+-   AI Insights para dashboard (RF-D03)
 
-### ÉPICA 4: Dashboards y Analítica
--   **Como usuario, quiero** tener un dashboard personalizable como mi página de inicio.
--   **Como usuario, quiero** que mi dashboard inicial se genere a partir de una plantilla predefinida según mi rol.
--   **Como usuario, quiero** poder añadir, eliminar, mover y redimensionar widgets en mi dashboard.
--   **Como usuario, quiero** tener acceso a un catálogo de widgets, donde solo veo los que están permitidos para mi rol.
--   **Como Gerente, quiero** tener acceso a widgets de supervisión (ej. "Carga de Trabajo del Equipo", "Proyectos en Riesgo").
+#### Calendario y Notificaciones
+-   Sistema de calendario completo (4 vistas: diaria, semanal, mensual, anual)
+-   Gestión de eventos y reuniones
+-   Notificaciones en tiempo real (WebSocket)
 
-### ÉPICA 5: Administración y Configuración
--   **Como usuario, quiero** acceder a una página de configuración para personalizar mi experiencia (ej. activar/desactivar notificaciones).
--   **Como Admin, quiero** poder definir qué configuraciones están disponibles en el catálogo y qué rol mínimo se necesita para ajustarlas.
--   **Como Admin, quiero** ver un registro de auditoría de las acciones más importantes que ocurren en el sistema.
+#### Gamificación y Archivos
+-   Sistema de puntos y logros
+-   Leaderboard (clasificaciones)
+-   Sistema de gestión de archivos (upload, preview, adjuntos)
+
+#### Auditoría Avanzada
+-   Registros inmutables con hash (RNF-SE01-SE02)
+-   UI de auditoría con filtros avanzados
+-   Exportación de registros
+
+### Funcionalidades **EXCLUIDAS** de la v2.0 (Para futuras versiones):
+
+-   Módulo de mensajería interna en tiempo real
+-   Aplicación móvil nativa
+-   Portal para clientes externos
+-   Integraciones con herramientas de terceros (Google Calendar, Slack, etc.)
+-   Módulo de seguimiento de tiempo
+-   Facturación y contabilidad avanzada
+
+## 6. Requisitos Funcionales Detallados (User Stories)
+
+### ÉPICA 1: Núcleo, Autenticación y Perfiles ✅ COMPLETADA
+-   ✅ **Como Admin, quiero** invitar a nuevos usuarios a la plataforma mediante un enlace mágico enviado a su email para asegurar un onboarding controlado.
+-   ✅ **Como nuevo usuario, quiero** usar el enlace de invitación para acceder a una página donde pueda establecer mi contraseña y activar mi cuenta.
+-   ✅ **Como usuario, quiero** poder iniciar sesión con mi email y contraseña de forma segura.
+-   ✅ **Como usuario, quiero** que mi sesión persista entre recargas del navegador pero que expire después de un tiempo razonable por seguridad.
+-   ✅ **Como usuario, quiero** poder cerrar mi sesión.
+-   ✅ **Como usuario, quiero** poder ver y editar la información de mi perfil (nombre, biografía, avatar, contactos, enlaces profesionales).
+-   ✅ **Como usuario, quiero** poder añadir y gestionar mis habilidades en mi perfil.
+-   ✅ **Como usuario, quiero** gestionar mis sesiones activas y cerrar sesión en todos los dispositivos.
+
+### ÉPICA 2: Gestión de Proyectos y Tareas ✅ COMPLETADA
+-   ✅ **Como Gerente, quiero** crear un proyecto definiendo su nombre, descripción, responsable, departamento y fechas.
+-   ✅ **Como Gerente, quiero** poder editar la información del proyecto en cualquier momento.
+-   ✅ **Como Gerente, quiero** archivar proyectos completados sin eliminarlos permanentemente.
+-   ✅ **Como Gerente, quiero** duplicar proyectos existentes para reutilizar estructuras.
+-   ✅ **Como Gerente, quiero** exportar datos del proyecto en múltiples formatos (PDF, Excel, CSV).
+-   ✅ **Como Gerente, quiero** gestionar miembros del proyecto y sus roles.
+-   ✅ **Como Gerente, quiero** crear y gestionar etapas personalizables del proyecto.
+-   ✅ **Como usuario, quiero** ver una lista de todos los proyectos a los que tengo acceso.
+-   ✅ **Como miembro de un proyecto, quiero** ver todas las tareas en un tablero Kanban con columnas personalizables.
+-   ✅ **Como miembro de un proyecto, quiero** poder crear una nueva tarea con título, descripción, responsable, prioridad y fecha de vencimiento.
+-   ✅ **Como miembro de un proyecto, quiero** poder mover tareas entre columnas mediante arrastrar y soltar para actualizar su estado.
+-   ✅ **Como usuario, quiero** poder hacer clic en una tarea para abrir una vista detallada.
+-   ✅ **Como usuario, quiero** poder añadir comentarios a una tarea.
+-   ✅ **Como usuario, quiero** ver las tareas en una vista Timeline con zoom y scroll infinito.
+-   ✅ **Como usuario, quiero** filtrar tareas por estado, prioridad, responsable y fechas.
+-   ✅ **Como usuario, quiero** buscar tareas en tiempo real.
+-   ✅ **Como usuario, quiero** usar atajos de teclado para acciones rápidas.
+
+### ÉPICA 3: Departamentos y Presupuestos ✅ COMPLETADA
+-   ✅ **Como Admin, quiero** crear y gestionar departamentos de la organización.
+-   ✅ **Como Admin, quiero** asignar empleados y puestos de trabajo a departamentos.
+-   ✅ **Como Admin, quiero** ver estadísticas de cada departamento (proyectos, empleados, presupuesto).
+-   ✅ **Como Gerente, quiero** crear y gestionar presupuestos por departamento y proyecto.
+-   ✅ **Como Gerente, quiero** registrar movimientos de presupuesto (ingresos y egresos).
+-   ✅ **Como Gerente, quiero** ver análisis de presupuestos con gráficos interactivos.
+-   ✅ **Como Gerente, quiero** comparar presupuestos entre períodos.
+-   ✅ **Como Gerente, quiero** recibir alertas de sobregasto automáticas.
+-   ✅ **Como usuario, quiero** ver proyecciones de gastos futuros.
+
+### ÉPICA 4: Base de Conocimiento ✅ COMPLETADA
+-   ✅ **Como Admin, quiero** crear y gestionar el contexto organizacional de la empresa.
+-   ✅ **Como Gerente, quiero** crear contexto específico para mi departamento.
+-   ✅ **Como usuario, quiero** acceder a documentos de proyecto y departamento.
+-   ✅ **Como usuario, quiero** buscar en la base de conocimiento.
+-   ✅ **Como usuario, quiero** ver el historial de versiones del conocimiento.
+
+### ÉPICA 5: Roles y Permisos ✅ COMPLETADA
+-   ✅ **Como Admin, quiero** crear y gestionar roles personalizados.
+-   ✅ **Como Admin, quiero** asignar permisos granulares a cada rol (47 permisos en 10 módulos).
+-   ✅ **Como Admin, quiero** asignar roles a usuarios.
+-   ✅ **Como Admin, quiero** ver qué usuarios tienen qué permisos.
+-   ✅ **Como sistema, quiero** validar permisos en cada acción del usuario.
+
+### ÉPICA 6: Ideas y Recomendaciones ✅ COMPLETADA
+-   ✅ **Como usuario, quiero** proponer ideas de mejora para la organización.
+-   ✅ **Como usuario, quiero** votar ideas de otros usuarios (upvote/downvote).
+-   ✅ **Como usuario, quiero** comentar en ideas.
+-   ✅ **Como Gerente, quiero** cambiar el estado de las ideas (Propuesta, En Revisión, Aprobada, Rechazada, Implementada).
+-   ✅ **Como Gerente, quiero** convertir una idea aprobada en un proyecto.
+-   ✅ **Como usuario, quiero** ver las ideas más votadas y populares.
+
+### ÉPICA 7: Dashboards Personalizables ✅ COMPLETADA
+-   ✅ **Como usuario, quiero** tener un dashboard personalizable como mi página de inicio.
+-   ✅ **Como usuario, quiero** añadir, eliminar, mover y redimensionar widgets en mi dashboard.
+-   ✅ **Como usuario, quiero** guardar y cargar mi configuración de dashboard.
+-   ✅ **Como usuario, quiero** ver un widget de "Tareas de Hoy" con acciones rápidas.
+-   ✅ **Como usuario, quiero** ver un widget de resumen de proyectos.
+-   ✅ **Como usuario, quiero** ver un widget Gantt Chart interactivo.
+-   ✅ **Como usuario, quiero** ver widgets de estadísticas y resumen de presupuestos.
+-   ✅ **Como Gerente, quiero** tener acceso a widgets de supervisión según mi rol.
+
+### ÉPICA 8: Inteligencia Artificial ⏳ PENDIENTE
+-   ⏳ **Como usuario, quiero** buscar información usando lenguaje natural con IA.
+-   ⏳ **Como Gerente, quiero** que la IA me asista durante la creación del proyecto, generando una estructura de tareas inicial.
+-   ⏳ **Como Gerente, quiero** que la IA analice riesgos en mis proyectos automáticamente.
+-   ⏳ **Como usuario, quiero** recibir sugerencias de IA para optimizar mi calendario.
+-   ⏳ **Como Gerente, quiero** ver insights generados por IA en mi dashboard.
+-   ⏳ **Como Gerente, quiero** guardar estructuras exitosas como plantillas de IA.
+
+### ÉPICA 9: Calendario y Notificaciones ⏳ PENDIENTE
+-   ⏳ **Como usuario, quiero** ver un calendario unificado con eventos, tareas y reuniones.
+-   ⏳ **Como usuario, quiero** crear eventos y reuniones vinculados a proyectos.
+-   ⏳ **Como usuario, quiero** ver el calendario en 4 vistas (diaria, semanal, mensual, anual).
+-   ⏳ **Como usuario, quiero** reprogramar eventos mediante drag & drop.
+-   ⏳ **Como usuario, quiero** recibir notificaciones en tiempo real.
+-   ⏳ **Como usuario, quiero** ver un panel de notificaciones con categorización.
+-   ⏳ **Como usuario, quiero** marcar notificaciones como leídas y tomar acciones rápidas.
+
+### ÉPICA 10: Gamificación ⏳ PENDIENTE
+-   ⏳ **Como usuario, quiero** ganar puntos por acciones clave (completar tareas, completar perfil, etc.).
+-   ⏳ **Como usuario, quiero** ver mi total de puntos y un historial de cómo los he ganado.
+-   ⏳ **Como usuario, quiero** desbloquear logros (insignias) al alcanzar hitos importantes.
+-   ⏳ **Como usuario, quiero** ver una página de clasificación (leaderboard) para comparar mi posición.
+-   ⏳ **Como usuario, quiero** recibir notificaciones cuando desbloqueo un logro.
+
+### ÉPICA 11: Auditoría y Archivos ⏳ PENDIENTE
+-   ⏳ **Como Admin, quiero** ver un registro de auditoría completo de todas las acciones importantes.
+-   ⏳ **Como Admin, quiero** filtrar registros de auditoría por fecha, usuario, acción y entidad.
+-   ⏳ **Como Admin, quiero** exportar registros de auditoría en CSV/PDF.
+-   ⏳ **Como Admin, quiero** verificar la integridad de los registros mediante hash.
+-   ⏳ **Como usuario, quiero** adjuntar archivos a tareas y comentarios.
+-   ⏳ **Como usuario, quiero** previsualizar imágenes y PDFs adjuntos.
+-   ⏳ **Como usuario, quiero** ver el progreso de carga de archivos.
 
 ## 7. Requisitos No Funcionales
 
@@ -124,31 +242,114 @@ La organización opera actualmente con una gestión descentralizada, resultando 
     -   El código debe seguir las guías de estilo de ESLint y Prettier.
     -   La arquitectura debe ser modular tanto en el frontend como en el backend para facilitar la adición de nuevas funcionalidades.
 
-## 8. Stack Técnico y Arquitectura
+## 8. Stack Técnico y Arquitectura (Implementado)
 
--   **Metodología:** Desarrollo Incremental con Kanban.
+-   **Metodología:** Desarrollo Ágil con Sprints Incrementales (7 sprints completados).
 -   **Arquitectura General:** Monorepo con Frontend desacoplado (SPA) y Backend (API REST).
--   **Frontend:**
-    -   **Framework:** React 19+ con Vite y TypeScript.
-    -   **Gestión de Estado:** Zustand.
-    -   **Peticiones HTTP:** Axios.
-    -   **Estilos:** Tailwind CSS v4+.
-    -   **Biblioteca de Componentes:** HeroUI.
-    -   **Enrutamiento:** React Router DOM.
--   **Backend:**
-    -   **Framework:** Nest.js con TypeScript.
-    -   **ORM:** Prisma.
-    -   **Autenticación:** Passport.js (JWT, bcrypt).
--   **Base de Datos:**
-    -   **Motor:** PostgreSQL.
--   **Infraestructura (AWS Serverless):**
-    -   **Frontend:** Desplegado en AWS S3, distribuido por AWS CloudFront.
-    -   **Backend:** Desplegado en AWS Lambda, expuesto por AWS API Gateway.
-    -   **Base de Datos:** Alojada en AWS RDS Serverless (Aurora PostgreSQL).
 
-## 9. Métricas de Éxito
--   **Adopción:** Usuarios Activos Semanales (WAU).
--   **Retención:** Tasa de Retención de Usuarios (Mes a Mes).
--   **Engagement:** Número de tareas creadas/completadas por usuario/semana.
--   **Rendimiento del Proyecto:** Tasa de Finalización a Tiempo (On-Time Completion Rate).
--   **Satisfacción del Usuario:** Net Promoter Score (NPS) medido trimestralmente.
+### Frontend Implementado:
+-   **Framework:** React 19.2.0 con Vite 6.0.1 y TypeScript 5.6.3
+-   **Gestión de Estado:** Zustand 5.0.1 (11 stores implementados)
+-   **Peticiones HTTP:** Axios 1.7.7
+-   **Estilos:** Tailwind CSS 3.4.15
+-   **Biblioteca de Componentes:** shadcn/ui + Radix UI
+-   **Enrutamiento:** React Router DOM 6.28.0
+-   **Drag & Drop:** @hello-pangea/dnd 16.6.1
+-   **Formularios:** React Hook Form 7.53.2 + Zod 3.23.8
+-   **Fechas:** date-fns 4.1.0 + react-day-picker 9.8.0
+-   **Gráficos:** recharts 2.14.1
+-   **Iconos:** Lucide React 0.454.0
+-   **Animaciones:** Framer Motion 11.11.17
+-   **Exportación:** jspdf 2.5.2, xlsx 0.18.5
+-   **Grid Layout:** react-grid-layout 1.5.0
+
+### Backend Implementado:
+-   **Framework:** NestJS 11.1.6 con TypeScript 5.7.2
+-   **ORM:** Prisma 6.16.3
+-   **Autenticación:** Passport.js (JWT con refresh tokens, bcryptjs)
+-   **Validación:** class-validator 0.14.1, class-transformer 0.5.1
+-   **Documentación:** Swagger (swagger-ui-express)
+-   **Seguridad:** Helmet, Throttler (rate limiting)
+-   **Módulos Implementados:** 11/15 (ProyectosModule, TareasModule, DepartamentosModule, PresupuestosModule, ConocimientoModule, RolesModule, UsuariosModule, InvitacionesModule, IdeasModule, DashboardModule, AuthModule)
+-   **Endpoints:** ~90 endpoints REST
+
+### Base de Datos:
+-   **Motor:** PostgreSQL
+-   **Schema:** Prisma con 25+ modelos
+-   **Características:** Relaciones complejas, soft delete, enums, índices
+
+### Infraestructura:
+-   **Desarrollo:** Local (PostgreSQL, Node.js)
+-   **Producción (Planificada):** AWS Serverless o similar
+-   **Versionamiento:** Git + GitHub
+-   **Documentación:** Swagger UI en /api/docs
+
+## 9. Progreso del Desarrollo
+
+### Estado Actual: 85% Completado
+
+**Sprints Completados (7/9):**
+1. ✅ Sprint 1: Core Funcional (Proyectos + Tareas) - 100%
+2. ✅ Sprint 2: Conocimiento + Departamentos + Presupuestos - 100%
+3. ✅ Sprint 2.5: Roles y Permisos (RBAC) - 100%
+4. ✅ Sprint 2.6: Usuarios e Invitación - 100%
+5. ✅ Sprint 2.7: Configuración + Perfil + Sesiones - 100%
+6. ✅ Sprint 2.8: Ideas y Recomendaciones - 100%
+7. ✅ Sprint 2.9: Dashboard Personalizable - 100%
+8. ⏳ Sprint 3: IA + Calendario + Notificaciones - 0%
+9. ⏳ Sprint 4: Gamificación + Auditoría + Polish - 0%
+
+**Módulos Backend:** 11/15 completados (~90 endpoints)
+**Componentes Frontend:** ~50 componentes
+**Stores Zustand:** 11 stores
+**Líneas de Código:** ~50,000+ líneas
+
+### Documentación Completa:
+- ✅ README.md (completo y profesional)
+- ✅ BACKEND.md (manual de arquitectura backend)
+- ✅ FRONTEND.md (manual de arquitectura frontend)
+- ✅ PLAN_DESARROLLO_10_SEMANAS.md (plan actualizado)
+- ✅ PRD.md (este documento)
+- ✅ LICENSE (licencia propietaria)
+- ✅ DERECHOS_DE_AUTOR.md (documentación legal)
+- ✅ ANALISIS_TECNICO_COMPLETO.md
+- ✅ Swagger UI en /api/docs
+
+## 10. Métricas de Éxito (Objetivos)
+
+### Métricas Técnicas:
+-   **Coverage:** >70% (tests unitarios)
+-   **LCP:** <2.5s (Largest Contentful Paint)
+-   **API Response:** <200ms (P95)
+-   **Uptime:** >99.5%
+-   **Error Rate:** <1%
+-   **Lighthouse Score:** >90
+
+### Métricas de Negocio:
+-   **Adopción:** 90% WAU (Weekly Active Users) en mes 1
+-   **Retención:** >80% mes a mes
+-   **Engagement:** >10 tareas/usuario/semana
+-   **NPS:** >50 (Net Promoter Score)
+-   **Tiempo de Coordinación:** -40% (reducción)
+-   **Proyectos a Tiempo:** +25% (incremento)
+
+---
+
+## 11. Información del Proyecto
+
+**Desarrollado por:** Eduardo Tanca  
+**Rol:** Full Stack Developer (Practicante Pre-Profesional SENATI)  
+**Email:** eduardotanca@gmail.com  
+**LinkedIn:** [linkedin.com/in/eduardo-tanca-6a433121b/](https://www.linkedin.com/in/eduardo-tanca-6a433121b/)
+
+**Centro de Prácticas:**  
+NEGOCIOS ASOCIADOS BIGANDER S.A.C.  
+RUC: 20610361707  
+Miraflores, Arequipa - Perú
+
+**Propiedad Intelectual:**  
+El código fuente es propiedad intelectual de Eduardo Tanca, desarrollado durante prácticas pre-profesionales bajo convenio SENATI. Ver LICENSE y DERECHOS_DE_AUTOR.md para más información.
+
+**Repositorio:** GitHub (privado temporal)  
+**Versión Actual:** 2.0  
+**Última Actualización:** 6 de Noviembre, 2025
