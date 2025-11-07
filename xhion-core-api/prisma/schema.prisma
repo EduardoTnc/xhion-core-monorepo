@@ -271,6 +271,9 @@ model Usuario {
   ideasCreadas                  Idea[]                    @relation("IdeasCreadas")
   votosIdeas                    VotoIdea[]                @relation("VotosIdeas")
   comentariosIdeas              ComentarioIdea[]          @relation("ComentariosIdeas")
+  eventosCreados                Evento[]                  @relation("EventosCreados")
+  eventosParticipando           EventoParticipante[]      @relation("EventosParticipando")
+  notificacionesRecibidas       Notificacion[]            @relation("NotificacionesRecibidas")
 }
 
 /// Invitaciones para nuevos usuarios.
@@ -362,6 +365,8 @@ model Proyecto {
   etapas       Etapa[]
   documentos   DocumentoProyecto[]
   presupuesto  PresupuestoProyecto?
+  eventos      Evento[]
+  notificaciones Notificacion[]
 }
 
 /// Registro de todas las tareas.
@@ -387,6 +392,8 @@ model Tarea {
   asignado    Usuario?     @relation("TareasAsignadas", fields: [asignadoId], references: [id])
   creador     Usuario      @relation("TareasCreadas", fields: [creadorId], references: [id])
   comentarios Comentario[]
+  eventos     Evento[]
+  notificaciones Notificacion[]
 
   @@index([proyectoId])
   @@index([etapaId])
@@ -996,4 +1003,140 @@ model ComentarioIdea {
   @@index([ideaId])
   @@index([usuarioId])
   @@index([fechaCreacion])
+}
+
+// --- MODULO: CALENDARIO Y EVENTOS (SPRINT 8) ---
+
+enum TipoEvento {
+  Reunion
+  Tarea
+  Proyecto
+  Personal
+  Recordatorio
+}
+
+enum EstadoEvento {
+  Pendiente
+  En_Curso
+  Completado
+  Cancelado
+}
+
+/// Eventos del calendario (reuniones, tareas con fecha, eventos personales)
+model Evento {
+  id                String        @id @default(uuid()) @db.Uuid
+  titulo            String        @db.VarChar(200)
+  descripcion       String?
+  tipo              TipoEvento
+  estado            EstadoEvento  @default(Pendiente)
+  fechaInicio       DateTime
+  fechaFin          DateTime
+  todoElDia         Boolean       @default(false)
+  ubicacion         String?       @db.VarChar(300)
+  color             String?       @db.VarChar(20) // Código de color hex
+  
+  // Relaciones opcionales
+  proyectoId        String?       @db.Uuid
+  tareaId           String?       @db.Uuid
+  
+  // Creador del evento
+  creadorId         String        @db.Uuid
+  
+  // Auditoría
+  fechaCreacion     DateTime      @default(now())
+  fechaActualizacion DateTime     @updatedAt
+  eliminado         Boolean       @default(false)
+  
+  // Relaciones
+  creador           Usuario       @relation("EventosCreados", fields: [creadorId], references: [id], onDelete: Cascade)
+  proyecto          Proyecto?     @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  tarea             Tarea?        @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  participantes     EventoParticipante[]
+  notificaciones    Notificacion[]
+  
+  @@index([creadorId])
+  @@index([proyectoId])
+  @@index([tareaId])
+  @@index([tipo])
+  @@index([estado])
+  @@index([fechaInicio])
+  @@index([fechaFin])
+  @@map("eventos")
+}
+
+/// Participantes de eventos
+model EventoParticipante {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventoId      String   @db.Uuid
+  usuarioId     String   @db.Uuid
+  confirmado    Boolean  @default(false)
+  fechaRespuesta DateTime?
+  
+  evento        Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation("EventosParticipando", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventoId, usuarioId])
+  @@index([eventoId])
+  @@index([usuarioId])
+  @@map("evento_participantes")
+}
+
+// --- MODULO: NOTIFICACIONES (SPRINT 8) ---
+
+enum TipoNotificacion {
+  Sistema
+  Tarea
+  Proyecto
+  Evento
+  Mensaje
+  Mencion
+  Comentario
+  Recordatorio
+}
+
+enum EstadoNotificacion {
+  NoLeida
+  Leida
+  Archivada
+}
+
+/// Notificaciones del sistema
+model Notificacion {
+  id                String              @id @default(uuid()) @db.Uuid
+  titulo            String              @db.VarChar(200)
+  mensaje           String
+  tipo              TipoNotificacion
+  estado            EstadoNotificacion  @default(NoLeida)
+  
+  // Destinatario
+  usuarioId         String              @db.Uuid
+  
+  // Relaciones opcionales (origen de la notificación)
+  proyectoId        String?             @db.Uuid
+  tareaId           String?             @db.Uuid
+  eventoId          String?             @db.Uuid
+  
+  // Metadata
+  metadata          Json?               // Datos adicionales en formato JSON
+  url               String?             @db.VarChar(500) // URL de acción
+  
+  // Auditoría
+  fechaCreacion     DateTime            @default(now())
+  fechaLeida        DateTime?
+  fechaArchivada    DateTime?
+  
+  // Relaciones
+  usuario           Usuario             @relation("NotificacionesRecibidas", fields: [usuarioId], references: [id], onDelete: Cascade)
+  proyecto          Proyecto?           @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  tarea             Tarea?              @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  evento            Evento?             @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  
+  @@index([usuarioId])
+  @@index([proyectoId])
+  @@index([tareaId])
+  @@index([eventoId])
+  @@index([tipo])
+  @@index([estado])
+  @@index([fechaCreacion])
+  @@map("notificaciones")
 }
