@@ -15,7 +15,7 @@ import DepartmentsPage from './pages/DepartmentsPage'
 import AiInsightsPage from './pages/AiInsightsPage'
 import IdeasPage from './pages/IdeasPage'
 import AuditPage from './pages/AuditPage'
-import CalendarPage from './pages/CalendarPage'
+import { CalendarioPage } from './pages/CalendarioPage'
 import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
 import TasksPage from './pages/TasksPage'
@@ -48,7 +48,7 @@ function AppContent() {
             <Route index element={<DashboardPage />} />
             <Route path='ai-insights' element={<AiInsightsPage />} />
             <Route path='auditoria' element={<AuditPage />} />
-            <Route path='calendario' element={<CalendarPage />} />
+            <Route path='calendario' element={<CalendarioPage />} />
             <Route path="departamentos" element={<DepartmentsPage />} />
             <Route path='ideas' element={<IdeasPage />} />
             <Route path="proyectos" element={<ProjectsPage />} />

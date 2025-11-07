@@ -3,7 +3,6 @@ import { ProjectStagesWidget } from "./ProjectStagesWidget"
 import { ProjectTeamWidget } from "./ProjectTeamWidget"
 import { ProjectFilesWidget } from "./ProjectFilesWidget"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
 
 interface Etapa {
   id: string
@@ -77,10 +76,10 @@ export function ProjectInfoSection({
 
   return (
     <div className="border-b bg-card">
-      <div className="px-4 lg:px-6 py-4">
+      <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
         {/* Vista Previa - Muestra los 3 widgets */}
         {activeSection === "preview" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             <ProjectStagesWidget
               etapas={etapas}
               isPreview
@@ -101,17 +100,17 @@ export function ProjectInfoSection({
 
         {/* Vista Completa - Etapas */}
         {activeSection === "stages" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Etapas del Proyecto</h2>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <h2 className="text-base sm:text-lg font-semibold">Etapas del Proyecto</h2>
               <button
                 onClick={() => setActiveSection("preview")}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
                 ← Volver a vista general
               </button>
             </div>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[300px] sm:h-[400px] pr-2 sm:pr-4">
               <ProjectStagesWidget
                 etapas={etapas}
                 isPreview={false}
@@ -125,17 +124,17 @@ export function ProjectInfoSection({
 
         {/* Vista Completa - Equipo */}
         {activeSection === "team" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Equipo del Proyecto</h2>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <h2 className="text-base sm:text-lg font-semibold">Equipo del Proyecto</h2>
               <button
                 onClick={() => setActiveSection("preview")}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
                 ← Volver a vista general
               </button>
             </div>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[300px] sm:h-[400px] pr-2 sm:pr-4">
               <ProjectTeamWidget
                 miembros={miembros}
                 isPreview={false}
@@ -148,17 +147,17 @@ export function ProjectInfoSection({
 
         {/* Vista Completa - Archivos */}
         {activeSection === "files" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Documentos del Proyecto</h2>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <h2 className="text-base sm:text-lg font-semibold">Documentos del Proyecto</h2>
               <button
                 onClick={() => setActiveSection("preview")}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
                 ← Volver a vista general
               </button>
             </div>
-            <ScrollArea className="h-[500px] pr-4">
+            <ScrollArea className="h-[350px] sm:h-[450px] lg:h-[500px] pr-2 sm:pr-4">
               <ProjectFilesWidget
                 archivos={archivos}
                 isPreview={false}

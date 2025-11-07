@@ -246,20 +246,20 @@ export function ProjectWorkspaceEnhanced({
         </>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* Main Content - Scroll Global */}
+      <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden">
         {proyectoActual ? (
           <>
-            {/* Header with Toggle Button */}
-            <div className="relative">
+            {/* Header with Toggle Button - Sticky */}
+            <div className="sticky top-0 z-20 bg-background border-b">
               {/* Sidebar Toggle Button - Oculto cuando hideSidebar es true */}
               {!hideSidebar && (
-                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex gap-2">
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="sm"
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className="hidden lg:flex shadow-md bg-background"
+                    className="hidden lg:flex shadow-md bg-background hover:bg-accent"
                   >
                     {isSidebarCollapsed ? (
                       <PanelLeftOpen className="h-4 w-4" />
@@ -270,9 +270,9 @@ export function ProjectWorkspaceEnhanced({
 
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="sm"
                     onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                    className="lg:hidden shadow-md bg-background"
+                    className="lg:hidden shadow-md bg-background hover:bg-accent"
                   >
                     <PanelLeftOpen className="h-4 w-4" />
                   </Button>
@@ -298,7 +298,7 @@ export function ProjectWorkspaceEnhanced({
                   email: m.usuario?.email || '',
                   avatar: m.usuario?.avatarUrl,
                 },
-                rol: m.rol,
+                rol: m.rol.toLowerCase() as "responsable" | "miembro" | "observador",
               })) || []}
               archivos={[]} // TODO: Implementar store de archivos
               onCreateEtapa={() => setShowCreateEtapaModal(true)}
@@ -333,16 +333,16 @@ export function ProjectWorkspaceEnhanced({
               }}
             />
 
-            {/* View Switcher with Filters and Export */}
-            <div className="border-b bg-card">
-              <div className="px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* View Switcher with Filters and Export - Sticky */}
+            <div className="sticky top-[72px] sm:top-[80px] z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+              <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
                 <TaskViewSwitcher
                   viewMode={viewMode}
                   onViewChange={setViewMode}
                   onCreateTask={() => setShowCreateTaskModal(true)}
                 />
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto flex-wrap">
                   <TaskFilters
                     filters={filters}
                     onFiltersChange={setFilters}
@@ -362,8 +362,8 @@ export function ProjectWorkspaceEnhanced({
               </div>
             </div>
 
-            {/* Task Views */}
-            <div className="flex-1 overflow-auto">
+            {/* Task Views - Con padding responsive */}
+            <div className="flex-1 min-h-0">
               {viewMode === "kanban" && (
                 <TaskKanbanViewDnD
                   tareas={filteredTareas}
