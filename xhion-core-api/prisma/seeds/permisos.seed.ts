@@ -350,6 +350,78 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
     descripcion: 'Permite cambiar el estado de ideas (evaluación, aprobada, implementada)',
     modulo: 'Ideas',
   },
+  // MÓDULO: RECURSOS E INVENTARIO
+  {
+    nombreAccion: 'recursos:crear',
+    descripcion: 'Permite crear nuevos recursos en el inventario',
+    modulo: 'Recursos'
+  },
+  {
+    nombreAccion: 'recursos:ver',
+    descripcion: 'Permite ver recursos y reportes de inventario',
+    modulo: 'Recursos'
+  },
+  {
+    nombreAccion: 'recursos:editar',
+    descripcion: 'Permite actualizar información de recursos',
+    modulo: 'Recursos'
+  },
+  {
+    nombreAccion: 'recursos:eliminar',
+    descripcion: 'Permite eliminar recursos del inventario',
+    modulo: 'Recursos'
+  },
+  {
+    nombreAccion: 'recursos:asignar',
+    descripcion: 'Permite asignar recursos a departamentos o proyectos',
+    modulo: 'Recursos'
+  },
+  {
+    nombreAccion: 'recursos:registrar_movimiento',
+    descripcion: 'Permite registrar entradas, salidas y movimientos de inventario',
+    modulo: 'Recursos'
+  },
+  // MÓDULO: FINANZAS
+  {
+    nombreAccion: 'finanzas:ver',
+    descripcion: 'Permite ver ingresos, gastos y reportes financieros',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:registrar_ingreso',
+    descripcion: 'Permite registrar ingresos en proyectos',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:registrar_gasto',
+    descripcion: 'Permite registrar gastos en proyectos',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:eliminar',
+    descripcion: 'Permite eliminar registros de ingresos y gastos',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:analizar',
+    descripcion: 'Permite analizar rentabilidad y generar reportes avanzados',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:crear_presupuesto',
+    descripcion: 'Permite crear presupuestos para departamentos y proyectos',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:editar_presupuesto',
+    descripcion: 'Permite editar presupuestos existentes',
+    modulo: 'Finanzas'
+  },
+  {
+    nombreAccion: 'finanzas:aprobar_presupuesto',
+    descripcion: 'Permite aprobar y cerrar presupuestos',
+    modulo: 'Finanzas'
+  },
 ];
 
 /**

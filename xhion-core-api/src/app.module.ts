@@ -14,10 +14,13 @@ import { ProyectosModule } from './proyectos/proyectos.module';
 import { TareasModule } from './tareas/tareas.module';
 import { ConocimientoModule } from './conocimiento/conocimiento.module';
 import { DepartamentosModule } from './departamentos/departamentos.module';
-import { PresupuestosModule } from './presupuestos/presupuestos.module';
 import { IdeasModule } from './ideas/ideas.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EventosModule } from './eventos/eventos.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { SolicitudesAccesoModule } from './solicitudes-acceso/solicitudes-acceso.module';
+import { RecursosModule } from './recursos/recursos.module';
+import { FinanzasModule } from './finanzas/finanzas.module';
 
 @Module({
   imports: [
@@ -42,10 +45,13 @@ import { EventosModule } from './eventos/eventos.module';
     ProyectosModule,
     TareasModule,
     ConocimientoModule,
-    PresupuestosModule,
     IdeasModule,
     DashboardModule,
     EventosModule,
+    NotificacionesModule,
+    SolicitudesAccesoModule,
+    RecursosModule,
+    FinanzasModule,
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)

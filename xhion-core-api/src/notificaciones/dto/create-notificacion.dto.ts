@@ -1,16 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsEnum, IsOptional, IsUUID, MaxLength, IsObject } from 'class-validator';
-
-export enum TipoNotificacion {
-  Sistema = 'Sistema',
-  Tarea = 'Tarea',
-  Proyecto = 'Proyecto',
-  Evento = 'Evento',
-  Mensaje = 'Mensaje',
-  Mencion = 'Mencion',
-  Comentario = 'Comentario',
-  Recordatorio = 'Recordatorio',
-}
+import { TipoNotificacion } from '@prisma/client';
 
 export class CreateNotificacionDto {
   @ApiProperty({

@@ -41,8 +41,12 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si el error no es 401, o si ya intentamos hacer refresh en esta petición, rechazar
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    // No intentar refresh si es una petición de logout o refresh
+    const isLogoutRequest = originalRequest.url?.includes('/auth/logout');
+    const isRefreshRequest = originalRequest.url?.includes('/auth/refresh');
+
+    // Si el error no es 401, o si ya intentamos hacer refresh, o si es logout/refresh, rechazar
+    if (error.response?.status !== 401 || originalRequest._retry || isLogoutRequest || isRefreshRequest) {
       return Promise.reject(error);
     }
 

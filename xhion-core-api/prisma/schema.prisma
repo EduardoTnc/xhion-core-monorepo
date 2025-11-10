@@ -180,6 +180,8 @@ model Departamento {
   contextoDepartamento ContextoDepartamento?
   presupuesto          PresupuestoDepartamento?
   documentos           DocumentoDepartamento[]
+  asignacionesRecursos AsignacionRecurso[]
+  movimientosRecursos  MovimientoRecurso[]
 }
 
 /// Catálogo centralizado de puestos de trabajo.
@@ -274,6 +276,12 @@ model Usuario {
   eventosCreados                Evento[]                  @relation("EventosCreados")
   eventosParticipando           EventoParticipante[]      @relation("EventosParticipando")
   notificacionesRecibidas       Notificacion[]            @relation("NotificacionesRecibidas")
+  solicitudesRevisadas          SolicitudAcceso[]         @relation("SolicitudesRevisadas")
+  recursosCreados               Recurso[]                 @relation("RecursosCreados")
+  asignacionesRecursos          AsignacionRecurso[]       @relation("AsignacionesRecursos")
+  movimientosRecursos           MovimientoRecurso[]       @relation("MovimientosRecursos")
+  ingresosRegistrados           IngresoProyecto[]         @relation("IngresosRegistrados")
+  gastosRegistrados             GastoProyecto[]           @relation("GastosRegistrados")
 }
 
 /// Invitaciones para nuevos usuarios.
@@ -295,6 +303,7 @@ model Invitacion {
 
   rol          Rol           @relation(fields: [rol_id], references: [id])
   departamento Departamento? @relation(fields: [departamento_id], references: [id])
+  solicitudAcceso SolicitudAcceso? @relation("SolicitudInvitacion")
 
   @@map("invitaciones")
 }
@@ -367,6 +376,10 @@ model Proyecto {
   presupuesto  PresupuestoProyecto?
   eventos      Evento[]
   notificaciones Notificacion[]
+  asignacionesRecursos AsignacionRecurso[]
+  movimientosRecursos  MovimientoRecurso[]
+  ingresos             IngresoProyecto[]  @relation("IngresosProyecto")
+  gastos               GastoProyecto[]    @relation("GastosProyecto")
 }
 
 /// Registro de todas las tareas.
@@ -1139,4 +1152,239 @@ model Notificacion {
   @@index([estado])
   @@index([fechaCreacion])
   @@map("notificaciones")
+}
+
+// --- MODULO: SOLICITUDES DE ACCESO ---
+
+enum EstadoSolicitud {
+  Pendiente
+  Aprobada
+  Rechazada
+  Expirada
+}
+
+/// Solicitudes de acceso al sistema de usuarios externos
+model SolicitudAcceso {
+  id                String            @id @default(uuid()) @db.Uuid
+  nombreCompleto    String            @db.VarChar(200)
+  email             String            @db.VarChar(255)
+  telefono          String?           @db.VarChar(20)
+  empresa           String?           @db.VarChar(200)
+  cargo             String?           @db.VarChar(100)
+  mensaje           String?           // Mensaje opcional del solicitante
+  estado            EstadoSolicitud   @default(Pendiente)
+  
+  // Información de procesamiento
+  revisadoPorId     String?           @db.Uuid
+  fechaRevision     DateTime?
+  comentarioRevision String?          // Comentario del revisor
+  invitacionId      String?           @unique @db.Uuid // Si se aprueba, se crea una invitación
+  
+  // Auditoría
+  fechaCreacion     DateTime          @default(now())
+  fechaExpiracion   DateTime          // Las solicitudes expiran después de 30 días
+  ipSolicitud       String?           @db.VarChar(45) // IPv4 o IPv6
+  
+  // Relaciones
+  revisadoPor       Usuario?          @relation("SolicitudesRevisadas", fields: [revisadoPorId], references: [id])
+  invitacion        Invitacion?       @relation("SolicitudInvitacion", fields: [invitacionId], references: [id])
+  
+  @@index([email])
+  @@index([estado])
+  @@index([fechaCreacion])
+  @@index([fechaExpiracion])
+  @@map("solicitudes_acceso")
+}
+
+// ============================================
+// MODULO: RECURSOS E INVENTARIO
+// ============================================
+
+enum TipoRecurso {
+  Software
+  Hardware
+  Material
+  Espacio
+  Humano
+  Otro
+}
+
+enum EstadoRecurso {
+  Disponible
+  Asignado
+  En_Mantenimiento
+  Fuera_De_Servicio
+  Agotado
+}
+
+enum UnidadMedida {
+  Unidad
+  Licencia
+  Metro
+  Kilogramo
+  Hora
+  Mes
+}
+
+enum TipoMovimiento {
+  Entrada
+  Salida
+  Asignacion
+  Devolucion
+  Ajuste
+  Baja
+}
+
+/// Catálogo de recursos de la empresa
+model Recurso {
+  id                 String            @id @default(uuid()) @db.Uuid
+  nombre             String            @db.VarChar(200)
+  descripcion        String?
+  tipo               TipoRecurso
+  categoria          String?           @db.VarChar(100)
+  unidadMedida       UnidadMedida
+  costoUnitario      Decimal?          @db.Decimal(10, 2)
+  stockActual        Int               @default(0)
+  stockMinimo        Int?
+  estado             EstadoRecurso     @default(Disponible)
+  proveedor          String?           @db.VarChar(200)
+  numeroSerie        String?           @db.VarChar(100)
+  fechaAdquisicion   DateTime?         @db.Date
+  vidaUtilMeses      Int?
+  ubicacionFisica    String?           @db.VarChar(200)
+  creadoPorId        String            @db.Uuid
+  fechaCreacion      DateTime          @default(now())
+  fechaActualizacion DateTime          @updatedAt
+  eliminado          Boolean           @default(false)
+  
+  creador            Usuario           @relation("RecursosCreados", fields: [creadoPorId], references: [id])
+  asignaciones       AsignacionRecurso[]
+  movimientos        MovimientoRecurso[]
+  gastos             GastoProyecto[]
+  
+  @@index([tipo])
+  @@index([estado])
+  @@index([categoria])
+  @@map("recursos")
+}
+
+/// Asignación de recursos a departamentos o proyectos
+model AsignacionRecurso {
+  id                 String      @id @default(uuid()) @db.Uuid
+  recursoId          String      @db.Uuid
+  cantidad           Int
+  departamentoId     String?     @db.Uuid
+  proyectoId         String?     @db.Uuid
+  fechaInicio        DateTime    @db.Date
+  fechaFin           DateTime?   @db.Date
+  activa             Boolean     @default(true)
+  proposito          String?
+  observaciones      String?
+  asignadoPorId      String      @db.Uuid
+  fechaAsignacion    DateTime    @default(now())
+  
+  recurso            Recurso     @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+  departamento       Departamento? @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  proyecto           Proyecto?   @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  asignadoPor        Usuario     @relation("AsignacionesRecursos", fields: [asignadoPorId], references: [id])
+  
+  @@index([recursoId])
+  @@index([departamentoId])
+  @@index([proyectoId])
+  @@index([activa])
+  @@map("asignaciones_recursos")
+}
+
+/// Historial de movimientos de inventario
+model MovimientoRecurso {
+  id                 String            @id @default(uuid()) @db.Uuid
+  recursoId          String            @db.Uuid
+  tipo               TipoMovimiento
+  cantidad           Int
+  stockAnterior      Int
+  stockNuevo         Int
+  departamentoId     String?           @db.Uuid
+  proyectoId         String?           @db.Uuid
+  motivo             String?
+  costoTotal         Decimal?          @db.Decimal(10, 2)
+  documentoReferencia String?          @db.VarChar(100)
+  registradoPorId    String            @db.Uuid
+  fechaMovimiento    DateTime          @default(now())
+  
+  recurso            Recurso           @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+  departamento       Departamento?     @relation(fields: [departamentoId], references: [id])
+  proyecto           Proyecto?         @relation(fields: [proyectoId], references: [id])
+  registradoPor      Usuario           @relation("MovimientosRecursos", fields: [registradoPorId], references: [id])
+  
+  @@index([recursoId])
+  @@index([tipo])
+  @@index([fechaMovimiento])
+  @@map("movimientos_recursos")
+}
+
+// ============================================
+// MODULO: FINANZAS MEJORADO
+// ============================================
+
+enum FuenteIngreso {
+  Ventas
+  Servicios
+  Publicidad
+  Suscripciones
+  Licencias
+  Otro
+}
+
+enum CategoriaGasto {
+  Personal
+  Software
+  Hardware
+  Materiales
+  Servicios
+  Marketing
+  Infraestructura
+  Otro
+}
+
+/// Ingresos de proyectos
+model IngresoProyecto {
+  id              String         @id @default(uuid()) @db.Uuid
+  proyectoId      String         @db.Uuid
+  fuente          FuenteIngreso
+  monto           Decimal        @db.Decimal(10, 2)
+  descripcion     String?
+  fechaIngreso    DateTime       @db.Date
+  comprobante     String?        @db.VarChar(100)
+  registradoPorId String         @db.Uuid
+  fechaRegistro   DateTime       @default(now())
+  
+  proyecto        Proyecto       @relation("IngresosProyecto", fields: [proyectoId], references: [id], onDelete: Cascade)
+  registradoPor   Usuario        @relation("IngresosRegistrados", fields: [registradoPorId], references: [id])
+  
+  @@index([proyectoId])
+  @@index([fechaIngreso])
+  @@map("ingresos_proyectos")
+}
+
+/// Gastos de proyectos
+model GastoProyecto {
+  id              String         @id @default(uuid()) @db.Uuid
+  proyectoId      String         @db.Uuid
+  categoria       CategoriaGasto
+  concepto        String         @db.VarChar(200)
+  monto           Decimal        @db.Decimal(10, 2)
+  fechaGasto      DateTime       @db.Date
+  comprobante     String?        @db.VarChar(100)
+  recursoId       String?        @db.Uuid
+  registradoPorId String         @db.Uuid
+  fechaRegistro   DateTime       @default(now())
+  
+  proyecto        Proyecto       @relation("GastosProyecto", fields: [proyectoId], references: [id], onDelete: Cascade)
+  recurso         Recurso?       @relation(fields: [recursoId], references: [id])
+  registradoPor   Usuario        @relation("GastosRegistrados", fields: [registradoPorId], references: [id])
+  
+  @@index([proyectoId])
+  @@index([categoria])
+  @@index([fechaGasto])
+  @@map("gastos_proyectos")
 }

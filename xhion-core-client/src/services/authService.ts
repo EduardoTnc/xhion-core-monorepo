@@ -138,10 +138,17 @@ export const authService = {
    */
   async logout(): Promise<void> {
     try {
+      // Intentar cerrar sesión en el servidor
       await apiClient.post('/auth/logout');
     } catch (error: any) {
-      // Aunque falle la petición, permitimos cerrar sesión localmente
-      console.error('Error al cerrar sesión:', error);
+      // Si falla (token inválido, sesión no existe, etc.), 
+      // solo logueamos el error pero continuamos con el logout local
+      console.warn('No se pudo cerrar sesión en el servidor:', error.message);
+    } finally {
+      // SIEMPRE limpiar el localStorage, independientemente del resultado
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
     }
   },
 };

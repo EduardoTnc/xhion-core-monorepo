@@ -1,4 +1,4 @@
-import api from '@/api/axios';
+import apiClient from '../api/axios';
 
 // Tipos
 export type TipoEvento = 'Reunion' | 'Tarea' | 'Proyecto' | 'Personal' | 'Recordatorio';
@@ -100,55 +100,55 @@ export interface FiltrarEventosDto {
 export const eventosService = {
   // CRUD Básico
   getEventos: (filtros?: FiltrarEventosDto) => {
-    return api.get<Evento[]>('/eventos', { params: filtros });
+    return apiClient.get<Evento[]>('/eventos', { params: filtros });
   },
 
   getEventoById: (id: string) => {
-    return api.get<Evento>(`/eventos/${id}`);
+    return apiClient.get<Evento>(`/eventos/${id}`);
   },
 
   createEvento: (data: CreateEventoDto) => {
-    return api.post<Evento>('/eventos', data);
+    return apiClient.post<Evento>('/eventos', data);
   },
 
   updateEvento: (id: string, data: UpdateEventoDto) => {
-    return api.patch<Evento>(`/eventos/${id}`, data);
+    return apiClient.patch<Evento>(`/eventos/${id}`, data);
   },
 
   deleteEvento: (id: string) => {
-    return api.delete(`/eventos/${id}`);
+    return apiClient.delete(`/eventos/${id}`);
   },
 
   // Participantes
   addParticipante: (eventoId: string, usuarioId: string) => {
-    return api.post(`/eventos/${eventoId}/participantes`, { usuarioId });
+    return apiClient.post(`/eventos/${eventoId}/participantes`, { usuarioId });
   },
 
   removeParticipante: (eventoId: string, usuarioId: string) => {
-    return api.delete(`/eventos/${eventoId}/participantes/${usuarioId}`);
+    return apiClient.delete(`/eventos/${eventoId}/participantes/${usuarioId}`);
   },
 
   confirmarAsistencia: (eventoId: string) => {
-    return api.post(`/eventos/${eventoId}/confirmar`);
+    return apiClient.post(`/eventos/${eventoId}/confirmar`);
   },
 
   // Queries Especiales
   getEventosByUsuario: (usuarioId: string, fechaDesde?: string, fechaHasta?: string) => {
-    return api.get<Evento[]>(`/eventos/usuario/${usuarioId}`, {
+    return apiClient.get<Evento[]>(`/eventos/usuario/${usuarioId}`, {
       params: { fechaDesde, fechaHasta },
     });
   },
 
   getEventosByProyecto: (proyectoId: string) => {
-    return api.get<Evento[]>(`/eventos/proyecto/${proyectoId}`);
+    return apiClient.get<Evento[]>(`/eventos/proyecto/${proyectoId}`);
   },
 
   getEventosProximos: (dias: number = 7) => {
-    return api.get<Evento[]>('/eventos/proximos', { params: { dias } });
+    return apiClient.get<Evento[]>('/eventos/proximos', { params: { dias } });
   },
 
   // Drag & Drop
   moverEvento: (eventoId: string, fechaInicio: string, fechaFin: string) => {
-    return api.patch<Evento>(`/eventos/${eventoId}/mover`, { fechaInicio, fechaFin });
+    return apiClient.patch<Evento>(`/eventos/${eventoId}/mover`, { fechaInicio, fechaFin });
   },
 };

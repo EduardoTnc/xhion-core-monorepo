@@ -7,6 +7,7 @@ import { useThemeStore } from './store/themeStore'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import LoginPage from './pages/LoginPage'
 import AceptarInvitacionPage from './pages/AceptarInvitacionPage'
+import RequestAccessPage from './pages/RequestAccessPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
 import RolesPage from './pages/RolesPage'
@@ -20,6 +21,8 @@ import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
 import TasksPage from './pages/TasksPage'
 import UsuariosPage from './pages/UsuariosPage'
+import FinanzasPage from './pages/FinanzasPage'
+import DepartmentDetailPage from './pages/DepartmentDetailPage'
 
 // Componente interno que usa los hooks
 function AppContent() {
@@ -40,6 +43,7 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<RequestAccessPage />} />
         <Route path="/aceptar-invitacion" element={<AceptarInvitacionPage />} />
 
         {/* Rutas Protegidas */}
@@ -50,6 +54,8 @@ function AppContent() {
             <Route path='auditoria' element={<AuditPage />} />
             <Route path='calendario' element={<CalendarioPage />} />
             <Route path="departamentos" element={<DepartmentsPage />} />
+            <Route path="departamentos/:id" element={<DepartmentDetailPage />} />
+            <Route path='finanzas' element={<FinanzasPage />} />
             <Route path='ideas' element={<IdeasPage />} />
             <Route path="proyectos" element={<ProjectsPage />} />
             <Route path="usuarios" element={<UsuariosPage />} />

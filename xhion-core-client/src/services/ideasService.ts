@@ -1,4 +1,4 @@
-    import apiClient from '../api/axios';
+import apiClient from '../api/axios';
 
 export interface Idea {
   id: string;

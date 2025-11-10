@@ -6,6 +6,9 @@ import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, Grid3x3, List, Calen
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarioMensual } from '@/components/calendario/CalendarioMensual';
+import { CalendarioSemanal } from '@/components/calendario/CalendarioSemanal';
+import { CalendarioDiario } from '@/components/calendario/CalendarioDiario';
+import { CalendarioAnual } from '@/components/calendario/CalendarioAnual';
 import { EventoModal } from '@/components/calendario/EventoModal';
 import { FiltrosCalendario } from '@/components/calendario/FiltrosCalendario';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -173,19 +176,22 @@ export function CalendarioPage() {
               />
             )}
             {vistaActual === 'semana' && (
-              <div className="text-center text-muted-foreground py-12">
-                Vista semanal en desarrollo
-              </div>
+              <CalendarioSemanal
+                fecha={fechaActual}
+                eventos={eventos}
+              />
             )}
             {vistaActual === 'dia' && (
-              <div className="text-center text-muted-foreground py-12">
-                Vista diaria en desarrollo
-              </div>
+              <CalendarioDiario
+                fecha={fechaActual}
+                eventos={eventos}
+              />
             )}
             {vistaActual === 'ano' && (
-              <div className="text-center text-muted-foreground py-12">
-                Vista anual en desarrollo
-              </div>
+              <CalendarioAnual
+                fecha={fechaActual}
+                eventos={eventos}
+              />
             )}
           </>
         )}
