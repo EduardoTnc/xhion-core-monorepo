@@ -21,6 +21,14 @@ export class CreateProyectoDto {
   @IsString()
   descripcion?: string;
 
+  @ApiPropertyOptional({
+    description: 'Objetivos del proyecto',
+    example: 'Aumentar la satisfacción del usuario en un 30%, reducir el tiempo de carga en un 50% y mejorar la accesibilidad',
+  })
+  @IsOptional()
+  @IsString()
+  objetivos?: string;
+
   @ApiProperty({
     description: 'ID del usuario responsable del proyecto',
     example: '550e8400-e29b-41d4-a716-446655440000',

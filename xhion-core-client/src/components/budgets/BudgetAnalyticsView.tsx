@@ -35,11 +35,29 @@ import {
   AreaChart,
 } from "recharts"
 import { Button } from "../ui/button"
-import { type PresupuestoDepartamento, type MovimientoPresupuestoDepartamento, type MovimientoPresupuestoProyecto, TipoMovimientoPresupuesto } from "@/services/presupuestoService"
+
+// Tipos locales (antes en presupuestoService)
+const TipoMovimientoPresupuesto = {
+  Asignacion: 'Asignacion',
+  Gasto: 'Gasto',
+  Ajuste: 'Ajuste',
+  Transferencia: 'Transferencia',
+} as const
+
+type TipoMovimientoPresupuestoType = typeof TipoMovimientoPresupuesto[keyof typeof TipoMovimientoPresupuesto]
+
+interface MovimientoPresupuesto {
+  id: string
+  tipo: TipoMovimientoPresupuestoType
+  monto: number
+  descripcion: string
+  categoria?: string
+  fechaMovimiento: string
+}
 
 interface BudgetAnalyticsViewProps {
-  presupuesto: PresupuestoDepartamento | any
-  movimientos: (MovimientoPresupuestoDepartamento | MovimientoPresupuestoProyecto)[]
+  presupuesto: any
+  movimientos: MovimientoPresupuesto[]
 }
 
 const COLORS = {

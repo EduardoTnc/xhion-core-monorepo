@@ -77,6 +77,9 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.45.0"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",

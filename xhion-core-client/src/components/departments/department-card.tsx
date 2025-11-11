@@ -1,11 +1,12 @@
 "use client"
 
-import { Users, FolderKanban, CheckSquare, TrendingUp, AlertCircle, ChevronRight, Building2 } from "lucide-react"
+import { Users, FolderKanban, CheckSquare, TrendingUp, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { Departamento } from "@/services/departmentService"
+import { getDepartmentIcon } from "@/lib/department-icons"
 
 interface DepartmentCardProps {
   department: Departamento
@@ -16,6 +17,9 @@ export function DepartmentCard({ department, onClick }: DepartmentCardProps) {
   const totalPuestos = department._count?.puestosTrabajo || 0
   const totalProyectos = department._count?.proyectos || 0
   const performance = 85 // Placeholder - obtener de estadísticas
+  
+  // Obtener icono dinámico
+  const { icon: DepartmentIcon, color: iconColor } = getDepartmentIcon(department.icono)
   
   // Función para obtener las iniciales del nombre
   const getInitials = (name: string) => {
@@ -29,16 +33,14 @@ export function DepartmentCard({ department, onClick }: DepartmentCardProps) {
 
   return (
     <Card
-      className="group cursor-pointer border-border bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg"
+      className="group cursor-pointer border-2 border-border bg-card p-6 transition-all hover:border-primary/30 hover:bg-muted/30"
       onClick={onClick}
     >
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div 
-            className={`h-12 w-12 rounded-lg flex items-center justify-center ${department.color || 'bg-primary'}`}
-          >
-            <Building2 className="h-6 w-6 text-white" />
+          <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center">
+            <DepartmentIcon className={`h-6 w-6 ${iconColor}`} />
           </div>
           <div>
             <h3 className="font-semibold text-foreground">{department.nombre}</h3>

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { type DateRange } from "react-day-picker"
-import { X, Coins, Calendar } from "lucide-react"
+import { Coins, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,16 +23,35 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { usePresupuestoStore } from "@/store/presupuestoStore"
-import { EstadoPresupuesto, type PresupuestoDepartamento } from "@/services/presupuestoService"
+import { useFinanzasStore } from "@/store/finanzasStore"
 import { toast } from "sonner"
+
+// Constantes y tipos locales
+const EstadoPresupuesto = {
+  Activo: 'Activo',
+  Agotado: 'Agotado',
+  Cerrado: 'Cerrado',
+  Suspendido: 'Suspendido',
+} as const
+
+type EstadoPresupuestoType = typeof EstadoPresupuesto[keyof typeof EstadoPresupuesto]
+
+type PresupuestoDepartamento = {
+  id: string
+  montoTotal: number
+  periodo: string
+  fechaInicio: string
+  fechaFin: string
+  estado: EstadoPresupuestoType
+  descripcion?: string
+}
 
 const presupuestoSchema = z.object({
   montoTotal: z.number().min(0, "El monto debe ser mayor a 0"),
   periodo: z.string().min(1, "El periodo es requerido"),
   fechaInicio: z.date().optional(),
   fechaFin: z.date().optional(),
-  estado: z.nativeEnum(EstadoPresupuesto).optional(),
+  estado: z.string().optional(),
   descripcion: z.string().optional(),
 })
 
@@ -55,7 +74,7 @@ export function CreateBudgetDepartmentModal({
 }: CreateBudgetDepartmentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const { createPresupuestoDepartamento, updatePresupuestoDepartamento } = usePresupuestoStore()
+  const { crearPresupuestoDepartamento, actualizarPresupuestoDepartamento } = useFinanzasStore()
 
   const {
     register,
@@ -119,17 +138,12 @@ export function CreateBudgetDepartmentModal({
         ...data,
         fechaInicio: dateRange.from.toISOString(),
         fechaFin: dateRange.to.toISOString(),
-      }
+      } as any
 
       if (presupuestoExistente) {
-        await updatePresupuestoDepartamento(departamentoId, presupuestoData)
-        toast.success("Presupuesto actualizado exitosamente")
+        await actualizarPresupuestoDepartamento(departamentoId, presupuestoData)
       } else {
-        await createPresupuestoDepartamento({
-          ...presupuestoData,
-          departamentoId,
-        })
-        toast.success("Presupuesto creado exitosamente")
+        await crearPresupuestoDepartamento(departamentoId, presupuestoData)
       }
       onOpenChange(false)
       reset()
@@ -231,7 +245,7 @@ export function CreateBudgetDepartmentModal({
             <Label htmlFor="estado">Estado</Label>
             <Select
               value={selectedEstado}
-              onValueChange={(value) => setValue("estado", value as EstadoPresupuesto)}
+              onValueChange={(value) => setValue("estado", value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un estado" />

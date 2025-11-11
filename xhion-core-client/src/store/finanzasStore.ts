@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import finanzasService from '../services/finanzasService';
 import type {
   RegistrarIngresoDto,
@@ -10,15 +11,23 @@ import type {
 } from '../services/finanzasService';
 
 interface FinanzasState {
-  // Estado
+  // Estado - Ingresos y Gastos
   ingresos: any[];
   gastos: any[];
-  presupuestoDepartamento: any | null;
-  presupuestoProyecto: any | null;
+  
+  // Estado - Presupuestos (usando Map para múltiples entidades)
+  presupuestosDepartamento: Map<string, any>;
+  presupuestosProyecto: Map<string, any>;
+  movimientosDepartamento: Map<string, any[]>;
+  movimientosProyecto: Map<string, any[]>;
+  
+  // Estado - Análisis
   rentabilidad: any | null;
   reporteGeneral: any | null;
   topProyectos: any[];
   presupuestoVsReal: any | null;
+  
+  // Estado de carga
   loading: boolean;
   error: string | null;
 
@@ -42,13 +51,19 @@ interface FinanzasState {
   crearPresupuestoDepartamento: (departamentoId: string, data: CreatePresupuestoDepartamentoDto) => Promise<void>;
   obtenerPresupuestoDepartamento: (departamentoId: string) => Promise<void>;
   actualizarPresupuestoDepartamento: (departamentoId: string, data: Partial<CreatePresupuestoDepartamentoDto>) => Promise<void>;
+  eliminarPresupuestoDepartamento: (departamentoId: string) => Promise<void>;
   registrarMovimientoPresupuestoDepartamento: (departamentoId: string, data: RegistrarMovimientoPresupuestoDto) => Promise<void>;
+  obtenerMovimientosPresupuestoDepartamento: (departamentoId: string) => Promise<void>;
+  eliminarMovimientoPresupuestoDepartamento: (movimientoId: string, departamentoId: string) => Promise<void>;
 
   // Acciones - Presupuestos Proyecto
   crearPresupuestoProyecto: (proyectoId: string, data: CreatePresupuestoProyectoDto) => Promise<void>;
   obtenerPresupuestoProyecto: (proyectoId: string) => Promise<void>;
   actualizarPresupuestoProyecto: (proyectoId: string, data: Partial<CreatePresupuestoProyectoDto>) => Promise<void>;
+  eliminarPresupuestoProyecto: (proyectoId: string) => Promise<void>;
   registrarMovimientoPresupuestoProyecto: (proyectoId: string, data: RegistrarMovimientoPresupuestoDto) => Promise<void>;
+  obtenerMovimientosPresupuestoProyecto: (proyectoId: string) => Promise<void>;
+  eliminarMovimientoPresupuestoProyecto: (movimientoId: string, proyectoId: string) => Promise<void>;
 
   // Acciones - Análisis Presupuesto vs Real
   analizarPresupuestoVsRealProyecto: (proyectoId: string) => Promise<void>;
@@ -59,12 +74,14 @@ interface FinanzasState {
   reset: () => void;
 }
 
-export const useFinanzasStore = create<FinanzasState>((set) => ({
+export const useFinanzasStore = create<FinanzasState>((set, get) => ({
   // Estado inicial
   ingresos: [],
   gastos: [],
-  presupuestoDepartamento: null,
-  presupuestoProyecto: null,
+  presupuestosDepartamento: new Map(),
+  presupuestosProyecto: new Map(),
+  movimientosDepartamento: new Map(),
+  movimientosProyecto: new Map(),
   rentabilidad: null,
   reporteGeneral: null,
   topProyectos: [],
@@ -201,9 +218,14 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       const presupuesto = await finanzasService.crearPresupuestoDepartamento(departamentoId, data);
-      set({ presupuestoDepartamento: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosDepartamento);
+      presupuestos.set(departamentoId, presupuesto);
+      set({ presupuestosDepartamento: presupuestos, loading: false });
+      toast.success('Presupuesto creado exitosamente');
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al crear presupuesto', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al crear presupuesto';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
       throw error;
     }
   },
@@ -212,9 +234,15 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       const presupuesto = await finanzasService.obtenerPresupuestoDepartamento(departamentoId);
-      set({ presupuestoDepartamento: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosDepartamento);
+      presupuestos.set(departamentoId, presupuesto);
+      set({ presupuestosDepartamento: presupuestos, loading: false });
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al obtener presupuesto', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al obtener presupuesto';
+      set({ error: errorMsg, loading: false });
+      if (error.response?.status !== 404) {
+        toast.error(errorMsg);
+      }
       throw error;
     }
   },
@@ -223,9 +251,30 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       const presupuesto = await finanzasService.actualizarPresupuestoDepartamento(departamentoId, data);
-      set({ presupuestoDepartamento: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosDepartamento);
+      presupuestos.set(departamentoId, presupuesto);
+      set({ presupuestosDepartamento: presupuestos, loading: false });
+      toast.success('Presupuesto actualizado exitosamente');
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al actualizar presupuesto', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al actualizar presupuesto';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
+      throw error;
+    }
+  },
+
+  eliminarPresupuestoDepartamento: async (departamentoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      await finanzasService.eliminarPresupuestoDepartamento(departamentoId);
+      const presupuestos = new Map(get().presupuestosDepartamento);
+      presupuestos.delete(departamentoId);
+      set({ presupuestosDepartamento: presupuestos, loading: false });
+      toast.success('Presupuesto eliminado exitosamente');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al eliminar presupuesto';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
       throw error;
     }
   },
@@ -234,11 +283,52 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       await finanzasService.registrarMovimientoPresupuestoDepartamento(departamentoId, data);
-      // Recargar presupuesto
+      // Recargar presupuesto y movimientos
       const presupuesto = await finanzasService.obtenerPresupuestoDepartamento(departamentoId);
-      set({ presupuestoDepartamento: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosDepartamento);
+      presupuestos.set(departamentoId, presupuesto);
+      
+      const movimientos = await finanzasService.obtenerMovimientosPresupuestoDepartamento(departamentoId);
+      const movimientosMap = new Map(get().movimientosDepartamento);
+      movimientosMap.set(departamentoId, movimientos);
+      
+      set({ presupuestosDepartamento: presupuestos, movimientosDepartamento: movimientosMap, loading: false });
+      toast.success('Movimiento registrado exitosamente');
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al registrar movimiento', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al registrar movimiento';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
+      throw error;
+    }
+  },
+
+  obtenerMovimientosPresupuestoDepartamento: async (departamentoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const movimientos = await finanzasService.obtenerMovimientosPresupuestoDepartamento(departamentoId);
+      const movimientosMap = new Map(get().movimientosDepartamento);
+      movimientosMap.set(departamentoId, movimientos);
+      set({ movimientosDepartamento: movimientosMap, loading: false });
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al obtener movimientos';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
+      throw error;
+    }
+  },
+
+  eliminarMovimientoPresupuestoDepartamento: async (movimientoId: string, departamentoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      await finanzasService.eliminarMovimientoPresupuestoDepartamento(movimientoId);
+      // Recargar movimientos
+      await get().obtenerMovimientosPresupuestoDepartamento(departamentoId);
+      set({ loading: false });
+      toast.success('Movimiento eliminado exitosamente');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al eliminar movimiento';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
       throw error;
     }
   },
@@ -248,9 +338,14 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       const presupuesto = await finanzasService.crearPresupuestoProyecto(proyectoId, data);
-      set({ presupuestoProyecto: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosProyecto);
+      presupuestos.set(proyectoId, presupuesto);
+      set({ presupuestosProyecto: presupuestos, loading: false });
+      toast.success('Presupuesto creado exitosamente');
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al crear presupuesto', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al crear presupuesto';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
       throw error;
     }
   },
@@ -259,9 +354,15 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       const presupuesto = await finanzasService.obtenerPresupuestoProyecto(proyectoId);
-      set({ presupuestoProyecto: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosProyecto);
+      presupuestos.set(proyectoId, presupuesto);
+      set({ presupuestosProyecto: presupuestos, loading: false });
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al obtener presupuesto', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al obtener presupuesto';
+      set({ error: errorMsg, loading: false });
+      if (error.response?.status !== 404) {
+        toast.error(errorMsg);
+      }
       throw error;
     }
   },
@@ -270,9 +371,30 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       const presupuesto = await finanzasService.actualizarPresupuestoProyecto(proyectoId, data);
-      set({ presupuestoProyecto: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosProyecto);
+      presupuestos.set(proyectoId, presupuesto);
+      set({ presupuestosProyecto: presupuestos, loading: false });
+      toast.success('Presupuesto actualizado exitosamente');
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al actualizar presupuesto', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al actualizar presupuesto';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
+      throw error;
+    }
+  },
+
+  eliminarPresupuestoProyecto: async (proyectoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      await finanzasService.eliminarPresupuestoProyecto(proyectoId);
+      const presupuestos = new Map(get().presupuestosProyecto);
+      presupuestos.delete(proyectoId);
+      set({ presupuestosProyecto: presupuestos, loading: false });
+      toast.success('Presupuesto eliminado exitosamente');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al eliminar presupuesto';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
       throw error;
     }
   },
@@ -281,11 +403,52 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
     set({ loading: true, error: null });
     try {
       await finanzasService.registrarMovimientoPresupuestoProyecto(proyectoId, data);
-      // Recargar presupuesto
+      // Recargar presupuesto y movimientos
       const presupuesto = await finanzasService.obtenerPresupuestoProyecto(proyectoId);
-      set({ presupuestoProyecto: presupuesto, loading: false });
+      const presupuestos = new Map(get().presupuestosProyecto);
+      presupuestos.set(proyectoId, presupuesto);
+      
+      const movimientos = await finanzasService.obtenerMovimientosPresupuestoProyecto(proyectoId);
+      const movimientosMap = new Map(get().movimientosProyecto);
+      movimientosMap.set(proyectoId, movimientos);
+      
+      set({ presupuestosProyecto: presupuestos, movimientosProyecto: movimientosMap, loading: false });
+      toast.success('Movimiento registrado exitosamente');
     } catch (error: any) {
-      set({ error: error.response?.data?.message || 'Error al registrar movimiento', loading: false });
+      const errorMsg = error.response?.data?.message || 'Error al registrar movimiento';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
+      throw error;
+    }
+  },
+
+  obtenerMovimientosPresupuestoProyecto: async (proyectoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const movimientos = await finanzasService.obtenerMovimientosPresupuestoProyecto(proyectoId);
+      const movimientosMap = new Map(get().movimientosProyecto);
+      movimientosMap.set(proyectoId, movimientos);
+      set({ movimientosProyecto: movimientosMap, loading: false });
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al obtener movimientos';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
+      throw error;
+    }
+  },
+
+  eliminarMovimientoPresupuestoProyecto: async (movimientoId: string, proyectoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      await finanzasService.eliminarMovimientoPresupuestoProyecto(movimientoId);
+      // Recargar movimientos
+      await get().obtenerMovimientosPresupuestoProyecto(proyectoId);
+      set({ loading: false });
+      toast.success('Movimiento eliminado exitosamente');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al eliminar movimiento';
+      set({ error: errorMsg, loading: false });
+      toast.error(errorMsg);
       throw error;
     }
   },
@@ -318,8 +481,10 @@ export const useFinanzasStore = create<FinanzasState>((set) => ({
   reset: () => set({
     ingresos: [],
     gastos: [],
-    presupuestoDepartamento: null,
-    presupuestoProyecto: null,
+    presupuestosDepartamento: new Map(),
+    presupuestosProyecto: new Map(),
+    movimientosDepartamento: new Map(),
+    movimientosProyecto: new Map(),
     rentabilidad: null,
     reporteGeneral: null,
     topProyectos: [],

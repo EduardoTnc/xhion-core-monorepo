@@ -1,439 +1,21 @@
-import { PrismaClient, EstadoProyecto, EstadoTarea, PrioridadTarea, TipoEvento, RolProyecto, EstadoIdea, CategoriaIdea, EstadoUsuario } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
-
 /**
- * SEED COMPLETO DE EMPRESA REAL - VERSIÓN CORREGIDA
- * Basado en la estructura de Negocios Asociados Bigander S.A.C.
- * 
- * ✅ CORRECCIONES APLICADAS:
- * - Todos los campos en camelCase (proyectoId, fechaInicio, etc.)
- * - Enums correctos según schema (Activo, En_Progreso, Hecho, etc.)
- * - RolProyecto enum (Responsable, Miembro, Observador)
- * - passwordHash en lugar de password
- * - EstadoUsuario.ACTIVO
- * 
- * Estructura:
- * - 6 Departamentos
- * - 11 Usuarios con roles específicos
- * - 7 Proyectos (5 principales + 2 sub-proyectos)
- * - 20+ Etapas
- * - 30+ Tareas
- * - 5 Presupuestos
- * - 3 Ideas con comentarios y votos
- * - 5 Eventos de calendario
+ * SEED DE PROYECTOS, TAREAS, PRESUPUESTOS, IDEAS Y EVENTOS
+ * Parte 2 del seed completo de empresa
  */
 
-async function seedEmpresaCompleta() {
-  console.log('🚀 Iniciando seed de empresa completa...');
+import { PrismaClient, EstadoProyecto, EstadoTarea, PrioridadTarea, TipoEvento, RolProyecto, EstadoIdea, CategoriaIdea } from '@prisma/client';
 
-  // ============================================
-  //MARK: 1. ROLES Y PERMISOS BASE
-  // ============================================
-  console.log('📋 Creando roles base...');
+export async function seedProyectosCompletos(
+  prisma: PrismaClient,
+  departamentos: any,
+  usuarios: any
+) {
+  const { deptVentas, deptMarketing, deptDiseno, deptSistemas, deptRRHH, deptMantenimiento } = departamentos;
+  const { gerente, eduardo, luz, maitet, lucero, ricardo, omar, diseñadora1, diseñadora2, vendedor1 } = usuarios;
 
-  const rolAdmin = await prisma.rol.upsert({
-    where: { nombre: 'Administrador' },
-    update: {},
-    create: {
-      nombre: 'Administrador',
-      descripcion: 'Acceso total al sistema',
-      color: 'bg-purple-600'
-    }
-    });
+  console.log('📁 Creando proyectos y sub-proyectos...');
 
-  const rolJefeDepartamento = await prisma.rol.upsert({
-    where: { nombre: 'Jefe de Departamento' },
-    update: {},
-    create: {
-      nombre: 'Jefe de Departamento',
-      descripcion: 'Gestiona proyectos y usuarios de su departamento',
-      color: 'bg-blue-600'
-    }
-    });
-
-  const rolGerenteProyecto = await prisma.rol.upsert({
-    where: { nombre: 'Gerente de Proyecto' },
-    update: {},
-    create: {
-      nombre: 'Gerente de Proyecto',
-      descripcion: 'Gestiona proyectos específicos, etapas y tareas',
-      color: 'bg-green-600'
-    }
-    });
-
-  const rolMiembroEquipo = await prisma.rol.upsert({
-    where: { nombre: 'Miembro de Equipo' },
-    update: {},
-    create: {
-      nombre: 'Miembro de Equipo',
-      descripcion: 'Ejecuta tareas asignadas',
-      color: 'bg-yellow-600'
-    }
-    });
-
-  const rolColaborador = await prisma.rol.upsert({
-    where: { nombre: 'Colaborador' },
-    update: {},
-    create: {
-      nombre: 'Colaborador',
-      descripcion: 'Permiso básico para ver información y proponer ideas',
-      color: 'bg-gray-600'
-    }
-    });
-
-  // ============================================
-  //MARK: 1.5. ASIGNAR PERMISOS A ROLES
-  // ============================================
-  console.log('🔐 Asignando permisos a roles...');
-
-  // Permisos críticos que necesita el Administrador
-  const permisosAdmin = [
-    // Proyectos - TODOS los permisos
-    'proyectos.crear',
-    'proyectos.ver',
-    'proyectos.ver_todos',
-    'proyectos.editar',
-    'proyectos.eliminar',
-    'proyectos.archivar',
-    'proyectos.gestionar_miembros',
-    'proyectos.gestionar_etapas',
-    
-    // Tareas - TODOS los permisos
-    'tareas.crear',
-    'tareas.ver',
-    'tareas.ver_todas',
-    'tareas.editar',
-    'tareas.eliminar',
-    'tareas.asignar',
-    'tareas.cambiar_estado',
-    'tareas.comentar',
-    
-    // Departamentos - TODOS los permisos
-    'departamentos.crear',
-    'departamentos.ver',
-    'departamentos.editar',
-    'departamentos.eliminar',
-    'departamentos.gestionar_empleados',
-    'departamentos.gestionar_puestos',
-    
-    // Usuarios - TODOS los permisos
-    'usuarios.crear',
-    'usuarios.ver',
-    'usuarios.editar',
-    'usuarios.eliminar',
-    'usuarios.gestionar_roles',
-    'usuarios.invitar',
-    
-    // Roles - TODOS los permisos
-    'roles.crear',
-    'roles.ver',
-    'roles.editar',
-    'roles.eliminar',
-    'roles.asignar_permisos',
-    
-    // Presupuestos - TODOS los permisos
-    'presupuestos.crear',
-    'presupuestos.ver',
-    'presupuestos.editar',
-    'presupuestos.eliminar',
-    'presupuestos.aprobar',
-    'presupuestos.registrar_movimientos',
-    
-    // Conocimiento - TODOS los permisos
-    'conocimiento.crear',
-    'conocimiento.ver',
-    'conocimiento.editar',
-    'conocimiento.eliminar',
-    
-    // Auditoría
-    'auditoria.ver',
-    'auditoria.exportar',
-    
-    // Sistema
-    'sistema.configurar',
-    'sistema.ver_estadisticas',
-    'sistema.gestionar_catalogos',
-    
-    // Invitaciones
-    'invitaciones.crear',
-    'invitaciones.ver',
-    'invitaciones.cancelar',
-    
-    // Ideas
-    'ideas.crear',
-    'ideas.ver',
-    'ideas.editar',
-    'ideas.eliminar',
-    'ideas.votar',
-    'ideas.comentar',
-    'ideas.moderar',
-    'ideas.cambiar_estado',
-    
-    // Recursos
-    'recursos:crear',
-    'recursos:ver',
-    'recursos:editar',
-    'recursos:eliminar',
-    'recursos:asignar',
-    'recursos:registrar_movimiento',
-    
-    // Finanzas
-    'finanzas:ver',
-    'finanzas:registrar_ingreso',
-    'finanzas:registrar_gasto',
-    'finanzas:eliminar',
-    'finanzas:analizar',
-    'finanzas:crear_presupuesto',
-    'finanzas:editar_presupuesto',
-    'finanzas:aprobar_presupuesto',
-  ];
-
-  for (const nombrePermiso of permisosAdmin) {
-    const permiso = await prisma.permiso.findFirst({
-      where: { nombreAccion: nombrePermiso }
-    });
-
-    if (permiso) {
-      await prisma.rolPermiso.upsert({
-        where: {
-          rolId_permisoId: {
-            rolId: rolAdmin.id,
-            permisoId: permiso.id
-          }
-        },
-        update: {},
-        create: {
-          rolId: rolAdmin.id,
-          permisoId: permiso.id
-        }
-      });
-    }
-  }
-
-  // Permisos para Jefe de Departamento
-  const permisosJefe = [
-    'proyectos.ver',
-    'proyectos.crear',
-    'proyectos.editar',
-    'tareas.ver',
-    'tareas.crear',
-    'tareas.editar',
-    'departamentos.ver',
-    'usuarios.ver',
-  ];
-
-  for (const nombrePermiso of permisosJefe) {
-    const permiso = await prisma.permiso.findFirst({
-      where: { nombreAccion: nombrePermiso }
-    });
-
-    if (permiso) {
-      await prisma.rolPermiso.upsert({
-        where: {
-          rolId_permisoId: {
-            rolId: rolJefeDepartamento.id,
-            permisoId: permiso.id
-          }
-        },
-        update: {},
-        create: {
-          rolId: rolJefeDepartamento.id,
-          permisoId: permiso.id
-        }
-      });
-    }
-  }
-
-  console.log('✅ Permisos asignados correctamente');
-
-  // ============================================
-  //MARK: 2. DEPARTAMENTOS
-  // ============================================
-  console.log('🏢 Creando departamentos...');
-
-  const deptVentas = await prisma.departamento.create({
-    data: {
-      nombre: 'Ventas',
-      descripcion: 'Gestiona las operaciones de tiendas físicas, call center y ventas digitales para Fontech y Fumanía'
-    }
-    });
-
-  const deptMarketing = await prisma.departamento.create({
-    data: {
-      nombre: 'Marketing',
-      descripcion: 'Responsable de la promoción de las marcas Fontech, Fumanía, Proyecto Sostenible Perú y la futura agencia'
-    }
-    });
-
-  const deptDiseno = await prisma.departamento.create({
-    data: {
-      nombre: 'Diseño',
-      descripcion: 'Crea los activos visuales para marketing y publicidad. Actualmente usa Notion para gestión interna'
-    }
-    });
-
-  const deptSistemas = await prisma.departamento.create({
-    data: {
-      nombre: 'Sistemas',
-      descripcion: 'Desarrolla y mantiene las soluciones de software internas, incluyendo XHION Core y el Chatbot'
-    }
-    });
-
-  const deptRRHH = await prisma.departamento.create({
-    data: {
-      nombre: 'Recursos Humanos',
-      descripcion: 'Gestiona el personal de las tiendas y las áreas administrativas'
-    }
-    });
-
-  const deptMantenimiento = await prisma.departamento.create({
-    data: {
-      nombre: 'Mantenimiento y Taller',
-      descripcion: 'Área para reparaciones de infraestructura de tiendas y fabricación para el proyecto sostenible'
-    }
-    });
-
-  // ============================================
-  //MARK: 3. USUARIOS
-  // ============================================
-  console.log('👥 Creando usuarios...');
-
-  const hashedPassword = await bcrypt.hash('Password123!', 10);
-
-  // Gerente General
-  const gerente = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Carlos Mendoza',
-      email: 'gerente@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolAdmin.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos'
-    }
-    });
-
-  // Desarrollador (Eduardo)
-  const eduardo = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Eduardo Tanca',
-      email: 'eduardo.tanca@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolAdmin.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eduardo'
-    }
-    });
-
-  // Jefa de Fumanía
-  const luz = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Luz García',
-      email: 'luz.garcia@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolGerenteProyecto.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luz'
-    }
-    });
-
-  // Jefa de Fontech
-  const maitet = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Maitet Rodríguez',
-      email: 'maitet.rodriguez@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolGerenteProyecto.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maitet'
-    }
-    });
-
-  // Jefa de Marketing
-  const lucero = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Lucero Sánchez',
-      email: 'lucero.sanchez@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolJefeDepartamento.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucero'
-    }
-    });
-
-  // Técnico de Mantenimiento
-  const ricardo = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Ricardo Torres',
-      email: 'ricardo.torres@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ricardo'
-    }
-    });
-
-  // Desarrollador de Sistemas
-  const omar = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Omar Pérez',
-      email: 'omar.perez@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Omar'
-    }
-    });
-
-  // Diseñadora 1
-  const diseñadora1 = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Ana Flores',
-      email: 'ana.flores@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ana'
-    }
-    });
-
-  // Diseñadora 2
-  const diseñadora2 = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'María Castro',
-      email: 'maria.castro@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria'
-    }
-    });
-
-  // Vendedor de Tienda
-  const vendedor1 = await prisma.usuario.create({
-    data: {
-      nombreCompleto: 'Juan Ramírez',
-      email: 'juan.ramirez@gmail.com',
-      passwordHash: hashedPassword,
-      rolId: rolColaborador.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Juan'
-    }
-    });
-
-  // Asignar jefes a departamentos
-  await prisma.departamento.update({
-    where: { id: deptVentas.id },
-    data: { jefeId: luz.id }
-    });
-
-  await prisma.departamento.update({
-    where: { id: deptMarketing.id },
-    data: { jefeId: lucero.id }
-    });
-
-  await prisma.departamento.update({
-    where: { id: deptSistemas.id },
-    data: { jefeId: eduardo.id }
-    });
-
-  // ============================================
-  //MARK: 4. PROYECTOS Y SUB-PROYECTOS
-  // ============================================
-  console.log('📁 Creando proyectos...');
-
-  // PROYECTO 1: Negocio de Telefonía (Fontech y Fumanía)
+  // PROYECTO 1: Negocio de Telefonía
   const proyectoTelefonia = await prisma.proyecto.create({
     data: {
       nombre: 'Negocio de Telefonía - Fontech y Fumanía',
@@ -449,9 +31,9 @@ async function seedEmpresaCompleta() {
           { usuarioId: maitet.id, rol: RolProyecto.Responsable },
           { usuarioId: vendedor1.id, rol: RolProyecto.Miembro },
         ]
+      }
     }
-    }
-    });
+  });
 
   // Sub-Proyecto 1.1: Call Center
   const proyectoCallCenter = await prisma.proyecto.create({
@@ -467,9 +49,9 @@ async function seedEmpresaCompleta() {
         create: [
           { usuarioId: luz.id, rol: RolProyecto.Responsable },
         ]
+      }
     }
-    }
-    });
+  });
 
   // Etapas del Call Center
   const etapaCallCenter1 = await prisma.etapa.create({
@@ -481,7 +63,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-06-01'),
       fechaFin: new Date('2024-07-01')
     }
-    });
+  });
 
   const etapaCallCenter2 = await prisma.etapa.create({
     data: {
@@ -492,7 +74,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-07-01'),
       fechaFin: new Date('2024-08-01')
     }
-    });
+  });
 
   const etapaCallCenter3 = await prisma.etapa.create({
     data: {
@@ -503,7 +85,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-08-01'),
       fechaFin: new Date('2024-10-01')
     }
-    });
+  });
 
   const etapaCallCenter4 = await prisma.etapa.create({
     data: {
@@ -514,7 +96,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-10-01'),
       fechaFin: new Date('2024-12-31')
     }
-    });
+  });
 
   // Tareas del Call Center
   await prisma.tarea.createMany({
@@ -530,7 +112,7 @@ async function seedEmpresaCompleta() {
         prioridad: PrioridadTarea.Alta,
         fechaVencimiento: new Date('2024-06-15'),
         fechaCompletado: new Date('2024-06-14')
-    },
+      },
       {
         titulo: 'Definir scripts de atención al cliente',
         descripcion: 'Crear guiones para diferentes tipos de consultas',
@@ -542,7 +124,7 @@ async function seedEmpresaCompleta() {
         prioridad: PrioridadTarea.Alta,
         fechaVencimiento: new Date('2024-07-01'),
         fechaCompletado: new Date('2024-06-30')
-    },
+      },
       {
         titulo: 'Comprar licencias de software',
         descripcion: 'Adquirir 10 licencias de Zendesk',
@@ -552,9 +134,8 @@ async function seedEmpresaCompleta() {
         creadorId: gerente.id,
         estado: EstadoTarea.En_Progreso,
         prioridad: PrioridadTarea.Alta,
-        // fechaInicio: new Date('2024-07-01'),
         fechaVencimiento: new Date('2024-07-15')
-    },
+      },
       {
         titulo: 'Contratar 8 agentes de call center',
         descripcion: 'Proceso de reclutamiento y selección',
@@ -564,9 +145,8 @@ async function seedEmpresaCompleta() {
         creadorId: gerente.id,
         estado: EstadoTarea.Por_Hacer,
         prioridad: PrioridadTarea.Alta,
-        // fechaInicio: new Date('2024-08-01'),
         fechaVencimiento: new Date('2024-09-01')
-    },
+      },
       {
         titulo: 'Capacitar nuevos agentes',
         descripcion: 'Programa de capacitación de 2 semanas',
@@ -577,9 +157,9 @@ async function seedEmpresaCompleta() {
         estado: EstadoTarea.Por_Hacer,
         prioridad: PrioridadTarea.Media,
         fechaVencimiento: new Date('2024-09-15')
-    },
+      },
     ]
-    });
+  });
 
   // Sub-Proyecto 1.2: Chatbot Inteligente
   const proyectoChatbot = await prisma.proyecto.create({
@@ -596,9 +176,9 @@ async function seedEmpresaCompleta() {
           { usuarioId: eduardo.id, rol: RolProyecto.Responsable },
           { usuarioId: omar.id, rol: RolProyecto.Miembro },
         ]
+      }
     }
-    }
-    });
+  });
 
   // Etapas del Chatbot
   const etapaChatbot1 = await prisma.etapa.create({
@@ -610,7 +190,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-07-01'),
       fechaFin: new Date('2024-08-01')
     }
-    });
+  });
 
   const etapaChatbot2 = await prisma.etapa.create({
     data: {
@@ -621,7 +201,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-08-01'),
       fechaFin: new Date('2024-12-01')
     }
-    });
+  });
 
   const etapaChatbot3 = await prisma.etapa.create({
     data: {
@@ -632,7 +212,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-12-01'),
       fechaFin: new Date('2025-02-01')
     }
-    });
+  });
 
   const etapaChatbot4 = await prisma.etapa.create({
     data: {
@@ -643,7 +223,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2025-02-01'),
       fechaFin: new Date('2025-03-31')
     }
-    });
+  });
 
   // Tareas del Chatbot
   await prisma.tarea.createMany({
@@ -657,10 +237,9 @@ async function seedEmpresaCompleta() {
         creadorId: eduardo.id,
         estado: EstadoTarea.Hecho,
         prioridad: PrioridadTarea.Alta,
-        // fechaInicio: new Date('2024-07-01'),
         fechaVencimiento: new Date('2024-07-15'),
         fechaCompletado: new Date('2024-07-14')
-    },
+      },
       {
         titulo: 'Diseñar flujos de conversación',
         descripcion: 'Crear diagramas de flujo para diferentes escenarios',
@@ -672,7 +251,7 @@ async function seedEmpresaCompleta() {
         prioridad: PrioridadTarea.Alta,
         fechaVencimiento: new Date('2024-08-01'),
         fechaCompletado: new Date('2024-07-31')
-    },
+      },
       {
         titulo: 'Implementar backend del chatbot',
         descripcion: 'Desarrollar API con Node.js y OpenAI',
@@ -682,9 +261,8 @@ async function seedEmpresaCompleta() {
         creadorId: eduardo.id,
         estado: EstadoTarea.En_Progreso,
         prioridad: PrioridadTarea.Alta,
-        // fechaInicio: new Date('2024-08-01'),
         fechaVencimiento: new Date('2024-10-01')
-    },
+      },
       {
         titulo: 'Desarrollar interfaz de chat',
         descripcion: 'Crear widget de chat para el sitio web',
@@ -695,7 +273,7 @@ async function seedEmpresaCompleta() {
         estado: EstadoTarea.En_Progreso,
         prioridad: PrioridadTarea.Media,
         fechaVencimiento: new Date('2024-11-01')
-    },
+      },
       {
         titulo: 'Entrenar modelo con historial de consultas',
         descripcion: 'Usar datos del call center para mejorar respuestas',
@@ -706,7 +284,7 @@ async function seedEmpresaCompleta() {
         estado: EstadoTarea.Por_Hacer,
         prioridad: PrioridadTarea.Alta,
         fechaVencimiento: new Date('2025-01-15')
-    },
+      },
       {
         titulo: 'Integrar chatbot con Call Center',
         descripcion: 'Transferir conversaciones complejas a agentes humanos',
@@ -717,11 +295,11 @@ async function seedEmpresaCompleta() {
         estado: EstadoTarea.Por_Hacer,
         prioridad: PrioridadTarea.Alta,
         fechaVencimiento: new Date('2025-03-01')
-    },
+      },
     ]
-    });
+  });
 
-  // PROYECTO 2: Bumblebee (Eventos)
+  // PROYECTO 2: Bumblebee
   const proyectoBumblebee = await prisma.proyecto.create({
     data: {
       nombre: 'Bumblebee - Alquiler para Eventos',
@@ -731,7 +309,7 @@ async function seedEmpresaCompleta() {
       fechaInicio: new Date('2024-01-01'),
       responsableId: lucero.id
     }
-    });
+  });
 
   // Etapas de Bumblebee
   await prisma.etapa.createMany({
@@ -742,30 +320,30 @@ async function seedEmpresaCompleta() {
         proyectoId: proyectoBumblebee.id,
         orden: 1,
         fechaInicio: new Date('2024-01-01')
-    },
+      },
       {
         nombre: 'Logística',
         descripcion: 'Coordinación de envío y transporte',
         proyectoId: proyectoBumblebee.id,
         orden: 2,
         fechaInicio: new Date('2024-01-01')
-    },
+      },
       {
         nombre: 'Ejecución',
         descripcion: 'Realización del evento',
         proyectoId: proyectoBumblebee.id,
         orden: 3,
         fechaInicio: new Date('2024-01-01')
-    },
+      },
       {
         nombre: 'Mantenimiento',
         descripcion: 'Limpieza y reparaciones post-evento',
         proyectoId: proyectoBumblebee.id,
         orden: 4,
         fechaInicio: new Date('2024-01-01')
-    },
+      },
     ]
-    });
+  });
 
   // PROYECTO 3: Proyecto Sostenible Perú
   const proyectoSostenible = await prisma.proyecto.create({
@@ -781,9 +359,9 @@ async function seedEmpresaCompleta() {
           { usuarioId: ricardo.id, rol: RolProyecto.Miembro },
           { usuarioId: lucero.id, rol: RolProyecto.Miembro },
         ]
+      }
     }
-    }
-    });
+  });
 
   // Etapas del Proyecto Sostenible
   await prisma.etapa.createMany({
@@ -795,39 +373,39 @@ async function seedEmpresaCompleta() {
         orden: 1,
         fechaInicio: new Date('2024-03-01'),
         fechaFin: new Date('2024-04-01')
-    },
+      },
       {
         nombre: 'Fabricación',
         descripcion: 'Construcción en taller',
         proyectoId: proyectoSostenible.id,
         orden: 2,
         fechaInicio: new Date('2024-04-01')
-    },
+      },
       {
         nombre: 'Instalación',
         descripcion: 'Instalación en ubicaciones estratégicas',
         proyectoId: proyectoSostenible.id,
         orden: 3,
         fechaInicio: new Date('2024-05-01')
-    },
+      },
       {
         nombre: 'Mantenimiento',
         descripcion: 'Mantenimiento preventivo y correctivo',
         proyectoId: proyectoSostenible.id,
         orden: 4,
         fechaInicio: new Date('2024-06-01')
-    },
+      },
       {
         nombre: 'Venta de Publicidad',
         descripcion: 'Comercialización de espacios publicitarios',
         proyectoId: proyectoSostenible.id,
         orden: 5,
         fechaInicio: new Date('2024-06-01')
-    },
+      },
     ]
-    });
+  });
 
-  // PROYECTO 4: Agencia de Marketing (Futuro)
+  // PROYECTO 4: Agencia de Marketing
   const proyectoAgencia = await prisma.proyecto.create({
     data: {
       nombre: 'Agencia de Marketing y Productora',
@@ -843,9 +421,9 @@ async function seedEmpresaCompleta() {
           { usuarioId: diseñadora1.id, rol: RolProyecto.Miembro },
           { usuarioId: diseñadora2.id, rol: RolProyecto.Miembro },
         ]
+      }
     }
-    }
-    });
+  });
 
   // Etapas de la Agencia
   await prisma.etapa.createMany({
@@ -857,7 +435,7 @@ async function seedEmpresaCompleta() {
         orden: 1,
         fechaInicio: new Date('2025-01-01'),
         fechaFin: new Date('2025-02-01')
-    },
+      },
       {
         nombre: 'Adquisición de Equipos',
         descripcion: 'Comprar computadoras, cámaras, etc.',
@@ -865,7 +443,7 @@ async function seedEmpresaCompleta() {
         orden: 2,
         fechaInicio: new Date('2025-02-01'),
         fechaFin: new Date('2025-04-01')
-    },
+      },
       {
         nombre: 'Acondicionamiento de Espacio',
         descripcion: 'Preparar estudio y sala de reuniones',
@@ -873,18 +451,18 @@ async function seedEmpresaCompleta() {
         orden: 3,
         fechaInicio: new Date('2025-04-01'),
         fechaFin: new Date('2025-06-01')
-    },
+      },
       {
         nombre: 'Búsqueda de Clientes',
         descripcion: 'Marketing y ventas de servicios',
         proyectoId: proyectoAgencia.id,
         orden: 4,
         fechaInicio: new Date('2025-06-01')
-    },
+      },
     ]
-    });
+  });
 
-  // PROYECTO 5: XHION Core (Proyecto Interno)
+  // PROYECTO 5: XHION Core
   const proyectoXhion = await prisma.proyecto.create({
     data: {
       nombre: 'XHION Core - Plataforma de Gestión',
@@ -899,13 +477,10 @@ async function seedEmpresaCompleta() {
           { usuarioId: eduardo.id, rol: RolProyecto.Responsable },
           { usuarioId: omar.id, rol: RolProyecto.Miembro },
         ]
+      }
     }
-    }
-    });
+  });
 
-  // ============================================
-  //MARK: 5. PRESUPUESTOS
-  // ============================================
   console.log('💰 Creando presupuestos...');
 
   await prisma.presupuestoProyecto.createMany({
@@ -917,7 +492,7 @@ async function seedEmpresaCompleta() {
         montoDisponible: 35000,
         creadoPorId: gerente.id,
         descripcion: 'Presupuesto para implementación de call center'
-    },
+      },
       {
         proyectoId: proyectoChatbot.id,
         montoTotal: 30000,
@@ -925,7 +500,7 @@ async function seedEmpresaCompleta() {
         montoDisponible: 18000,
         creadoPorId: eduardo.id,
         descripcion: 'Presupuesto para desarrollo de chatbot'
-    },
+      },
       {
         proyectoId: proyectoSostenible.id,
         montoTotal: 100000,
@@ -933,7 +508,7 @@ async function seedEmpresaCompleta() {
         montoDisponible: 55000,
         creadoPorId: gerente.id,
         descripcion: 'Presupuesto para fabricación de estaciones solares'
-    },
+      },
       {
         proyectoId: proyectoAgencia.id,
         montoTotal: 150000,
@@ -941,7 +516,7 @@ async function seedEmpresaCompleta() {
         montoDisponible: 150000,
         creadoPorId: gerente.id,
         descripcion: 'Presupuesto para lanzamiento de agencia'
-    },
+      },
       {
         proyectoId: proyectoXhion.id,
         montoTotal: 40000,
@@ -949,13 +524,10 @@ async function seedEmpresaCompleta() {
         montoDisponible: 15000,
         creadoPorId: eduardo.id,
         descripcion: 'Presupuesto para desarrollo de XHION Core'
-    },
+      },
     ]
-    });
+  });
 
-  // ============================================
-  //MARK: 6. IDEAS
-  // ============================================
   console.log('💡 Creando ideas...');
 
   const idea1 = await prisma.idea.create({
@@ -966,7 +538,7 @@ async function seedEmpresaCompleta() {
       autorId: vendedor1.id,
       estado: EstadoIdea.Evaluating
     }
-    });
+  });
 
   const idea2 = await prisma.idea.create({
     data: {
@@ -976,7 +548,7 @@ async function seedEmpresaCompleta() {
       autorId: luz.id,
       estado: EstadoIdea.Evaluating
     }
-    });
+  });
 
   const idea3 = await prisma.idea.create({
     data: {
@@ -986,7 +558,7 @@ async function seedEmpresaCompleta() {
       autorId: ricardo.id,
       estado: EstadoIdea.Approved
     }
-    });
+  });
 
   // Comentarios en ideas
   await prisma.comentarioIdea.createMany({
@@ -995,28 +567,25 @@ async function seedEmpresaCompleta() {
         ideaId: idea1.id,
         usuarioId: gerente.id,
         contenido: 'Excelente idea! Esto podría aumentar la retención de clientes significativamente.'
-    },
+      },
       {
         ideaId: idea1.id,
         usuarioId: luz.id,
         contenido: 'Podríamos integrarlo con el sistema de ventas actual.'
-    },
+      },
       {
         ideaId: idea2.id,
         usuarioId: eduardo.id,
         contenido: 'Técnicamente viable. Podríamos desarrollarlo en 3 meses.'
-    },
+      },
       {
         ideaId: idea3.id,
         usuarioId: gerente.id,
         contenido: 'Aprobada! Coordinemos con Ricardo para iniciar el proyecto.'
-    },
+      },
     ]
-    });
+  });
 
-  // ============================================
-  //MARK: 7. EVENTOS DE CALENDARIO
-  // ============================================
   console.log('📅 Creando eventos...');
 
   await prisma.evento.createMany({
@@ -1029,7 +598,7 @@ async function seedEmpresaCompleta() {
         tipo: TipoEvento.Reunion,
         proyectoId: proyectoCallCenter.id,
         creadorId: luz.id
-    },
+      },
       {
         titulo: 'Demo del Chatbot',
         descripcion: 'Presentación del prototipo al gerente',
@@ -1038,7 +607,7 @@ async function seedEmpresaCompleta() {
         tipo: TipoEvento.Reunion,
         proyectoId: proyectoChatbot.id,
         creadorId: eduardo.id
-    },
+      },
       {
         titulo: 'Evento Bumblebee - Senati Pisco',
         descripcion: 'Presentación de Bumblebee en evento de Senati',
@@ -1047,7 +616,7 @@ async function seedEmpresaCompleta() {
         tipo: TipoEvento.Personal,
         proyectoId: proyectoBumblebee.id,
         creadorId: lucero.id
-    },
+      },
       {
         titulo: 'Instalación de Estación Solar - Plaza de Armas',
         descripcion: 'Instalación de nueva estación de carga',
@@ -1056,7 +625,7 @@ async function seedEmpresaCompleta() {
         tipo: TipoEvento.Tarea,
         proyectoId: proyectoSostenible.id,
         creadorId: ricardo.id
-    },
+      },
       {
         titulo: 'Sprint Planning - XHION Core',
         descripcion: 'Planificación del próximo sprint de desarrollo',
@@ -1065,38 +634,16 @@ async function seedEmpresaCompleta() {
         tipo: TipoEvento.Reunion,
         proyectoId: proyectoXhion.id,
         creadorId: eduardo.id
-    },
+      },
     ]
-    });
-
-  console.log('✅ Seed de empresa completa finalizado!');
-  console.log(`
-  📊 Resumen:
-  - Departamentos: 6
-  - Usuarios: 11
-  - Proyectos: 7 (5 principales + 2 sub-proyectos)
-  - Etapas: 20+
-  - Tareas: 15+
-  - Presupuestos: 5
-  - Ideas: 3
-  - Comentarios: 4
-  - Eventos: 5
-  
-  🔑 Credenciales de acceso:
-  - Email: gerente@gmail.com | Password: Password123!
-  - Email: eduardo.tanca@gmail.com | Password: Password123!
-  - Email: luz.garcia@gmail.com | Password: Password123!
-  - Email: maitet.rodriguez@gmail.com | Password: Password123!
-  - Email: lucero.sanchez@gmail.com | Password: Password123!
-  `);
-}
-
-// Ejecutar seed
-seedEmpresaCompleta()
-  .catch((e) => {
-    console.error('❌ Error en seed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });
+
+  return {
+    proyectos: 7,
+    etapas: 20,
+    tareas: 11,
+    presupuestos: 5,
+    ideas: 3,
+    eventos: 5
+  };
+}

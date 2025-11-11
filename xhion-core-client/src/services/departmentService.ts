@@ -4,6 +4,8 @@ export interface Departamento {
   id: string;
   nombre: string;
   descripcion?: string;
+  objetivos?: string;
+  icono?: string;
   color?: string;
   jefeId?: string;
   fechaCreacion: string;

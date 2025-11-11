@@ -17,10 +17,28 @@ import {
   Line,
   ComposedChart,
 } from "recharts"
-import { type MovimientoPresupuestoDepartamento, type MovimientoPresupuestoProyecto, TipoMovimientoPresupuesto } from "@/services/presupuestoService"
+
+// Tipos locales (antes en presupuestoService)
+const TipoMovimientoPresupuesto = {
+  Asignacion: 'Asignacion',
+  Gasto: 'Gasto',
+  Ajuste: 'Ajuste',
+  Transferencia: 'Transferencia',
+} as const
+
+type TipoMovimientoPresupuestoType = typeof TipoMovimientoPresupuesto[keyof typeof TipoMovimientoPresupuesto]
+
+interface MovimientoPresupuesto {
+  id: string
+  tipo: TipoMovimientoPresupuestoType
+  monto: number
+  descripcion: string
+  categoria?: string
+  fechaMovimiento: string
+}
 
 interface BudgetComparisonProps {
-  movimientos: (MovimientoPresupuestoDepartamento | MovimientoPresupuestoProyecto)[]
+  movimientos: MovimientoPresupuesto[]
   fechaInicio: string
   fechaFin: string
 }

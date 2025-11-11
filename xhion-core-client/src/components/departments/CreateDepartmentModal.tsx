@@ -17,10 +17,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { useDepartmentStore } from "@/store/departmentStore";
 import type { Departamento } from "@/services/departmentService";
+import { DEPARTMENT_ICONS } from "@/lib/department-icons";
 
 const departmentSchema = z.object({
   nombre: z.string().min(1, "El nombre es requerido").max(100, "Máximo 100 caracteres"),
   descripcion: z.string().optional(),
+  objetivos: z.string().optional(),
+  icono: z.string().optional(),
   color: z.string().optional(),
   jefeId: z.string().optional(),
 });
@@ -51,6 +54,7 @@ export function CreateDepartmentModal({
 }: CreateDepartmentModalProps) {
   const { createDepartamento, updateDepartamento, isLoading } = useDepartmentStore();
   const [selectedColor, setSelectedColor] = useState(departamento?.color || "bg-blue-500");
+  const [selectedIcon, setSelectedIcon] = useState(departamento?.icono || "Building2");
 
   const {
     register,
@@ -63,6 +67,8 @@ export function CreateDepartmentModal({
     defaultValues: {
       nombre: departamento?.nombre || "",
       descripcion: departamento?.descripcion || "",
+      objetivos: departamento?.objetivos || "",
+      icono: departamento?.icono || "Building2",
       color: departamento?.color || "bg-blue-500",
       jefeId: departamento?.jefeId || "",
     },
@@ -73,18 +79,24 @@ export function CreateDepartmentModal({
       reset({
         nombre: departamento.nombre,
         descripcion: departamento.descripcion || "",
+        objetivos: departamento.objetivos || "",
+        icono: departamento.icono || "Building2",
         color: departamento.color || "bg-blue-500",
         jefeId: departamento.jefeId || "",
       });
       setSelectedColor(departamento.color || "bg-blue-500");
+      setSelectedIcon(departamento.icono || "Building2");
     } else {
       reset({
         nombre: "",
         descripcion: "",
+        objetivos: "",
+        icono: "Building2",
         color: "bg-blue-500",
         jefeId: "",
       });
       setSelectedColor("bg-blue-500");
+      setSelectedIcon("Building2");
     }
   }, [departamento, reset]);
 
@@ -93,12 +105,17 @@ export function CreateDepartmentModal({
       // Limpiar campos vacíos para evitar errores de validación
       const payload: any = {
         nombre: data.nombre,
+        icono: selectedIcon,
         color: selectedColor,
       };
 
       // Solo agregar campos opcionales si tienen valor
       if (data.descripcion && data.descripcion.trim()) {
         payload.descripcion = data.descripcion.trim();
+      }
+
+      if (data.objetivos && data.objetivos.trim()) {
+        payload.objetivos = data.objetivos.trim();
       }
       
       if (data.jefeId && data.jefeId.trim()) {
@@ -155,13 +172,57 @@ export function CreateDepartmentModal({
             <Textarea
               id="descripcion"
               placeholder="Describe las funciones y responsabilidades del departamento..."
-              rows={3}
+              rows={2}
               {...register("descripcion")}
               disabled={isLoading}
             />
             {errors.descripcion && (
               <p className="text-sm text-destructive">{errors.descripcion.message}</p>
             )}
+          </div>
+
+          {/* Objetivos */}
+          <div className="space-y-2">
+            <Label htmlFor="objetivos">Objetivos</Label>
+            <Textarea
+              id="objetivos"
+              placeholder="Define los objetivos del departamento..."
+              rows={2}
+              {...register("objetivos")}
+              disabled={isLoading}
+            />
+            {errors.objetivos && (
+              <p className="text-sm text-destructive">{errors.objetivos.message}</p>
+            )}
+          </div>
+
+          {/* Icono */}
+          <div className="space-y-2">
+            <Label>Icono del Departamento</Label>
+            <div className="grid grid-cols-7 gap-2 max-h-[120px] overflow-y-auto p-2 border rounded-md">
+              {DEPARTMENT_ICONS.map((iconOption) => {
+                const IconComponent = iconOption.icon;
+                return (
+                  <button
+                    key={iconOption.name}
+                    type="button"
+                    onClick={() => {
+                      setSelectedIcon(iconOption.name);
+                      setValue("icono", iconOption.name);
+                    }}
+                    className={`h-12 w-12 rounded-md border-2 flex items-center justify-center transition-all hover:bg-muted ${
+                      selectedIcon === iconOption.name
+                        ? "border-primary bg-primary/10"
+                        : "border-border"
+                    }`}
+                    title={iconOption.label}
+                    disabled={isLoading}
+                  >
+                    <IconComponent className={`h-5 w-5 ${iconOption.color}`} />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Color */}
@@ -189,15 +250,24 @@ export function CreateDepartmentModal({
           </div>
 
           {/* Preview */}
-          <div className="rounded-lg border border-border bg-muted/50 p-4">
-            <p className="text-sm text-muted-foreground mb-2">Vista previa:</p>
+          <div className="rounded-lg border-2 border-border bg-muted/50 p-4">
+            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Vista previa:</p>
             <div className="flex items-center gap-3">
-              <div className={`h-12 w-12 rounded-lg ${selectedColor}`} />
-              <div>
-                <p className="font-semibold text-foreground">
+              <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center">
+                {(() => {
+                  const selectedIconData = DEPARTMENT_ICONS.find(i => i.name === selectedIcon);
+                  if (selectedIconData) {
+                    const IconComponent = selectedIconData.icon;
+                    return <IconComponent className={`h-6 w-6 ${selectedIconData.color}`} />;
+                  }
+                  return null;
+                })()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground truncate">
                   {register("nombre").name || "Nombre del Departamento"}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground truncate">
                   {register("descripcion").name || "Descripción del departamento"}
                 </p>
               </div>

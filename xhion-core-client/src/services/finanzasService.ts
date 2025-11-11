@@ -220,6 +220,30 @@ class FinanzasService {
     return response.data;
   }
 
+  async obtenerMovimientosPresupuestoDepartamento(departamentoId: string) {
+    const response = await apiClient.get(
+      `/finanzas/departamentos/${departamentoId}/presupuesto/movimientos`,
+      this.getAuthHeaders()
+    );
+    return response.data;
+  }
+
+  async eliminarMovimientoPresupuestoDepartamento(movimientoId: string) {
+    const response = await apiClient.delete(
+      `/finanzas/departamentos/presupuesto/movimientos/${movimientoId}`,
+      this.getAuthHeaders()
+    );
+    return response.data;
+  }
+
+  async eliminarPresupuestoDepartamento(departamentoId: string) {
+    const response = await apiClient.delete(
+      `/finanzas/departamentos/${departamentoId}/presupuesto`,
+      this.getAuthHeaders()
+    );
+    return response.data;
+  }
+
   // ============================================
   // PRESUPUESTOS DE PROYECTO
   // ============================================
@@ -254,6 +278,30 @@ class FinanzasService {
     const response = await apiClient.post(
       `/finanzas/proyectos/${proyectoId}/presupuesto/movimientos`,
       data,
+      this.getAuthHeaders()
+    );
+    return response.data;
+  }
+
+  async obtenerMovimientosPresupuestoProyecto(proyectoId: string) {
+    const response = await apiClient.get(
+      `/finanzas/proyectos/${proyectoId}/presupuesto/movimientos`,
+      this.getAuthHeaders()
+    );
+    return response.data;
+  }
+
+  async eliminarMovimientoPresupuestoProyecto(movimientoId: string) {
+    const response = await apiClient.delete(
+      `/finanzas/proyectos/presupuesto/movimientos/${movimientoId}`,
+      this.getAuthHeaders()
+    );
+    return response.data;
+  }
+
+  async eliminarPresupuestoProyecto(proyectoId: string) {
+    const response = await apiClient.delete(
+      `/finanzas/proyectos/${proyectoId}/presupuesto`,
       this.getAuthHeaders()
     );
     return response.data;

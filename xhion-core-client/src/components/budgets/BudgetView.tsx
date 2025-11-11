@@ -27,12 +27,58 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { usePresupuestoStore } from "@/store/presupuestoStore"
+import { useFinanzasStore } from "@/store/finanzasStore"
 import { CreateBudgetDepartmentModal } from "./CreateBudgetDepartmentModal"
 import { CreateMovementModal } from "./CreateMovementModal"
 import { BudgetAnalyticsView } from "./BudgetAnalyticsView"
 import { BudgetComparison } from "./BudgetComparison"
-import { EstadoPresupuesto, TipoMovimientoPresupuesto } from "@/services/presupuestoService"
+
+// Constantes y tipos locales (antes en presupuestoService)
+const EstadoPresupuesto = {
+  Activo: 'Activo',
+  Agotado: 'Agotado',
+  Cerrado: 'Cerrado',
+  Suspendido: 'Suspendido',
+} as const
+
+type EstadoPresupuestoType = typeof EstadoPresupuesto[keyof typeof EstadoPresupuesto]
+
+const TipoMovimientoPresupuesto = {
+  Asignacion: 'Asignacion',
+  Gasto: 'Gasto',
+  Ajuste: 'Ajuste',
+  Transferencia: 'Transferencia',
+} as const
+
+type TipoMovimientoPresupuestoType = typeof TipoMovimientoPresupuesto[keyof typeof TipoMovimientoPresupuesto]
+
+interface Movimiento {
+  id: string
+  tipo: TipoMovimientoPresupuestoType
+  monto: number
+  descripcion: string
+  categoria?: string
+  fechaMovimiento: string
+  registradoPor: {
+    id: string
+    nombreCompleto: string
+    email?: string
+  }
+}
+
+interface Presupuesto {
+  id: string
+  estado: EstadoPresupuestoType
+  montoTotal: number
+  montoUtilizado: number
+  montoGastado: number
+  montoDisponible: number
+  periodo: string
+  fechaInicio: string
+  fechaFin: string
+  descripcion?: string
+  movimientos?: Movimiento[]
+}
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { formatCurrency } from "@/lib/formatCurrency"
@@ -43,7 +89,7 @@ interface BudgetViewProps {
   entityName: string
 }
 
-const estadoColors = {
+const estadoColors: Record<EstadoPresupuestoType, string> = {
   [EstadoPresupuesto.Activo]: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   [EstadoPresupuesto.Agotado]: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   [EstadoPresupuesto.Cerrado]: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
@@ -51,14 +97,14 @@ const estadoColors = {
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
 }
 
-const tipoIcons = {
+const tipoIcons: Record<TipoMovimientoPresupuestoType, React.ComponentType<any>> = {
   [TipoMovimientoPresupuesto.Asignacion]: ArrowUpCircle,
   [TipoMovimientoPresupuesto.Gasto]: ArrowDownCircle,
   [TipoMovimientoPresupuesto.Ajuste]: RefreshCw,
   [TipoMovimientoPresupuesto.Transferencia]: ArrowRightLeft,
 }
 
-const tipoColors = {
+const tipoColors: Record<TipoMovimientoPresupuestoType, string> = {
   [TipoMovimientoPresupuesto.Asignacion]: "text-green-500",
   [TipoMovimientoPresupuesto.Gasto]: "text-red-500",
   [TipoMovimientoPresupuesto.Ajuste]: "text-blue-500",
@@ -72,22 +118,22 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
   const {
     presupuestosDepartamento,
     presupuestosProyecto,
-    fetchPresupuestoDepartamento,
-    fetchPresupuestoProyecto,
-    deletePresupuestoDepartamento,
-    deletePresupuestoProyecto,
-  } = usePresupuestoStore()
+    obtenerPresupuestoDepartamento,
+    obtenerPresupuestoProyecto,
+    eliminarPresupuestoDepartamento,
+    eliminarPresupuestoProyecto,
+  } = useFinanzasStore()
 
-  const presupuesto =
+  const presupuesto: Presupuesto | undefined =
     entityType === "departamento"
       ? presupuestosDepartamento.get(entityId)
       : presupuestosProyecto.get(entityId)
 
   useEffect(() => {
     if (entityType === "departamento") {
-      fetchPresupuestoDepartamento(entityId).catch(() => {})
+      obtenerPresupuestoDepartamento(entityId).catch(() => {})
     } else {
-      fetchPresupuestoProyecto(entityId).catch(() => {})
+      obtenerPresupuestoProyecto(entityId).catch(() => {})
     }
   }, [entityId, entityType])
 
@@ -95,9 +141,9 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
     if (!confirm("¿Estás seguro de eliminar este presupuesto?")) return
     try {
       if (entityType === "departamento") {
-        await deletePresupuestoDepartamento(entityId)
+        await eliminarPresupuestoDepartamento(entityId)
       } else {
-        await deletePresupuestoProyecto(entityId)
+        await eliminarPresupuestoProyecto(entityId)
       }
     } catch (error) {
       console.error("Error al eliminar presupuesto:", error)
@@ -266,7 +312,7 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
 
             <div className="space-y-3">
               {presupuesto.movimientos && presupuesto.movimientos.length > 0 ? (
-                presupuesto.movimientos.slice(0, 10).map((movimiento) => {
+                presupuesto.movimientos.slice(0, 10).map((movimiento: Movimiento) => {
                   const TipoIcon = tipoIcons[movimiento.tipo]
                   return (
                     <div

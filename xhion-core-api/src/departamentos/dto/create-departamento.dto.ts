@@ -20,6 +20,24 @@ export class CreateDepartamentoDto {
   descripcion?: string;
 
   @ApiPropertyOptional({
+    description: 'Objetivos del departamento',
+    example: 'Desarrollar aplicaciones de alta calidad, mantener la infraestructura tecnológica y liderar la innovación digital',
+  })
+  @IsOptional()
+  @IsString()
+  objetivos?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nombre del icono de lucide-react para el departamento',
+    example: 'Code',
+    maxLength: 50,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  icono?: string;
+
+  @ApiPropertyOptional({
     description: 'Color del departamento (clase Tailwind o hex)',
     example: 'bg-blue-500',
     maxLength: 50,

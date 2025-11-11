@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { DepartmentDetail } from '@/components/departments/department-detail-enhanced';
+import { DepartmentDetailWidgets } from '@/components/departments/department-detail-widgets';
 
 export default function DepartmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,7 +14,7 @@ export default function DepartmentDetailPage() {
   }
 
   return (
-    <DepartmentDetail 
+    <DepartmentDetailWidgets 
       departamentoId={id} 
       onBack={() => navigate('/departamentos')} 
     />

@@ -22,12 +22,21 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { usePresupuestoStore } from "@/store/presupuestoStore"
-import { TipoMovimientoPresupuesto } from "@/services/presupuestoService"
+import { useFinanzasStore } from "@/store/finanzasStore"
 import { formatCurrency } from "@/lib/formatCurrency"
 
+// Constantes y tipos locales
+const TipoMovimientoPresupuesto = {
+  Asignacion: 'Asignacion',
+  Gasto: 'Gasto',
+  Ajuste: 'Ajuste',
+  Transferencia: 'Transferencia',
+} as const
+
+type TipoMovimientoPresupuestoType = typeof TipoMovimientoPresupuesto[keyof typeof TipoMovimientoPresupuesto]
+
 const movimientoSchema = z.object({
-  tipo: z.nativeEnum(TipoMovimientoPresupuesto),
+  tipo: z.string(),
   monto: z.number().min(0.01, "El monto debe ser mayor a 0"),
   descripcion: z.string().min(1, "La descripción es requerida"),
   categoria: z.string().optional(),
@@ -44,14 +53,14 @@ interface CreateMovementModalProps {
   montoDisponible: number
 }
 
-const tipoIcons = {
+const tipoIcons: Record<TipoMovimientoPresupuestoType, React.ComponentType<any>> = {
   [TipoMovimientoPresupuesto.Asignacion]: ArrowUpCircle,
   [TipoMovimientoPresupuesto.Gasto]: ArrowDownCircle,
   [TipoMovimientoPresupuesto.Ajuste]: RefreshCw,
   [TipoMovimientoPresupuesto.Transferencia]: ArrowRightLeft,
 }
 
-const tipoColors = {
+const tipoColors: Record<TipoMovimientoPresupuestoType, string> = {
   [TipoMovimientoPresupuesto.Asignacion]: "text-green-500",
   [TipoMovimientoPresupuesto.Gasto]: "text-red-500",
   [TipoMovimientoPresupuesto.Ajuste]: "text-blue-500",
@@ -67,7 +76,7 @@ export function CreateMovementModal({
 }: CreateMovementModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fechaMovimiento, setFechaMovimiento] = useState<Date | undefined>(new Date())
-  const { createMovimientoDepartamento, createMovimientoProyecto } = usePresupuestoStore()
+  const { registrarMovimientoPresupuestoDepartamento, registrarMovimientoPresupuestoProyecto } = useFinanzasStore()
 
   const {
     register,
@@ -88,7 +97,7 @@ export function CreateMovementModal({
   })
 
   const selectedTipo = watch("tipo")
-  const TipoIcon = tipoIcons[selectedTipo]
+  const TipoIcon = tipoIcons[selectedTipo as TipoMovimientoPresupuestoType] || ArrowUpCircle
 
   useEffect(() => {
     if (open) {
@@ -112,15 +121,12 @@ export function CreateMovementModal({
         monto: data.monto,
         descripcion: data.descripcion,
         categoria: data.categoria,
-        fechaMovimiento: fechaMovimiento?.toISOString(),
-        [tipo === "departamento" ? "presupuestoDepartamentoId" : "presupuestoProyectoId"]:
-          presupuestoId,
       }
 
       if (tipo === "departamento") {
-        await createMovimientoDepartamento(movimientoData as any)
+        await registrarMovimientoPresupuestoDepartamento(presupuestoId, movimientoData as any)
       } else {
-        await createMovimientoProyecto(movimientoData as any)
+        await registrarMovimientoPresupuestoProyecto(presupuestoId, movimientoData as any)
       }
 
       onOpenChange(false)
@@ -137,7 +143,7 @@ export function CreateMovementModal({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            <TipoIcon className={`h-6 w-6 ${tipoColors[selectedTipo]}`} />
+            <TipoIcon className={`h-6 w-6 ${tipoColors[selectedTipo as TipoMovimientoPresupuestoType] || 'text-gray-500'}`} />
             Registrar Movimiento
           </DialogTitle>
           <DialogDescription>
@@ -158,7 +164,7 @@ export function CreateMovementModal({
             </Label>
             <Select
               value={selectedTipo}
-              onValueChange={(value) => setValue("tipo", value as TipoMovimientoPresupuesto)}
+              onValueChange={(value) => setValue("tipo", value)}
             >
               <SelectTrigger>
                 <SelectValue />
