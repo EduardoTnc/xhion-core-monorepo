@@ -63,6 +63,7 @@ export interface ProyectoTimeline {
   // Progreso
   progreso: number // 0-100
   salud: 'saludable' | 'atencion' | 'critico'
+  estado: 'Activo' | 'En Pausa' | 'Completado' | 'Archivado'
   
   // Hitos
   hitos: Hito[]

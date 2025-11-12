@@ -51,6 +51,8 @@
     "embla-carousel-react": "8.5.1",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.22",
+    "frappe-gantt": "^1.0.4",
+    "html2canvas": "^1.4.1",
     "input-otp": "1.4.1",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
@@ -76,6 +78,7 @@
   "devDependencies": {
     "@eslint/js": "^9.36.0",
     "@types/file-saver": "^2.0.7",
+    "@types/frappe-gantt": "^0.9.0",
     "@types/node": "^22",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

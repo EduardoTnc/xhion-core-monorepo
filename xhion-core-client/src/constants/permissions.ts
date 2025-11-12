@@ -507,6 +507,114 @@ export const MODULOS_PERMISOS: ModuloPermisos[] = [
       },
     ],
   },
+
+  // ========================================
+  // MÓDULO: RECURSOS E INVENTARIO
+  // ========================================
+  {
+    id: 'recursos',
+    nombre: 'Recursos e Inventario',
+    descripcion: 'Gestión de recursos materiales y equipamiento',
+    icon: 'Package',
+    permisos: [
+      {
+        nombreAccion: 'recursos:crear',
+        descripcion: 'Crear nuevos recursos en el inventario',
+        modulo: 'Recursos',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'recursos:ver',
+        descripcion: 'Ver recursos y reportes de inventario',
+        modulo: 'Recursos',
+        categoria: 'Lectura',
+      },
+      {
+        nombreAccion: 'recursos:editar',
+        descripcion: 'Actualizar información de recursos',
+        modulo: 'Recursos',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'recursos:eliminar',
+        descripcion: 'Eliminar recursos del inventario',
+        modulo: 'Recursos',
+        categoria: 'Eliminación',
+      },
+      {
+        nombreAccion: 'recursos:asignar',
+        descripcion: 'Asignar recursos a departamentos o proyectos',
+        modulo: 'Recursos',
+        categoria: 'Gestión',
+      },
+      {
+        nombreAccion: 'recursos:registrar_movimiento',
+        descripcion: 'Registrar entradas, salidas y movimientos de inventario',
+        modulo: 'Recursos',
+        categoria: 'Escritura',
+      },
+    ],
+  },
+
+  // ========================================
+  // MÓDULO: FINANZAS
+  // ========================================
+  {
+    id: 'finanzas',
+    nombre: 'Finanzas',
+    descripcion: 'Gestión financiera avanzada de proyectos',
+    icon: 'TrendingUp',
+    permisos: [
+      {
+        nombreAccion: 'finanzas:ver',
+        descripcion: 'Ver ingresos, gastos y reportes financieros',
+        modulo: 'Finanzas',
+        categoria: 'Lectura',
+      },
+      {
+        nombreAccion: 'finanzas:registrar_ingreso',
+        descripcion: 'Registrar ingresos en proyectos',
+        modulo: 'Finanzas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'finanzas:registrar_gasto',
+        descripcion: 'Registrar gastos en proyectos',
+        modulo: 'Finanzas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'finanzas:eliminar',
+        descripcion: 'Eliminar registros de ingresos y gastos',
+        modulo: 'Finanzas',
+        categoria: 'Eliminación',
+      },
+      {
+        nombreAccion: 'finanzas:analizar',
+        descripcion: 'Analizar rentabilidad y generar reportes avanzados',
+        modulo: 'Finanzas',
+        categoria: 'Análisis',
+      },
+      {
+        nombreAccion: 'finanzas:crear_presupuesto',
+        descripcion: 'Crear presupuestos para departamentos y proyectos',
+        modulo: 'Finanzas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'finanzas:editar_presupuesto',
+        descripcion: 'Editar presupuestos existentes',
+        modulo: 'Finanzas',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'finanzas:aprobar_presupuesto',
+        descripcion: 'Aprobar y cerrar presupuestos',
+        modulo: 'Finanzas',
+        categoria: 'Aprobación',
+      },
+    ],
+  },
 ];
 
 /**
@@ -542,6 +650,7 @@ export const CATEGORIAS_PERMISOS = [
   'Aprobación',
   'Exportación',
   'Configuración',
+  'Análisis',
 ] as const;
 
 /**
