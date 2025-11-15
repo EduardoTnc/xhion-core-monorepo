@@ -113,8 +113,8 @@ export function TaskTableView({ tareas, onTaskClick, onEditTask, onDeleteTask }:
   );
 
   return (
-    <div className="flex-1 overflow-hidden bg-background">
-      <div className="h-full overflow-auto">
+    <div className="w-full bg-background">
+      <div className="w-full">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10 border-b">
             <TableRow>

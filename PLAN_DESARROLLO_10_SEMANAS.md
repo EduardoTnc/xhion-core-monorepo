@@ -485,7 +485,7 @@
 
 ---
 
-## 🎯 SPRINT 4: GAMIFICACIÓN + AUDITORÍA + POLISH FINAL ⏳
+## 🎯 SPRINT 4: AUDITORÍA + POLISH FINAL ⏳
 
 **Estado:** 0% | **Fecha Estimada:** Diciembre 2025
 
@@ -493,12 +493,6 @@
 
 ### Backend Pendiente
 
-1. **GamificacionModule:**
-   - Sistema de puntos por acciones
-   - Logros (10+ insignias)
-   - Leaderboard (total, periodo, departamento)
-   - Historial de puntos
-   - Notificaciones de logros
 
 2. **AuditoriaModule (Mejorar):**
    - Registros inmutables con hash (RNF-SE01-SE02)

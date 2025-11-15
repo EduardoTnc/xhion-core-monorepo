@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ const estadoColors = {
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { proyectoActual, etapas, miembros, fetchProyectoById, fetchEtapas, fetchMiembros, deleteEtapa, removeMiembro, isLoading } = useProjectStore();
   const { tareas, fetchTareas, deleteTarea } = useTaskStore();
@@ -54,6 +55,16 @@ export default function ProjectDetailPage() {
       loadProjectData(id);
     }
   }, [id]);
+
+  // Abrir modal de tarea si se llega con state.openTaskId desde el Gantt
+  useEffect(() => {
+    const state = location.state as any
+    if (state?.openTaskId) {
+      setSelectedTaskId(state.openTaskId)
+      setShowTaskModal(true)
+    }
+    // No limpiar el state aquí para permitir back/forward mantener contexto
+  }, [location.state])
 
   const loadProjectData = async (projectId: string) => {
     try {

@@ -1,4 +1,3 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,9 +64,8 @@ export function TaskListView({ tareas, onTaskClick, onEditTask, onDeleteTask }: 
   }, {} as Record<string, Tarea[]>);
 
   return (
-    <div className="flex-1 overflow-hidden bg-background">
-      <ScrollArea className="h-full">
-        <div className="p-6 space-y-6">
+    <div className="w-full bg-background">
+      <div className="space-y-6">
           {Object.entries(groupedTareas).map(([etapaName, etapaTareas]) => (
             <div key={etapaName}>
               {/* Group Header */}
@@ -214,7 +212,6 @@ export function TaskListView({ tareas, onTaskClick, onEditTask, onDeleteTask }: 
             </div>
           )}
         </div>
-      </ScrollArea>
     </div>
   );
 }

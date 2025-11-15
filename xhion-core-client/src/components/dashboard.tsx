@@ -1,4 +1,4 @@
-import { DashboardMinimalista } from "@/components/dashboard/dashboard-minimalista"
+import { GanttChartProfessional } from "@/components/dashboard/gantt-chart-professional"
 
 /**
  * Dashboard Principal
@@ -7,5 +7,9 @@ import { DashboardMinimalista } from "@/components/dashboard/dashboard-minimalis
  * con visión de pájaro completa de todos los proyectos.
  */
 export function Dashboard() {
-  return <DashboardMinimalista />
+  return (
+    <div className="h-full flex flex-col p-4">
+      <GanttChartProfessional />
+    </div>
+  )
 }

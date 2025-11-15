@@ -15,6 +15,18 @@ export async function seedProyectosCompletos(
 
   console.log('📁 Creando proyectos y sub-proyectos...');
 
+  // Todas las fechas se normalizarán para que no sean más antiguas que 2 semanas atrás
+  const today = new Date();
+  const twoWeeksAgo = new Date(today);
+  twoWeeksAgo.setDate(today.getDate() - 14);
+
+  const clampDateToLastTwoWeeks = (date: Date): Date => {
+    const d = new Date(date);
+    if (d < twoWeeksAgo) return twoWeeksAgo;
+    if (d > today) return today;
+    return d;
+  };
+
   // PROYECTO 1: Negocio de Telefonía
   const proyectoTelefonia = await prisma.proyecto.create({
     data: {
@@ -637,6 +649,64 @@ export async function seedProyectosCompletos(
       },
     ]
   });
+
+  console.log('🕒 Normalizando fechas de proyectos, etapas, tareas y eventos a las últimas 2 semanas...');
+
+  const proyectos = await prisma.proyecto.findMany();
+  for (const p of proyectos) {
+    await prisma.proyecto.update({
+      where: { id: p.id },
+      data: {
+        ...(p.fechaInicio && { fechaInicio: clampDateToLastTwoWeeks(p.fechaInicio) }),
+        ...(p.fechaFin && { fechaFin: clampDateToLastTwoWeeks(p.fechaFin) }),
+      },
+    });
+  }
+
+  const etapas = await prisma.etapa.findMany();
+  for (const e of etapas) {
+    await prisma.etapa.update({
+      where: { id: e.id },
+      data: {
+        ...(e.fechaInicio && { fechaInicio: clampDateToLastTwoWeeks(e.fechaInicio) }),
+        ...(e.fechaFin && { fechaFin: clampDateToLastTwoWeeks(e.fechaFin) }),
+      },
+    });
+  }
+
+  const tareas = await prisma.tarea.findMany();
+  for (const t of tareas) {
+    const data: any = {};
+    if (t.fechaVencimiento) {
+      data.fechaVencimiento = clampDateToLastTwoWeeks(t.fechaVencimiento);
+    }
+    if (t.fechaCompletado) {
+      data.fechaCompletado = clampDateToLastTwoWeeks(t.fechaCompletado);
+    }
+    if (Object.keys(data).length > 0) {
+      await prisma.tarea.update({
+        where: { id: t.id },
+        data,
+      });
+    }
+  }
+
+  const eventos = await prisma.evento.findMany();
+  for (const ev of eventos) {
+    const data: any = {};
+    if (ev.fechaInicio) {
+      data.fechaInicio = clampDateToLastTwoWeeks(ev.fechaInicio);
+    }
+    if (ev.fechaFin) {
+      data.fechaFin = clampDateToLastTwoWeeks(ev.fechaFin);
+    }
+    if (Object.keys(data).length > 0) {
+      await prisma.evento.update({
+        where: { id: ev.id },
+        data,
+      });
+    }
+  }
 
   return {
     proyectos: 7,

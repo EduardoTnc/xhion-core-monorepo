@@ -2,7 +2,6 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -26,8 +25,6 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-  ChevronDown,
-  ChevronRight,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -37,19 +34,28 @@ import {
   FileText,
   Save,
   Milestone,
+  SquareStack,
+  Layers,
+  ListChecks,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import { useTimelineStore } from "@/store/timelineStore"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
 import { es } from "date-fns/locale"
-import Gantt from "frappe-gantt"
+import { Gantt as ReactGantt, ViewMode as GTViewMode, TitleColumn, DateStartColumn, DateEndColumn, DependenciesColumn } from "@wamra/gantt-task-react"
+import type { Task as GTTask, TaskOrEmpty as GTTaskOrEmpty } from "@wamra/gantt-task-react"
 import type { ProyectoTimeline, Hito } from "@/services/timelineService"
 import { timelineService } from "@/services/timelineService"
 import { toast } from "sonner"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
-import "@/styles/frappe-gantt.css"
+import "@wamra/gantt-task-react/dist/style.css"
+import "@/styles/gantt-task-react-overrides.css"
+
+type ContentFilter = "all" | "projects" | "tasks"
 
 /**
  * Diagrama de Gantt Profesional con Frappe Gantt - v2.0
@@ -78,19 +84,6 @@ import "@/styles/frappe-gantt.css"
  * - ✅ Dependencias reales del backend
  */
 
-interface GanttTask {
-  id: string
-  name: string
-  start: string
-  end: string
-  progress: number
-  dependencies?: string
-  custom_class?: string
-  proyecto?: ProyectoTimeline
-}
-
-type ViewMode = 'Quarter Day' | 'Half Day' | 'Day' | 'Week' | 'Month' | 'Year'
-
 export function GanttChartProfessional() {
   const navigate = useNavigate()
   const {
@@ -101,23 +94,49 @@ export function GanttChartProfessional() {
 
   // Estados
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('Week')
+  const [viewMode, setViewMode] = useState<GTViewMode>(GTViewMode.Week)
   const [selectedDepartamento, setSelectedDepartamento] = useState<string>('all')
   const [selectedEstado, setSelectedEstado] = useState<string>('all')
-  const [expandedDepartamentos, setExpandedDepartamentos] = useState<Set<string>>(new Set())
   const [showCompleted, setShowCompleted] = useState(true)
-  const [ganttInstance, setGanttInstance] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [showMilestones, setShowMilestones] = useState(true)
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('all')
+  const [localTasks, setLocalTasks] = useState<GTTask[]>([])
+  const [containerWidth, setContainerWidth] = useState(0)
+  const [isDarkTheme, setIsDarkTheme] = useState(false)
+  const [currentViewDate, setCurrentViewDate] = useState<Date | undefined>(undefined)
+  const [collapsedTaskIds, setCollapsedTaskIds] = useState<Set<string>>(() => new Set())
 
   // Refs
   const ganttContainerRef = useRef<HTMLDivElement>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
+  const proyectoByTaskIdRef = useRef<Map<string, ProyectoTimeline>>(new Map())
+  const parentTaskIdsRef = useRef<string[]>([])
 
   // Cargar datos iniciales
   useEffect(() => {
     fetchTimelineData()
   }, [fetchTimelineData])
+
+  // Detectar cambios de tema (Tailwind: clase 'dark' en <html>)
+  useEffect(() => {
+    const el = document.documentElement
+    const update = () => setIsDarkTheme(el.classList.contains('dark'))
+    update()
+    const mo = new MutationObserver(update)
+    mo.observe(el, { attributes: true, attributeFilter: ['class'] })
+    return () => mo.disconnect()
+  }, [])
+
+  // Observar ancho del contenedor para hacer el Gantt responsive
+  useEffect(() => {
+    if (!ganttContainerRef.current) return
+    const ro = new ResizeObserver((entries) => {
+      const e = entries[0]
+      if (e) setContainerWidth(e.contentRect.width)
+    })
+    ro.observe(ganttContainerRef.current)
+    return () => ro.disconnect()
+  }, [])
 
   // Agrupar proyectos por departamento
   const proyectosPorDepartamento = useMemo(() => {
@@ -165,205 +184,504 @@ export function GanttChartProfessional() {
     return proyectos
   }, [timelineData, selectedDepartamento, selectedEstado, showCompleted])
 
-  // Obtener clase CSS según salud del proyecto
-  const getCustomClass = (proyecto: ProyectoTimeline) => {
-    switch (proyecto.salud) {
-      case 'saludable':
-        return 'bar-success'
-      case 'atencion':
-        return 'bar-warning'
-      case 'critico':
-        return 'bar-danger'
-      default:
-        return 'bar-default'
-    }
-  }
+  // Paleta de colores dependiente del tema (más simple y enfocada en lectura)
+  const ganttColors = useMemo(() => (
+    isDarkTheme
+      ? {
+          // Fondo general alineado con la plataforma
+          evenTaskBackgroundColor: "#171717",
+          oddTaskBackgroundColor: "#171717",
+          selectedTaskBackgroundColor: "#262626",
+          // Línea de "hoy" sutil pero visible
+          todayColor: "rgba(56,189,248,0.24)",
+          // Flechas y grid
+          arrowColor: "#525252",
+          // Barras de tareas (etapas/tareas)
+          barBackgroundColor: "#262626",
+          barBackgroundSelectedColor: "#404040",
+          barProgressColor: "#22c55e",
+          barProgressSelectedColor: "#16a34a",
+          // Barras de proyectos/departamentos
+          projectBackgroundColor: "#27272a",
+          projectBackgroundSelectedColor: "#3f3f46",
+          projectProgressColor: "#38bdf8",
+          projectProgressSelectedColor: "#0ea5e9",
+          // Hitos
+          milestoneBackgroundColor: "#f97316",
+          milestoneBackgroundSelectedColor: "#ea580c",
+          // Etiquetas
+          barLabelColor: "#e5e5e5",
+          barLabelWhenOutsideColor: "#e5e5e5",
+          // Menú contextual
+          contextMenuBgColor: "#171717",
+          contextMenuTextColor: "#f5f5f5",
+          contextMenuBoxShadow: "0 10px 15px -3px rgba(0,0,0,0.7)",
+        }
+      : {
+          todayColor: "rgba(59,130,246,0.16)", // blue-500
+          arrowColor: "#94a3b8",
+          evenTaskBackgroundColor: "#f8fafc", // slate-50
+          oddTaskBackgroundColor: "#ffffff",
+          selectedTaskBackgroundColor: "#e5e7eb",
+          barBackgroundColor: "#e5e7eb",
+          barBackgroundSelectedColor: "#cbd5e1",
+          barProgressColor: "#16a34a",
+          barProgressSelectedColor: "#15803d",
+          projectBackgroundColor: "#cbd5e1",
+          projectBackgroundSelectedColor: "#94a3b8",
+          projectProgressColor: "#3b82f6",
+          projectProgressSelectedColor: "#2563eb",
+          milestoneBackgroundColor: "#f97316",
+          milestoneBackgroundSelectedColor: "#ea580c",
+          barLabelColor: "#0f172a",
+          barLabelWhenOutsideColor: "#0f172a",
+          contextMenuBgColor: "#ffffff",
+          contextMenuTextColor: "#0f172a",
+          contextMenuBoxShadow: "0 10px 15px -3px rgba(15,23,42,0.18)",
+        }
+  ), [isDarkTheme])
 
-  const getTareaCustomClass = (tarea: any) => {
-    if (tarea.progreso === 100) return 'bar-success'
-    if (tarea.prioridad === 'alta') return 'bar-danger'
-    if (tarea.prioridad === 'media') return 'bar-warning'
-    return 'bar-default'
-  }
+  // Distancias responsivas para equilibrar tabla vs. timeline
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
+  const computedDistances = useMemo(() => {
+    const w = containerWidth || 1024
+    const tableWidth = clamp(Math.round(w * 0.34), 280, 420)
+    const dateCellWidth = clamp(Math.round(w * 0.09), 80, 120)
+    const dependenciesCellWidth = clamp(Math.round(w * 0.06), 40, 80)
+    const actionColumnWidth = 56
+    const expandIconWidth = 18
+    const titleCellWidth = clamp(
+      tableWidth - dateCellWidth * 2 - dependenciesCellWidth - actionColumnWidth - expandIconWidth,
+      160,
+      320
+    )
+    const columnWidth =
+      viewMode === GTViewMode.Year
+        ? 160
+        : viewMode === GTViewMode.Month
+        ? 80
+        : viewMode === GTViewMode.Week
+        ? 60
+        : 40
+
+    return {
+      columnWidth,
+      barCornerRadius: 3,
+      handleWidth: 6,
+      barFill: 60,
+      arrowIndent: 8,
+      titleCellWidth,
+      dateCellWidth,
+      dependenciesCellWidth,
+      actionColumnWidth,
+      expandIconWidth,
+      headerHeight: 42,
+      rowHeight: 34,
+      relationCircleRadius: 3,
+      relationCircleOffset: 6,
+      nestedTaskNameOffset: 18,
+      minimumRowDisplayed: 6,
+      tableWidth,
+      contextMenuIconWidth: 16,
+      contextMenuOptionHeight: 28,
+      contextMenuSidePadding: 6,
+      taskWarningOffset: 8,
+      dependencyFixWidth: 14,
+      dependencyFixHeight: 14,
+      dependencyFixIndent: 6,
+    }
+  }, [containerWidth, viewMode])
+
+  // Columnas responsivas del listado izquierdo
+  const columns = useMemo(() => {
+    const isMobile = containerWidth > 0 && containerWidth < 640
+    const cols: any[] = []
+    cols.push({ id: 'title', Cell: TitleColumn, width: computedDistances.titleCellWidth, title: 'Nombre' })
+    if (!isMobile) {
+      cols.push({ id: 'from', Cell: DateStartColumn, width: computedDistances.dateCellWidth, title: 'Desde' })
+      cols.push({ id: 'to', Cell: DateEndColumn, width: computedDistances.dateCellWidth, title: 'Hasta' })
+      cols.push({ id: 'deps', Cell: DependenciesColumn, width: computedDistances.dependenciesCellWidth, title: 'Deps.' })
+    }
+    return cols
+  }, [containerWidth, computedDistances])
 
   // Guardar cambios de fechas (Backend Integration)
-  const handleDateChange = useCallback(async (task: GanttTask, start: Date, end: Date) => {
-    if (!task.proyecto) return
+  const handleDateChange = useCallback((task: GTTaskOrEmpty) => {
+    // Aceptamos TaskOrEmpty. Ignorar si es EmptyTask
+    if ((task as any).type !== 'project') return
+    const t = task as GTTask
+    if ((t as any).isDisabled) return
+
+    // Solo persistimos cambios para proyectos reales (id: proj-<id>)
+    const isProyecto = t.type === "project" && t.id.startsWith("proj-")
+    if (!isProyecto) return
+
+    const proyecto = proyectoByTaskIdRef.current.get(t.id)
+    if (!proyecto) return
+
+    const prevTasks = localTasks
+    // Optimistic UI
+    setLocalTasks((ts) => ts.map(x => x.id === t.id ? { ...x, start: t.start, end: t.end } : x))
 
     setIsSaving(true)
-    try {
-      toast.loading('Guardando cambios...')
-      
-      await timelineService.actualizarFechas(task.proyecto.id, {
-        fechaInicio: format(start, 'yyyy-MM-dd'),
-        fechaFin: format(end, 'yyyy-MM-dd'),
-      })
-
-      // Actualizar datos locales - esto recargará el Gantt automáticamente
-      await fetchTimelineData()
-      
-      toast.success('Fechas actualizadas exitosamente')
-    } catch (error: any) {
-      console.error('Error al actualizar fechas:', error)
-      toast.error(error.response?.data?.message || 'Error al actualizar fechas')
-      
-      // En caso de error, recargar datos para revertir cambios visuales
-      await fetchTimelineData()
-    } finally {
-      setIsSaving(false)
-    }
-  }, [fetchTimelineData])
+    void (async () => {
+      try {
+        toast.loading('Guardando cambios...')
+        await timelineService.actualizarFechas(proyecto.id, {
+          fechaInicio: format(t.start, 'yyyy-MM-dd'),
+          fechaFin: format(t.end, 'yyyy-MM-dd'),
+        })
+        await fetchTimelineData()
+        toast.success('Fechas actualizadas exitosamente')
+      } catch (error: any) {
+        console.error('Error al actualizar fechas:', error)
+        toast.error(error?.response?.data?.message || 'Error al actualizar fechas')
+        // Revertir UI
+        setLocalTasks(prevTasks)
+      } finally {
+        setIsSaving(false)
+      }
+    })()
+  }, [fetchTimelineData, localTasks])
 
   // Guardar cambios de progreso (Backend Integration)
-  const handleProgressChange = useCallback(async (task: GanttTask, progress: number) => {
-    if (!task.proyecto) return
-
+  const handleProgressChange = useCallback((task: GTTask) => {
+    if ((task as any).isDisabled) return
     try {
-      // Aquí puedes implementar la actualización de progreso en el backend
-      console.log('Progreso cambiado:', task.proyecto.nombre, progress)
-      toast.success(`Progreso actualizado: ${progress}%`)
+      // Actualización local inmediata
+      setLocalTasks((ts) => ts.map(t => t.id === task.id ? { ...t, progress: task.progress } : t))
+      toast.success(`Progreso actualizado: ${task.progress}%`)
     } catch (error) {
       console.error('Error al actualizar progreso:', error)
       toast.error('Error al actualizar progreso')
     }
   }, [])
 
-  // Convertir proyectos a formato Gantt
-  const ganttTasks = useMemo(() => {
-    const tasks: GanttTask[] = []
+  // Parsear fechas como locales para evitar desfases por zona horaria
+  const parseLocalDate = useCallback((value: string | Date) => {
+    if (value instanceof Date) return value
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+    if (m) {
+      const y = Number(m[1])
+      const mo = Number(m[2]) - 1
+      const d = Number(m[3])
+      return new Date(y, mo, d)
+    }
+    return new Date(value)
+  }, [])
+
+  // Convertir proyectos a formato GTTask (gantt-task-react)
+  const derivedTasks = useMemo(() => {
+    const tasks: GTTask[] = []
+    const map = new Map<string, ProyectoTimeline>()
+    let order = 0
+    parentTaskIdsRef.current = []
+
+    const addDeptGroup = (grupo: { departamento: { id: string; nombre: string }; proyectos: ProyectoTimeline[] }) => {
+      if (!grupo.proyectos.length) return
+
+      const deptId = `dept-${grupo.departamento.id}`
+      parentTaskIdsRef.current.push(deptId)
+      const minStart = new Date(Math.min(...grupo.proyectos.map(p => parseLocalDate(p.fechaInicio).getTime())))
+      const maxEnd = new Date(Math.max(...grupo.proyectos.map(p => parseLocalDate(p.fechaFin).getTime())))
+
+      // Fila de agrupación por departamento sin barra visible en el timeline.
+      // Solo sirve como contenedor y título para sus proyectos.
+      tasks.push({
+        id: deptId,
+        type: "project",
+        name: `DEP · ${grupo.departamento.nombre.toUpperCase()}`,
+        start: minStart,
+        end: maxEnd,
+        progress: 0,
+        isDisabled: true,
+        displayOrder: order++,
+        styles: {
+          projectBackgroundColor: "transparent",
+          projectBackgroundSelectedColor: "transparent",
+          projectProgressColor: "transparent",
+          projectProgressSelectedColor: "transparent",
+        },
+      })
+    }
+
+    if (selectedDepartamento === 'all') {
+      proyectosPorDepartamento.forEach(addDeptGroup)
+    }
 
     proyectosFiltrados.forEach((proyecto) => {
-      // Agregar proyecto como tarea principal
-      tasks.push({
-        id: `proyecto-${proyecto.id}`,
-        name: proyecto.nombre,
-        start: proyecto.fechaInicio,
-        end: proyecto.fechaFin,
-        progress: proyecto.progreso,
-        custom_class: getCustomClass(proyecto),
-        proyecto: proyecto,
-      })
+      const tareaList = Array.isArray((proyecto as any).tareas) ? (proyecto as any).tareas : []
+      if (contentFilter === 'tasks' && tareaList.length === 0) {
+        return
+      }
+      const projId = `proj-${proyecto.id}`
+      const parentDept = selectedDepartamento === 'all' ? `dept-${proyecto.departamento.id}` : undefined
+      if (contentFilter !== 'tasks') {
+        const projTask: GTTask = {
+          id: projId,
+          type: "project",
+          name: `● ${proyecto.nombre}`,
+          start: parseLocalDate(proyecto.fechaInicio),
+          end: parseLocalDate(proyecto.fechaFin),
+          progress: proyecto.progreso,
+          parent: parentDept,
+          displayOrder: order++,
+          styles: {
+            projectBackgroundColor: ganttColors.projectBackgroundColor,
+            projectBackgroundSelectedColor: ganttColors.projectBackgroundSelectedColor,
+            projectProgressColor: ganttColors.projectProgressColor,
+            projectProgressSelectedColor: ganttColors.projectProgressSelectedColor,
+          },
+        }
+        tasks.push(projTask)
+        map.set(projId, proyecto)
+        parentTaskIdsRef.current.push(projId)
 
-      // Agregar tareas del proyecto si existen
-      const tareas = (proyecto as any).tareas
-      if (tareas && Array.isArray(tareas) && tareas.length > 0) {
-        tareas.forEach((tarea: any, index: number) => {
+        // Dependencias de proyecto
+        if (proyecto.dependencias && proyecto.dependencias.length) {
+          projTask.dependencies = proyecto.dependencias.map((d) => ({
+            sourceId: `proj-${d.proyectoId}`,
+            sourceTarget: 'endOfTask',
+            ownTarget: 'startOfTask',
+          }))
+        }
+      }
+
+      // Subtareas (si existen como array)
+      if (contentFilter !== 'projects' && tareaList.length > 0) {
+        tareaList.forEach((tarea: any, index: number) => {
+          const taskId = String(tarea.id ?? `task-${proyecto.id}-${index}`)
           tasks.push({
-            id: `tarea-${proyecto.id}-${index}`,
-            name: `  └─ ${tarea.titulo}`,
-            start: tarea.fechaInicio || proyecto.fechaInicio,
-            end: tarea.fechaFin || proyecto.fechaFin,
-            progress: tarea.progreso || 0,
-            dependencies: `proyecto-${proyecto.id}`,
-            custom_class: getTareaCustomClass(tarea),
+            id: taskId,
+            type: "task",
+            name: `• ${tarea.titulo || `Tarea ${index + 1}`}`,
+            start: parseLocalDate(tarea.fechaInicio || proyecto.fechaInicio),
+            end: parseLocalDate(tarea.fechaFin || proyecto.fechaFin),
+            progress: tarea.progreso ?? 0,
+            isDisabled: true,
+            parent: contentFilter === 'tasks' ? parentDept : projId,
+            displayOrder: order++,
+            styles: {
+              barBackgroundColor: ganttColors.barBackgroundColor,
+              barBackgroundSelectedColor: ganttColors.barBackgroundSelectedColor,
+              barProgressColor: ganttColors.barProgressColor,
+              barProgressSelectedColor: ganttColors.barProgressSelectedColor,
+            },
           })
+          map.set(taskId, proyecto)
+        })
+      }
+
+      // Hitos
+      if (showMilestones && proyecto.hitos && proyecto.hitos.length) {
+        proyecto.hitos.forEach((hito: Hito, idx: number) => {
+          const fecha = parseLocalDate(hito.fecha)
+          const milestoneId = `milestone-${proyecto.id}-${idx}`
+          tasks.push({
+            id: milestoneId,
+            type: "milestone",
+            name: `★ ${hito.nombre}`,
+            start: fecha,
+            end: fecha,
+            progress: 100,
+            isDisabled: true,
+            parent: projId,
+            displayOrder: order++,
+            styles: {
+              milestoneBackgroundColor: ganttColors.milestoneBackgroundColor,
+              milestoneBackgroundSelectedColor: ganttColors.milestoneBackgroundSelectedColor,
+            },
+          })
+          map.set(milestoneId, proyecto)
         })
       }
     })
 
+    // Orden estable
+    tasks.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+    proyectoByTaskIdRef.current = map
     return tasks
-  }, [proyectosFiltrados])
+  }, [proyectosFiltrados, proyectosPorDepartamento, selectedDepartamento, showMilestones, contentFilter, ganttColors])
 
-
-  // Inicializar Gantt
+  // Mantener tasks locales sincronizados con los derivados del store
   useEffect(() => {
-    if (!ganttContainerRef.current || ganttTasks.length === 0) return
-
-    // Limpiar instancia anterior
-    if (ganttInstance) {
-      ganttInstance.clear()
-    }
-
-    // Crear nueva instancia
-    try {
-      const gantt = new Gantt(ganttContainerRef.current, ganttTasks, {
-        view_mode: viewMode,
-        language: 'es',
-        bar_height: 30,
-        bar_corner_radius: 3,
-        arrow_curve: 5,
-        padding: 18,
-        date_format: 'DD/MM/YYYY',
-        popup_trigger: 'click',
-        custom_popup_html: (task: GanttTask) => {
-          const proyecto = task.proyecto
-          if (!proyecto) {
-            return `
-              <div class="gantt-popup">
-                <div class="gantt-popup-title">${task.name}</div>
-                <div class="gantt-popup-content">
-                  <p><strong>Progreso:</strong> ${task.progress}%</p>
-                  <p><strong>Inicio:</strong> ${format(new Date(task.start), 'dd/MM/yyyy', { locale: es })}</p>
-                  <p><strong>Fin:</strong> ${format(new Date(task.end), 'dd/MM/yyyy', { locale: es })}</p>
-                </div>
-              </div>
-            `
-          }
-
-          const duracion = differenceInDays(new Date(proyecto.fechaFin), new Date(proyecto.fechaInicio))
-          const saludBadge = proyecto.salud === 'saludable' ? '🟢' : proyecto.salud === 'atencion' ? '🟡' : '🔴'
-          
-          // Hitos del proyecto
-          const hitosHTML = proyecto.hitos && proyecto.hitos.length > 0 ? `
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
-              <p style="font-weight: 600; margin-bottom: 4px;">🎯 Hitos (${proyecto.hitos.length}):</p>
-              ${proyecto.hitos.slice(0, 3).map(hito => `
-                <p style="font-size: 11px; margin: 2px 0;">
-                  ${hito.completado ? '✅' : '⏳'} ${hito.nombre}
-                  <span style="color: #64748b;"> - ${format(new Date(hito.fecha), 'dd/MM/yyyy', { locale: es })}</span>
-                </p>
-              `).join('')}
-              ${proyecto.hitos.length > 3 ? `<p style="font-size: 10px; color: #64748b;">+${proyecto.hitos.length - 3} más...</p>` : ''}
-            </div>
-          ` : ''
-
-          return `
-            <div class="gantt-popup">
-              <div class="gantt-popup-title">${proyecto.nombre}</div>
-              <div class="gantt-popup-subtitle">${proyecto.departamento.nombre}</div>
-              <div class="gantt-popup-content">
-                <p><strong>Salud:</strong> ${saludBadge} ${proyecto.salud}</p>
-                <p><strong>Progreso:</strong> ${proyecto.progreso}%</p>
-                <p><strong>Duración:</strong> ${duracion} días</p>
-                <p><strong>Tareas:</strong> ${(proyecto as any).tareas?.total || 0} (${(proyecto as any).tareas?.completadas || 0} completadas)</p>
-                <p><strong>Equipo:</strong> ${(proyecto as any).equipo?.length || 0} miembros</p>
-                ${proyecto.alertas && proyecto.alertas.length > 0 ? `<p class="text-orange-600"><strong>⚠️ Alertas:</strong> ${proyecto.alertas.length}</p>` : ''}
-                ${hitosHTML}
-              </div>
-              <div class="gantt-popup-footer">
-                <small>Click para ver detalles</small>
-              </div>
-            </div>
-          `
-        },
-        on_click: (task: GanttTask) => {
-          if (task.proyecto) {
-            navigate(`/proyectos/${task.proyecto.id}`)
-          }
-        },
-        on_date_change: handleDateChange,
-        on_progress_change: handleProgressChange,
+    setCollapsedTaskIds(prev => {
+      const validIds = new Set(parentTaskIdsRef.current)
+      let changed = false
+      prev.forEach((id) => {
+        if (!validIds.has(id)) {
+          changed = true
+        }
       })
+      if (!changed) return prev
+      const next = new Set<string>()
+      prev.forEach((id) => {
+        if (validIds.has(id)) next.add(id)
+      })
+      return next
+    })
+  }, [derivedTasks])
 
-      setGanttInstance(gantt)
-    } catch (error) {
-      console.error('Error al inicializar Gantt:', error)
+  useEffect(() => {
+    if (!derivedTasks.length) {
+      setLocalTasks([])
+      return
     }
+    const parentIds = new Set(parentTaskIdsRef.current)
+    setLocalTasks(
+      derivedTasks.map((task) => {
+        if (!parentIds.has(task.id)) return task
+        const shouldCollapse = collapsedTaskIds.has(task.id)
+        if ((task as any).hideChildren === shouldCollapse) return task
+        return { ...task, hideChildren: shouldCollapse }
+      })
+    )
+  }, [derivedTasks, collapsedTaskIds])
 
-    return () => {
-      if (ganttInstance) {
-        ganttInstance.clear()
-      }
+  // Calcular una fecha de vista consistente dentro del rango de datos
+  useEffect(() => {
+    if (!derivedTasks.length) return
+
+    const tasksWithDates = derivedTasks.filter((t) => t.start && t.end)
+    if (!tasksWithDates.length) return
+
+    const starts = tasksWithDates.map(t => t.start.getTime())
+    const ends = tasksWithDates.map(t => t.end.getTime())
+    const minStart = new Date(Math.min(...starts))
+    const maxEnd = new Date(Math.max(...ends))
+
+    const midTime = minStart.getTime() + (maxEnd.getTime() - minStart.getTime()) / 2
+    const midpoint = new Date(midTime)
+
+    const today = new Date()
+    const insideRange = today >= minStart && today <= maxEnd
+    const defaultDate = insideRange ? today : midpoint
+
+    setCurrentViewDate(prev => prev ?? defaultDate)
+  }, [derivedTasks])
+
+  // Tooltip personalizado para gantt-task-react
+  const TooltipTemplate = ({ task }: { task: GTTask; fontSize: string; fontFamily: string }) => {
+    const proyecto = proyectoByTaskIdRef.current.get(task.id)
+    if (!proyecto) {
+      return (
+        <div className="p-2 text-xs">
+          <div className="font-semibold">{task.name}</div>
+          <div className="text-muted-foreground">
+            <div>Progreso: {task.progress}%</div>
+            <div>Inicio: {format(task.start, 'dd/MM/yyyy', { locale: es })}</div>
+            <div>Fin: {format(task.end, 'dd/MM/yyyy', { locale: es })}</div>
+          </div>
+        </div>
+      )
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ganttTasks, viewMode])
+    const startD = parseLocalDate(proyecto.fechaInicio)
+    const endD = parseLocalDate(proyecto.fechaFin)
+    const duracion = differenceInDays(endD, startD)
+    const saludBadge = proyecto.salud === 'saludable' ? '🟢' : proyecto.salud === 'atencion' ? '🟡' : '🔴'
+    return (
+      <div className="p-2 text-xs">
+        <div className="font-semibold">{proyecto.nombre}</div>
+        <div className="text-muted-foreground mb-1">{proyecto.departamento.nombre}</div>
+        <div className="space-y-0.5">
+          <div><strong>Salud:</strong> {saludBadge} {proyecto.salud}</div>
+          <div><strong>Progreso:</strong> {proyecto.progreso}%</div>
+          <div><strong>Duración:</strong> {duracion} días</div>
+          <div><strong>Tareas:</strong> {(proyecto as any).tareas?.total || 0} ({(proyecto as any).tareas?.completadas || 0} completadas)</div>
+          <div><strong>Equipo:</strong> {(proyecto as any).equipo?.length || 0} miembros</div>
+        </div>
+        {proyecto.hitos && proyecto.hitos.length > 0 && (
+          <div className="mt-2 pt-1 border-t">
+            <div className="font-medium mb-1">🎯 Hitos ({proyecto.hitos.length}):</div>
+            {proyecto.hitos.slice(0, 3).map((h, i) => (
+              <div key={i} className="text-[11px]">{h.completado ? '✅' : '⏳'} {h.nombre} <span className="text-muted-foreground">- {format(new Date(h.fecha), 'dd/MM/yyyy', { locale: es })}</span></div>
+            ))}
+            {proyecto.hitos.length > 3 && (
+              <div className="text-[10px] text-muted-foreground">+{proyecto.hitos.length - 3} más...</div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // Cambiar vista
-  const handleViewModeChange = (mode: ViewMode) => {
+  const handleViewModeChange = (mode: GTViewMode) => {
+    // Sólo cambiamos la resolución (día/semana/mes), manteniendo la fecha anclada
     setViewMode(mode)
-    if (ganttInstance) {
-      ganttInstance.change_view_mode(mode)
+
+    // Para la vista mensual, recentrar automáticamente en la fecha actual (o rango de tareas)
+    if (mode === GTViewMode.Month) {
+      handleTodayClick()
     }
+  }
+
+  const handleTodayClick = () => {
+    if (!derivedTasks.length) {
+      setCurrentViewDate(new Date())
+      return
+    }
+
+    const tasksWithDates = derivedTasks.filter((t) => t.start && t.end)
+    if (!tasksWithDates.length) {
+      setCurrentViewDate(new Date())
+      return
+    }
+
+    const starts = tasksWithDates.map(t => t.start.getTime())
+    const ends = tasksWithDates.map(t => t.end.getTime())
+    const minStart = new Date(Math.min(...starts))
+    const maxEnd = new Date(Math.max(...ends))
+
+    const today = new Date()
+    const clamped = today < minStart ? minStart : today > maxEnd ? maxEnd : today
+    setCurrentViewDate(clamped)
+  }
+
+  const handleExpandAll = useCallback(() => {
+    setCollapsedTaskIds(new Set())
+  }, [])
+
+  const handleCollapseAll = useCallback(() => {
+    setCollapsedTaskIds(new Set(parentTaskIdsRef.current))
+  }, [])
+
+  const handleChangeExpandState = useCallback((changedTask: GTTask) => {
+    if (!parentTaskIdsRef.current.includes(changedTask.id)) return
+    setCollapsedTaskIds((prev) => {
+      const next = new Set(prev)
+      if (changedTask.hideChildren) {
+        next.add(changedTask.id)
+      } else {
+        next.delete(changedTask.id)
+      }
+      return next
+    })
+  }, [])
+
+  // Función para convertir colores oklch a rgb para compatibilidad con html2canvas
+  const convertOklchToRgb = (element: HTMLElement) => {
+    const style = getComputedStyle(element)
+    const colorProperties = ['color', 'backgroundColor', 'fill', 'stroke']
+
+    colorProperties.forEach(prop => {
+      const value = style.getPropertyValue(prop)
+      if (value.includes('oklch')) {
+        // Forzar al navegador a computar el color a rgb
+        const tempDiv = document.createElement('div')
+        tempDiv.style.color = value
+        document.body.appendChild(tempDiv)
+        const rgbColor = getComputedStyle(tempDiv).color
+        document.body.removeChild(tempDiv)
+        ;(element.style as any)[prop] = rgbColor
+      }
+    })
+
+    element.childNodes.forEach(child => {
+      if (child.nodeType === 1) {
+        convertOklchToRgb(child as HTMLElement)
+      }
+    })
   }
 
   // Exportar a PNG
@@ -372,11 +690,16 @@ export function GanttChartProfessional() {
 
     try {
       toast.loading('Generando imagen...')
+
+      const ganttElement = ganttContainerRef.current.cloneNode(true) as HTMLElement
+      convertOklchToRgb(ganttElement)
       
-      const canvas = await html2canvas(ganttContainerRef.current, {
-        backgroundColor: '#ffffff',
+      const bg = getComputedStyle(document.body).backgroundColor
+      const canvas = await html2canvas(ganttElement, {
+        backgroundColor: bg,
         scale: 2,
         logging: false,
+        useCORS: true,
       })
 
       canvas.toBlob((blob) => {
@@ -402,11 +725,16 @@ export function GanttChartProfessional() {
 
     try {
       toast.loading('Generando PDF...')
+
+      const ganttElement = ganttContainerRef.current.cloneNode(true) as HTMLElement
+      convertOklchToRgb(ganttElement)
       
-      const canvas = await html2canvas(ganttContainerRef.current, {
-        backgroundColor: '#ffffff',
+      const bg = getComputedStyle(document.body).backgroundColor
+      const canvas = await html2canvas(ganttElement, {
+        backgroundColor: bg,
         scale: 2,
         logging: false,
+        useCORS: true,
       })
 
       const imgData = canvas.toDataURL('image/png')
@@ -424,18 +752,6 @@ export function GanttChartProfessional() {
       console.error('Error al exportar PDF:', error)
       toast.error('Error al exportar PDF')
     }
-  }
-
-
-  // Toggle departamento
-  const toggleDepartamento = (deptId: string) => {
-    const newExpanded = new Set(expandedDepartamentos)
-    if (newExpanded.has(deptId)) {
-      newExpanded.delete(deptId)
-    } else {
-      newExpanded.add(deptId)
-    }
-    setExpandedDepartamentos(newExpanded)
   }
 
   // Calcular estadísticas
@@ -492,146 +808,7 @@ export function GanttChartProfessional() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          /* Estilos personalizados para Frappe Gantt */
-          .gantt-container {
-            overflow: auto;
-            font-family: inherit;
-          }
-
-          .gantt .bar-success {
-            fill: #10b981;
-          }
-
-          .gantt .bar-warning {
-            fill: #f59e0b;
-          }
-
-          .gantt .bar-danger {
-            fill: #ef4444;
-          }
-
-          .gantt .bar-default {
-            fill: #6366f1;
-          }
-
-          .gantt .bar-progress {
-            fill: rgba(0, 0, 0, 0.2);
-          }
-
-          .gantt .bar-label {
-            fill: white;
-            font-size: 12px;
-            font-weight: 500;
-          }
-
-          .gantt .grid-row {
-            fill: transparent;
-          }
-
-          .gantt .grid-row:nth-child(even) {
-            fill: rgba(0, 0, 0, 0.02);
-          }
-
-          .gantt .today-highlight {
-            fill: rgba(239, 68, 68, 0.1);
-          }
-
-          .gantt .arrow {
-            stroke: #94a3b8;
-            stroke-width: 1.5;
-          }
-
-          /* Popup personalizado */
-          .gantt-popup {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            padding: 16px;
-            min-width: 280px;
-            max-width: 350px;
-          }
-
-          .dark .gantt-popup {
-            background: #1e293b;
-            color: #f1f5f9;
-          }
-
-          .gantt-popup-title {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: #0f172a;
-          }
-
-          .dark .gantt-popup-title {
-            color: #f1f5f9;
-          }
-
-          .gantt-popup-subtitle {
-            font-size: 12px;
-            color: #64748b;
-            margin-bottom: 12px;
-          }
-
-          .gantt-popup-content {
-            font-size: 12px;
-            line-height: 1.6;
-          }
-
-          .gantt-popup-content p {
-            margin: 4px 0;
-          }
-
-          .gantt-popup-footer {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
-          }
-
-          .dark .gantt-popup-footer {
-            border-top-color: #334155;
-          }
-
-          .gantt-popup-footer small {
-            color: #94a3b8;
-            font-size: 11px;
-          }
-
-          /* Scrollbar personalizado */
-          .gantt-container::-webkit-scrollbar {
-            width: 12px;
-            height: 12px;
-          }
-
-          .gantt-container::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 6px;
-          }
-
-          .gantt-container::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-          }
-
-          .gantt-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.3);
-          }
-
-          /* Dark mode */
-          .dark .gantt .grid-row:nth-child(even) {
-            fill: rgba(255, 255, 255, 0.02);
-          }
-
-          .dark .gantt .bar-label {
-            fill: white;
-          }
-        `
-      }} />
-
-      <Card className={cn("flex flex-col", isFullscreen ? "fixed inset-0 z-50" : "h-full")}>
+      <Card className={cn("flex flex-col border-none shadow-none bg-background/40", isFullscreen ? "fixed inset-0 z-50" : "h-full")}>
         {/* Header */}
         <CardHeader className="pb-3 px-4 flex-shrink-0 border-b space-y-3">
           {/* Fila 1: Título y Acciones */}
@@ -832,32 +1009,119 @@ export function GanttChartProfessional() {
                 <Milestone className="h-3.5 w-3.5" />
                 Hitos
               </Button>
+
+              <div className="flex items-center gap-1 rounded-lg border p-0.5">
+                <Button
+                  variant={contentFilter === 'all' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-2 text-[11px]"
+                  onClick={() => setContentFilter('all')}
+                >
+                  <SquareStack className="h-3.5 w-3.5" /> Todo
+                </Button>
+                <Button
+                  variant={contentFilter === 'projects' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-2 text-[11px]"
+                  onClick={() => setContentFilter('projects')}
+                >
+                  <Layers className="h-3.5 w-3.5" /> Proyectos
+                </Button>
+                <Button
+                  variant={contentFilter === 'tasks' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-2 text-[11px]"
+                  onClick={() => setContentFilter('tasks')}
+                >
+                  <ListChecks className="h-3.5 w-3.5" /> Tareas
+                </Button>
+              </div>
             </div>
 
             {/* Vista */}
-            <div className="flex items-center gap-1 border rounded-lg p-0.5">
-              {(['Day', 'Week', 'Month'] as ViewMode[]).map((mode) => (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                {[GTViewMode.Day, GTViewMode.Week, GTViewMode.Month].map((mode) => (
+                  <Button
+                    key={mode}
+                    variant={viewMode === mode ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleViewModeChange(mode)}
+                    className="h-7 px-3 text-xs"
+                  >
+                    {mode === GTViewMode.Day ? 'Día' : mode === GTViewMode.Week ? 'Semana' : 'Mes'}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTodayClick}
+                className="h-7 px-3 text-xs flex items-center gap-1"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Hoy
+              </Button>
+              <div className="flex items-center gap-1 border rounded-lg p-0.5">
                 <Button
-                  key={mode}
-                  variant={viewMode === mode ? 'secondary' : 'ghost'}
+                  variant="ghost"
                   size="sm"
-                  onClick={() => handleViewModeChange(mode)}
-                  className="h-7 px-3 text-xs"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={handleExpandAll}
                 >
-                  {mode === 'Day' ? 'Día' : mode === 'Week' ? 'Semana' : 'Mes'}
+                  <ChevronDown className="h-3.5 w-3.5" /> Expandir todo
                 </Button>
-              ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={handleCollapseAll}
+                >
+                  <ChevronUp className="h-3.5 w-3.5" /> Contraer todo
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
 
         {/* Contenido del Gantt */}
-        <CardContent className="flex-1 p-0 min-h-0 overflow-hidden">
-          <div
-            ref={ganttContainerRef}
-            className="gantt-container h-full w-full"
-            style={{ padding: '20px' }}
-          />
+        <CardContent className="flex-1 min-h-0 overflow-hidden px-4 pb-4 pt-2">
+          <div className="h-full w-full overflow-auto rounded-lg gantt-scroll" ref={ganttContainerRef}>
+            <ReactGantt
+              tasks={localTasks}
+              viewMode={viewMode}
+              onDateChange={handleDateChange}
+              onProgressChange={handleProgressChange}
+              onChangeExpandState={handleChangeExpandState}
+              onDoubleClick={(task: GTTask) => {
+                if (task.type === 'project' && task.id.startsWith('proj-')) {
+                  const proyecto = proyectoByTaskIdRef.current.get(task.id)
+                  if (proyecto) navigate(`/proyectos/${proyecto.id}`)
+                } else if (task.type === 'task' || task.type === 'milestone') {
+                  const proyecto = proyectoByTaskIdRef.current.get(task.id)
+                  if (proyecto) navigate(`/proyectos/${proyecto.id}`, { state: { openTaskId: task.id } })
+                }
+              }}
+              onClick={(task: GTTaskOrEmpty) => {
+                if ((task as any).type === 'project' && (task as any).id.startsWith('proj-')) {
+                  const proyecto = proyectoByTaskIdRef.current.get((task as any).id)
+                  if (proyecto) navigate(`/proyectos/${proyecto.id}`)
+                } else if ((task as any).type === 'task' || (task as any).type === 'milestone') {
+                  const proyecto = proyectoByTaskIdRef.current.get((task as any).id)
+                  if (proyecto) navigate(`/proyectos/${proyecto.id}`, { state: { openTaskId: (task as any).id } })
+                }
+              }}
+              dateLocale={es}
+              viewDate={currentViewDate}
+              distances={computedDistances}
+              canResizeColumns
+              fontSize="12px"
+              fontFamily="Inter, ui-sans-serif, system-ui"
+              colors={ganttColors}
+              columns={columns}
+              TooltipContent={TooltipTemplate}
+            />
+          </div>
         </CardContent>
       </Card>
     </>

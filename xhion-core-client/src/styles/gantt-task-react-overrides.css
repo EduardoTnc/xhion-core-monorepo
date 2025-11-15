@@ -1,0 +1,109 @@
+/* Overrides visuales para @wamra/gantt-task-react integrados con el tema oscuro de la plataforma */
+
+.dark ._ganttTable_Header_7mmcq_1 {
+  border-top: 1px solid #262626;
+  border-bottom: 1px solid #262626;
+}
+
+.dark ._ganttTableRoot_v4xjz_1 {
+  border-left: none;
+}
+
+.dark ._calendarMain_14og3_1 {
+  border-top: 1px solid #262626;
+  border-bottom: 1px solid #262626;
+}
+
+.dark ._calendarHeader_14og3_33 {
+  fill: #171717;
+  stroke: #262626;
+}
+
+.dark ._calendarTopTick_14og3_18 {
+  stroke: #404040;
+}
+
+.dark ._calendarBottomText_14og3_7,
+.dark ._calendarTopText_14og3_22 {
+  fill: #e5e5e5;
+}
+
+.dark ._ganttTaskRoot_1sr1d_1 {
+  background-color: #171717;
+}
+
+/* Scrollbars del panel izquierdo (tabla) y del área de tareas */
+.dark ._ganttTableWrapper_v4xjz_8::-webkit-scrollbar,
+.dark ._ganttTaskContent_1sr1d_41::-webkit-scrollbar,
+.dark .gantt-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.dark ._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-track,
+.dark ._ganttTaskContent_1sr1d_41::-webkit-scrollbar-track,
+.dark .gantt-scroll::-webkit-scrollbar-track {
+  background: #171717;
+}
+
+.dark ._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-thumb,
+.dark ._ganttTaskContent_1sr1d_41::-webkit-scrollbar-thumb,
+.dark .gantt-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  border: 3px solid #171717;
+  background: #3f3f46; /* zinc-700 */
+}
+
+.dark ._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-thumb:hover,
+.dark ._ganttTaskContent_1sr1d_41::-webkit-scrollbar-thumb:hover,
+.dark .gantt-scroll::-webkit-scrollbar-thumb:hover {
+  background: #52525b; /* zinc-600 */
+}
+
+.dark ._ganttTaskContent_1sr1d_41,
+.dark .gantt-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #171717; /* thumb, track */
+}
+
+.dark .gantt-scroll::-webkit-scrollbar-corner {
+  background: #171717;
+}
+
+/* Modo claro */
+._ganttTableWrapper_v4xjz_8::-webkit-scrollbar,
+._ganttTaskContent_1sr1d_41::-webkit-scrollbar,
+.gantt-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-track,
+._ganttTaskContent_1sr1d_41::-webkit-scrollbar-track,
+.gantt-scroll::-webkit-scrollbar-track {
+  background: #f4f4f5; /* zinc-100 */
+}
+
+._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-thumb,
+._ganttTaskContent_1sr1d_41::-webkit-scrollbar-thumb,
+.gantt-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  border: 3px solid #f4f4f5;
+  background: #d4d4d8; /* zinc-300 */
+}
+
+._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-thumb:hover,
+._ganttTaskContent_1sr1d_41::-webkit-scrollbar-thumb:hover,
+.gantt-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa; /* zinc-400 */
+}
+
+._ganttTaskContent_1sr1d_41,
+.gantt-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #a1a1aa #f4f4f5;
+}
+
+.gantt-scroll::-webkit-scrollbar-corner {
+  background: #f4f4f5;
+}

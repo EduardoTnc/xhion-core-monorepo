@@ -10,6 +10,7 @@ import AceptarInvitacionPage from './pages/AceptarInvitacionPage'
 import RequestAccessPage from './pages/RequestAccessPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
+import ProjectDetailPage from './pages/ProjectDetailPage'
 import RolesPage from './pages/RolesPage'
 import SessionsPage from './pages/SessionsPage'
 import DepartmentsPage from './pages/DepartmentsPage'
@@ -58,6 +59,7 @@ function AppContent() {
             <Route path='finanzas' element={<FinanzasPage />} />
             <Route path='ideas' element={<IdeasPage />} />
             <Route path="proyectos" element={<ProjectsPage />} />
+            <Route path="proyectos/:id" element={<ProjectDetailPage />} />
             <Route path="usuarios" element={<UsuariosPage />} />
             <Route path="roles" element={<RolesPage />} />
             <Route path="perfil" element={<ProfilePage />} />

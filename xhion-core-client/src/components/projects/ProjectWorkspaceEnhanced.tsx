@@ -3,13 +3,11 @@ import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
 import { ProjectSidebarShadcn } from "./ProjectSidebarShadcn";
 import { ProjectHeader } from "./ProjectHeader";
-import { StageTimeline } from "./StageTimeline";
 import { TaskViewSwitcher } from "./TaskViewSwitcher";
 import { TaskKanbanViewDnD } from "./TaskKanbanViewDnD";
 import { TaskListView } from "./TaskListView";
 import { TaskTableView } from "./TaskTableView";
-import { TaskTimelineViewEnhanced } from "./TaskTimelineViewEnhanced";
-import { ProjectDocumentsManager } from "./ProjectDocumentsManager";
+import { ProjectGanttTimeline } from "./ProjectGanttTimeline";
 import { ProjectInfoSection } from "./ProjectInfoSection";
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "./TaskFilters";
 import { ExportMenu } from "./ExportMenu";
@@ -27,7 +25,7 @@ import { toast } from "sonner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
 
-type ViewMode = "kanban" | "list" | "table" | "timeline" | "docs";
+type ViewMode = "kanban" | "list" | "table" | "timeline";
 
 const initialFilters: TaskFiltersType = {
   search: "",
@@ -246,8 +244,8 @@ export function ProjectWorkspaceEnhanced({
         </>
       )}
 
-      {/* Main Content - Scroll Global */}
-      <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden">
+      {/* Main Content - Scroll Global con espacio extra al final */}
+      <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden pb-32">
         {proyectoActual ? (
           <>
             {/* Header with Toggle Button - Sticky */}
@@ -362,12 +360,11 @@ export function ProjectWorkspaceEnhanced({
               </div>
             </div>
 
-            {/* Task Views - Con padding responsive */}
-            <div className="flex-1 min-h-0">
+            {/* Task Views - Sin restricciones de altura para expansión completa */}
+            <div className="w-full p-4 sm:p-6">
               {viewMode === "kanban" && (
                 <TaskKanbanViewDnD
                   tareas={filteredTareas}
-                  etapas={etapas}
                   onTaskClick={handleTaskClick}
                   onEditTask={handleEditTaskDirect}
                   onDeleteTask={handleDeleteTask}
@@ -390,22 +387,13 @@ export function ProjectWorkspaceEnhanced({
                   onDeleteTask={handleDeleteTask}
                 />
               )}
-              {viewMode === "timeline" && (
-                <TaskTimelineViewEnhanced 
-                  tareas={filteredTareas} 
-                  etapas={etapas} 
+              {viewMode === "timeline" && proyectoActual && (
+                <ProjectGanttTimeline
+                  proyecto={proyectoActual}
+                  etapas={etapas}
+                  tareas={filteredTareas}
                   onTaskClick={handleTaskClick}
-                  onEditTask={handleEditTaskDirect}
-                  onDeleteTask={handleDeleteTask}
                 />
-              )}
-              {viewMode === "docs" && proyectoActual && (
-                <div className="h-full overflow-auto p-6">
-                  <ProjectDocumentsManager
-                    proyectoId={proyectoActual.id}
-                    proyectoNombre={proyectoActual.nombre}
-                  />
-                </div>
               )}
             </div>
           </>
