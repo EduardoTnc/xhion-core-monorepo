@@ -39,13 +39,22 @@ const estadoColors = {
 };
 
 export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete }: TaskDetailModalProps) {
-  const { tareaActual, fetchTareaById, isLoading } = useTaskStore();
+  const { tareas, tareaActual, fetchTareaById, isLoading, setTareaActual } = useTaskStore();
+
+  useEffect(() => {
+    if (!tareaId || !open) return;
+
+    const cachedTask = tareas.find((t) => t.id === tareaId);
+    if (cachedTask) {
+      setTareaActual(cachedTask);
+    }
+  }, [tareaId, open, tareas, setTareaActual]);
 
   useEffect(() => {
     if (tareaId && open) {
       fetchTareaById(tareaId);
     }
-  }, [tareaId, open]);
+  }, [tareaId, open, fetchTareaById]);
 
   const getInitials = (name: string) => {
     return name

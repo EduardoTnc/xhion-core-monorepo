@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
-  Plus,
   Mail,
   Phone,
   Briefcase,
@@ -74,6 +73,7 @@ interface DepartmentTeamViewProps {
   empleados?: Usuario[];
   puestosTrabajo?: PuestoTrabajo[];
   totalEmpleados: number;
+  variant?: "default" | "condensed";
 }
 
 export function DepartmentTeamView({
@@ -83,6 +83,7 @@ export function DepartmentTeamView({
   empleados,
   puestosTrabajo,
   totalEmpleados,
+  variant = "default",
 }: DepartmentTeamViewProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,6 +93,7 @@ export function DepartmentTeamView({
   const [selectedEmpleado, setSelectedEmpleado] = useState<Usuario | null>(null);
   const [empleadoToRemove, setEmpleadoToRemove] = useState<Usuario | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const isCondensed = variant === "condensed";
 
   const getInitials = (name: string) => {
     return name
@@ -102,7 +104,7 @@ export function DepartmentTeamView({
       .slice(0, 2);
   };
 
-  const filteredEmpleados = empleados?.filter((emp) => {
+  const filteredEmpleados = (empleados ?? []).filter((emp) => {
     const matchesSearch =
       emp.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -111,7 +113,103 @@ export function DepartmentTeamView({
     return matchesSearch && matchesPuesto;
   });
 
+  const modalElements = (
+    <>
+      <AssignEmployeeModal
+        open={showAssignModal}
+        onOpenChange={setShowAssignModal}
+        departamentoId={departamentoId}
+        departamentoNombre={departamentoNombre}
+        puestosTrabajo={puestosTrabajo || []}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
+
+      <ChangePuestoModal
+        open={showChangePuestoModal}
+        onOpenChange={setShowChangePuestoModal}
+        empleado={selectedEmpleado}
+        puestosTrabajo={puestosTrabajo || []}
+        onSuccess={() => {
+          setSelectedEmpleado(null);
+          window.location.reload();
+        }}
+      />
+
+      <AlertDialog
+        open={!!empleadoToRemove}
+        onOpenChange={(open) => !open && setEmpleadoToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              ¿Remover empleado del departamento?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {empleadoToRemove && (
+                <>
+                  Estás a punto de remover a <strong>{empleadoToRemove.nombreCompleto}</strong> del
+                  departamento <strong>{departamentoNombre}</strong>. El empleado perderá su puesto
+                  de trabajo asignado.
+                  <br />
+                  <br />
+                  Esta acción no se puede deshacer.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!empleadoToRemove) return;
+                setIsRemoving(true);
+                try {
+                  await apiClient.delete(
+                    `/usuarios/${empleadoToRemove.id}/remover-puesto`
+                  );
+
+                  toast.success("Empleado removido exitosamente");
+                  setEmpleadoToRemove(null);
+                  window.location.reload();
+                } catch (error) {
+                  console.error("Error removing employee:", error);
+                  toast.error("Error al remover empleado");
+                } finally {
+                  setIsRemoving(false);
+                }
+              }}
+              disabled={isRemoving}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isRemoving ? "Removiendo..." : "Remover Empleado"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+
   if (totalEmpleados === 0) {
+    if (isCondensed) {
+      return (
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Equipo no asignado</span>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setShowAssignModal(true)}>
+              Asignar
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Aún no hay colaboradores registrados en {departamentoNombre}.
+          </p>
+          {modalElements}
+        </div>
+      );
+    }
+
     return (
       <>
         <EmptyState
@@ -123,19 +221,71 @@ export function DepartmentTeamView({
           secondaryActionLabel="Ver Todos los Empleados"
           onSecondaryAction={() => navigate("/usuarios")}
         />
-
-        {/* Modal Asignar Empleado - También disponible en estado vacío */}
-        <AssignEmployeeModal
-          open={showAssignModal}
-          onOpenChange={setShowAssignModal}
-          departamentoId={departamentoId}
-          departamentoNombre={departamentoNombre}
-          puestosTrabajo={puestosTrabajo || []}
-          onSuccess={() => {
-            window.location.reload();
-          }}
-        />
+        {modalElements}
       </>
+    );
+  }
+
+  if (isCondensed) {
+    const visibleEmpleados = filteredEmpleados.slice(0, 8);
+    return (
+      <div className="space-y-4 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div>
+            <span className="font-semibold text-foreground">{totalEmpleados}</span> colaboradores
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setShowAssignModal(true)}>
+              Asignar
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[11px]"
+              onClick={() => navigate(`/departamentos/${departamentoId}`)}
+            >
+              Gestionar
+            </Button>
+          </div>
+        </div>
+
+        {jefe && (
+          <div className="text-xs">
+            <span className="text-muted-foreground">Líder:</span>{" "}
+            <span className="font-medium text-foreground">{jefe.nombreCompleto}</span>
+          </div>
+        )}
+
+        <div className="divide-y divide-border/70 text-xs">
+          {visibleEmpleados.map((empleado) => (
+            <div key={empleado.id} className="flex items-center justify-between py-2 gap-4">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground truncate">{empleado.nombreCompleto}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {empleado.puestoTrabajo?.titulo || "Sin puesto"}
+                </p>
+              </div>
+              <button
+                className="text-[11px] text-primary hover:underline"
+                onClick={() => {
+                  setSelectedEmpleado(empleado);
+                  setShowChangePuestoModal(true);
+                }}
+              >
+                Ajustar
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {filteredEmpleados.length > visibleEmpleados.length && (
+          <p className="text-[11px] text-muted-foreground">
+            +{filteredEmpleados.length - visibleEmpleados.length} colaboradores adicionales
+          </p>
+        )}
+
+        {modalElements}
+      </div>
     );
   }
 
@@ -359,86 +509,7 @@ export function DepartmentTeamView({
         </Card>
       )}
 
-      {/* Modal Asignar Empleado */}
-      <AssignEmployeeModal
-        open={showAssignModal}
-        onOpenChange={setShowAssignModal}
-        departamentoId={departamentoId}
-        departamentoNombre={departamentoNombre}
-        puestosTrabajo={puestosTrabajo || []}
-        onSuccess={() => {
-          // Recargar datos del departamento
-          window.location.reload();
-        }}
-      />
-
-      {/* Modal Cambiar Puesto */}
-      <ChangePuestoModal
-        open={showChangePuestoModal}
-        onOpenChange={setShowChangePuestoModal}
-        empleado={selectedEmpleado}
-        puestosTrabajo={puestosTrabajo || []}
-        onSuccess={() => {
-          setSelectedEmpleado(null);
-          // Recargar datos del departamento
-          window.location.reload();
-        }}
-      />
-
-      {/* Dialog Confirmar Remover */}
-      <AlertDialog
-        open={!!empleadoToRemove}
-        onOpenChange={(open) => !open && setEmpleadoToRemove(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              ¿Remover empleado del departamento?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {empleadoToRemove && (
-                <>
-                  Estás a punto de remover a <strong>{empleadoToRemove.nombreCompleto}</strong> del
-                  departamento <strong>{departamentoNombre}</strong>. El empleado perderá su puesto
-                  de trabajo asignado.
-                  <br />
-                  <br />
-                  Esta acción no se puede deshacer.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemoving}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (!empleadoToRemove) return;
-                setIsRemoving(true);
-                try {
-                  await apiClient.delete(
-                    `/usuarios/${empleadoToRemove.id}/remover-puesto`
-                  );
-
-                  toast.success("Empleado removido exitosamente");
-                  setEmpleadoToRemove(null);
-                  // Recargar datos del departamento
-                  window.location.reload();
-                } catch (error) {
-                  console.error("Error removing employee:", error);
-                  toast.error("Error al remover empleado");
-                } finally {
-                  setIsRemoving(false);
-                }
-              }}
-              disabled={isRemoving}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {isRemoving ? "Removiendo..." : "Remover Empleado"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {modalElements}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
 import { ProjectSidebarShadcn } from "./ProjectSidebarShadcn";
@@ -24,6 +24,8 @@ import { Loader2, PanelLeftClose, PanelLeftOpen, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
+import { type Etapa, type ProyectoMiembro } from "@/services/projectService";
+import { type Tarea } from "@/services/taskService";
 
 type ViewMode = "kanban" | "list" | "table" | "timeline";
 
@@ -55,10 +57,18 @@ export function ProjectWorkspaceEnhanced({
     fetchProyectoById,
     fetchEtapas,
     fetchMiembros,
+    deleteEtapa,
+    setProyectoActual,
     isLoading,
   } = useProjectStore();
 
-  const { tareas, fetchTareas } = useTaskStore();
+  const { tareas: taskStoreTareas, fetchTareas } = useTaskStore();
+
+  type CachedProjectData = {
+    etapas: Etapa[];
+    miembros: ProyectoMiembro[];
+    tareas: Tarea[];
+  };
 
   // UI State
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -66,6 +76,11 @@ export function ProjectWorkspaceEnhanced({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [filters, setFilters] = useState<TaskFiltersType>(initialFilters);
+  const [displayEtapas, setDisplayEtapas] = useState<Etapa[]>([]);
+  const [displayMiembros, setDisplayMiembros] = useState<ProyectoMiembro[]>([]);
+  const [displayTareas, setDisplayTareas] = useState<Tarea[]>([]);
+  const [projectDataCache, setProjectDataCache] = useState<Record<string, CachedProjectData>>({});
+  const [lastFetchedProjectId, setLastFetchedProjectId] = useState<string | null>(null);
 
   // Modals State
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
@@ -78,12 +93,30 @@ export function ProjectWorkspaceEnhanced({
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [etapaToEdit, setEtapaToEdit] = useState<any>(null);
+  const [etapaToDelete, setEtapaToDelete] = useState<Etapa | null>(null);
+  const [showDeleteEtapaConfirm, setShowDeleteEtapaConfirm] = useState(false);
   const [tareaToEdit, setTareaToEdit] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tareaToDelete, setTareaToDelete] = useState<string | null>(null);
 
   // Refs for keyboard shortcuts
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const prefillProjectData = useCallback(
+    (projectId: string) => {
+      const cachedData = projectDataCache[projectId];
+      if (cachedData) {
+        setDisplayEtapas(cachedData.etapas);
+        setDisplayMiembros(cachedData.miembros);
+        setDisplayTareas(cachedData.tareas);
+      } else {
+        setDisplayEtapas([]);
+        setDisplayMiembros([]);
+        setDisplayTareas([]);
+      }
+    },
+    [projectDataCache]
+  );
 
   // Load projects on mount
   useEffect(() => {
@@ -99,18 +132,48 @@ export function ProjectWorkspaceEnhanced({
 
   // Auto-select first project or use provided proyectoId
   useEffect(() => {
-    if (proyectoIdProp) {
+    if (proyectoIdProp && proyectoIdProp !== selectedProjectId) {
       setSelectedProjectId(proyectoIdProp);
-    } else if (!selectedProjectId && proyectos.length > 0) {
-      setSelectedProjectId(proyectos[0].id);
+      prefillProjectData(proyectoIdProp);
+      const targetProject = proyectos.find((p) => p.id === proyectoIdProp);
+      if (targetProject) {
+        setProyectoActual(targetProject);
+      }
+      return;
     }
-  }, [proyectos, selectedProjectId, proyectoIdProp]);
+
+    if (!proyectoIdProp && !selectedProjectId && proyectos.length > 0) {
+      const firstProject = proyectos[0];
+      setSelectedProjectId(firstProject.id);
+      prefillProjectData(firstProject.id);
+      setProyectoActual(firstProject);
+    }
+  }, [proyectos, selectedProjectId, proyectoIdProp, setProyectoActual, prefillProjectData]);
 
   const loadProyectos = async () => {
     try {
       await fetchProyectos();
     } catch (error: any) {
       toast.error(error.message || "Error al cargar proyectos");
+    }
+  };
+
+  const handleDeleteStage = (etapa: Etapa) => {
+    setEtapaToDelete(etapa);
+    setShowDeleteEtapaConfirm(true);
+  };
+
+  const confirmDeleteEtapa = async () => {
+    if (!etapaToDelete || !selectedProjectId) return;
+    try {
+      await deleteEtapa(selectedProjectId, etapaToDelete.id);
+      toast.success("Etapa eliminada exitosamente");
+      setEtapaToDelete(null);
+      setShowDeleteEtapaConfirm(false);
+      await fetchEtapas(selectedProjectId);
+      await fetchTareas({ proyectoId: selectedProjectId });
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar etapa");
     }
   };
 
@@ -122,15 +185,53 @@ export function ProjectWorkspaceEnhanced({
         fetchMiembros(projectId),
         fetchTareas({ proyectoId: projectId }),
       ]);
+
+      const { etapas: latestEtapas, miembros: latestMiembros } = useProjectStore.getState();
+      const { tareas: latestTareas } = useTaskStore.getState();
+
+      setLastFetchedProjectId(projectId);
+      setDisplayEtapas(latestEtapas);
+      setDisplayMiembros(latestMiembros);
+      setDisplayTareas(latestTareas);
+      setProjectDataCache((prev) => ({
+        ...prev,
+        [projectId]: {
+          etapas: latestEtapas,
+          miembros: latestMiembros,
+          tareas: latestTareas,
+        },
+      }));
     } catch (error: any) {
       toast.error(error.message || "Error al cargar datos del proyecto");
     }
   };
 
   const handleProjectSelect = (projectId: string) => {
+    const cachedProject = proyectos.find((p) => p.id === projectId);
+    if (cachedProject) {
+      setProyectoActual(cachedProject);
+    }
+    prefillProjectData(projectId);
     setSelectedProjectId(projectId);
     setIsMobileSidebarOpen(false);
   };
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    if (lastFetchedProjectId !== selectedProjectId) return;
+
+    setDisplayEtapas(etapas);
+    setDisplayMiembros(miembros);
+    setDisplayTareas(taskStoreTareas);
+    setProjectDataCache((prev) => ({
+      ...prev,
+      [selectedProjectId]: {
+        etapas,
+        miembros,
+        tareas: taskStoreTareas,
+      },
+    }));
+  }, [selectedProjectId, lastFetchedProjectId, etapas, miembros, taskStoreTareas]);
 
   const handleTaskClick = (taskId: string) => {
     setSelectedTaskId(taskId);
@@ -144,7 +245,7 @@ export function ProjectWorkspaceEnhanced({
   };
 
   const handleEditTaskDirect = (tareaId: string) => {
-    const tarea = tareas.find(t => t.id === tareaId);
+    const tarea = displayTareas.find((t) => t.id === tareaId);
     if (tarea) {
       setTareaToEdit(tarea);
       setShowEditTaskModal(true);
@@ -173,7 +274,7 @@ export function ProjectWorkspaceEnhanced({
   };
 
   // Apply filters to tasks
-  const filteredTareas = applyTaskFilters(tareas, filters);
+  const filteredTareas = applyTaskFilters(displayTareas, filters);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -244,12 +345,12 @@ export function ProjectWorkspaceEnhanced({
         </>
       )}
 
-      {/* Main Content - Scroll Global con espacio extra al final */}
-      <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden pb-32">
+      {/* Main Content - Scroll Global compacto */}
+      <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden pb-20">
         {proyectoActual ? (
           <>
             {/* Header with Toggle Button - Sticky */}
-            <div className="sticky top-0 z-20 bg-background border-b">
+            <div className="sticky top-0 z-20 bg-background/98 border-b border-border/40 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               {/* Sidebar Toggle Button - Oculto cuando hideSidebar es true */}
               {!hideSidebar && (
                 <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex gap-2">
@@ -279,16 +380,17 @@ export function ProjectWorkspaceEnhanced({
 
               <ProjectHeader
                 proyecto={proyectoActual}
-                miembros={miembros}
+                miembros={displayMiembros}
                 onEdit={() => setShowEditProjectModal(true)}
                 onInvite={() => setShowAddMiembroModal(true)}
+                etapasCount={displayEtapas.length}
+                tareasCount={displayTareas.length}
               />
             </div>
 
-            {/* Project Info Section - 3 Widgets */}
+            {/* Project Info Section - Equipo y Documentos */}
             <ProjectInfoSection
-              etapas={etapas}
-              miembros={miembros?.map((m) => ({
+              miembros={displayMiembros?.map((m) => ({
                 usuarioId: m.usuarioId,
                 usuario: {
                   id: m.usuario?.id || '',
@@ -299,15 +401,6 @@ export function ProjectWorkspaceEnhanced({
                 rol: m.rol.toLowerCase() as "responsable" | "miembro" | "observador",
               })) || []}
               archivos={[]} // TODO: Implementar store de archivos
-              onCreateEtapa={() => setShowCreateEtapaModal(true)}
-              onEditEtapa={(etapa) => {
-                setEtapaToEdit(etapa);
-                setShowCreateEtapaModal(true);
-              }}
-              onDeleteEtapa={(_etapaId) => {
-                // TODO: Implementar eliminación de etapa
-                toast.success("Etapa eliminada");
-              }}
               onAddMiembro={() => setShowAddMiembroModal(true)}
               onRemoveMiembro={(_usuarioId) => {
                 // TODO: Implementar eliminación de miembro
@@ -332,8 +425,8 @@ export function ProjectWorkspaceEnhanced({
             />
 
             {/* View Switcher with Filters and Export - Sticky */}
-            <div className="sticky top-[72px] sm:top-[80px] z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-              <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+            <div className="sticky top-[64px] sm:top-[68px] z-10 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div className="px-3 sm:px-4 lg:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-2">
                 <TaskViewSwitcher
                   viewMode={viewMode}
                   onViewChange={setViewMode}
@@ -344,8 +437,8 @@ export function ProjectWorkspaceEnhanced({
                   <TaskFilters
                     filters={filters}
                     onFiltersChange={setFilters}
-                    miembros={miembros}
-                    etapas={etapas}
+                    miembros={displayMiembros}
+                    etapas={displayEtapas}
                   />
                   <ExportMenu tareas={filteredTareas} proyecto={proyectoActual} />
                   <Button
@@ -361,7 +454,7 @@ export function ProjectWorkspaceEnhanced({
             </div>
 
             {/* Task Views - Sin restricciones de altura para expansión completa */}
-            <div className="w-full p-4 sm:p-6">
+            <div className="w-full px-4 py-4 sm:px-6 sm:py-5">
               {viewMode === "kanban" && (
                 <TaskKanbanViewDnD
                   tareas={filteredTareas}
@@ -369,6 +462,13 @@ export function ProjectWorkspaceEnhanced({
                   onEditTask={handleEditTaskDirect}
                   onDeleteTask={handleDeleteTask}
                   proyectoId={selectedProjectId || ""}
+                  etapas={displayEtapas}
+                  onCreateStage={() => setShowCreateEtapaModal(true)}
+                  onEditStage={(etapa) => {
+                    setEtapaToEdit(etapa);
+                    setShowCreateEtapaModal(true);
+                  }}
+                  onDeleteStage={handleDeleteStage}
                 />
               )}
               {viewMode === "list" && (
@@ -377,6 +477,13 @@ export function ProjectWorkspaceEnhanced({
                   onTaskClick={handleTaskClick}
                   onEditTask={handleEditTaskDirect}
                   onDeleteTask={handleDeleteTask}
+                  etapas={displayEtapas}
+                  onCreateStage={() => setShowCreateEtapaModal(true)}
+                  onEditStage={(etapa) => {
+                    setEtapaToEdit(etapa);
+                    setShowCreateEtapaModal(true);
+                  }}
+                  onDeleteStage={handleDeleteStage}
                 />
               )}
               {viewMode === "table" && (
@@ -385,6 +492,13 @@ export function ProjectWorkspaceEnhanced({
                   onTaskClick={handleTaskClick}
                   onEditTask={handleEditTaskDirect}
                   onDeleteTask={handleDeleteTask}
+                  etapas={displayEtapas}
+                  onCreateStage={() => setShowCreateEtapaModal(true)}
+                  onEditStage={(etapa) => {
+                    setEtapaToEdit(etapa);
+                    setShowCreateEtapaModal(true);
+                  }}
+                  onDeleteStage={handleDeleteStage}
                 />
               )}
               {viewMode === "timeline" && proyectoActual && (
@@ -494,6 +608,17 @@ export function ProjectWorkspaceEnhanced({
         onConfirm={confirmDeleteTask}
         title="¿Eliminar tarea?"
         description="Esta acción no se puede deshacer. La tarea será eliminada permanentemente."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
+
+      <ConfirmDialog
+        open={showDeleteEtapaConfirm}
+        onOpenChange={setShowDeleteEtapaConfirm}
+        onConfirm={confirmDeleteEtapa}
+        title="¿Eliminar etapa?"
+        description="Esta acción no se puede deshacer. La etapa y su relación con las tareas se actualizarán."
         confirmText="Eliminar"
         cancelText="Cancelar"
         variant="destructive"

@@ -161,4 +161,43 @@
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
   }
+
+  .project-members-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .project-members-scroll::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  .project-members-scroll::-webkit-scrollbar-track {
+    background: hsla(var(--muted), 0.4);
+    border-radius: 999px;
+  }
+
+  .project-members-scroll::-webkit-scrollbar-thumb {
+    background: hsla(var(--foreground), 0.25);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.2s ease;
+  }
+
+  .project-members-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsla(var(--foreground), 0.35);
+  }
+
+  .dark .project-members-scroll::-webkit-scrollbar-track {
+    background: hsla(var(--background), 0.15);
+  }
+
+  .dark .project-members-scroll::-webkit-scrollbar-thumb {
+    background: hsla(var(--foreground), 0.4);
+  }
+
+  .dark .project-members-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsla(var(--foreground), 0.55);
+  }
 }

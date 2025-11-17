@@ -41,6 +41,29 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+const isHexColor = (value?: string | null) => {
+  if (!value || typeof value !== "string") return false
+  return /^#([0-9A-Fa-f]{3}){1,2}$/.test(value.trim())
+}
+
+const hexToRgba = (hex: string, alpha = 0.18) => {
+  let sanitized = hex.replace("#", "")
+  if (sanitized.length === 3) {
+    sanitized = sanitized
+      .split("")
+      .map((char) => char + char)
+      .join("")
+  }
+
+  const parsed = parseInt(sanitized, 16)
+  if (Number.isNaN(parsed)) return `rgba(29, 30, 34, ${alpha})`
+
+  const r = (parsed >> 16) & 255
+  const g = (parsed >> 8) & 255
+  const b = parsed & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 // Navegación principal organizada por grupos
 const navigationMain: NavItem[] = [
   {
@@ -205,16 +228,37 @@ export function Sidebar() {
               <div className="grid grid-cols-3 gap-2 group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:gap-1">
                 {departamentos.map((dept) => {
                   const { icon: Icon, color } = getDepartmentIcon(dept.icono)
+                  const rawColor = dept.color
+                  const hasHexColor = isHexColor(rawColor)
+                  const accentHex = hasHexColor ? rawColor! : undefined
+                  const haloClass = !hasHexColor && rawColor ? rawColor : !hasHexColor ? "bg-muted/40" : ""
+                  const iconFallbackClass = !rawColor ? color : ""
+                  const iconTextClass = rawColor && !hasHexColor ? "text-white" : iconFallbackClass
                   return (
                     <Tooltip key={dept.id}>
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-12 flex-col gap-1 p-2 group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:flex-row group-data-[collapsible=icon]:justify-center"
+                          className="h-12 flex-col gap-1 p-0 group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:flex-row group-data-[collapsible=icon]:justify-center"
                           onClick={() => handleDepartmentClick(dept.id)}
                         >
-                          <Icon className={`h-5 w-5 ${color} group-data-[collapsible=icon]:h-4 group-data-[collapsible=icon]:w-4`} />
+                          <div
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg border group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 ${haloClass}`}
+                            style={
+                              hasHexColor && accentHex
+                                ? {
+                                    backgroundColor: hexToRgba(accentHex, 0.18),
+                                    borderColor: hexToRgba(accentHex, 0.45),
+                                  }
+                                : undefined
+                            }
+                          >
+                            <Icon
+                              className={`h-5 w-5 group-data-[collapsible=icon]:h-4 group-data-[collapsible=icon]:w-4 ${iconTextClass}`}
+                              style={hasHexColor && accentHex ? { color: accentHex } : undefined}
+                            />
+                          </div>
                           <span className="text-[10px] truncate w-full group-data-[collapsible=icon]:hidden">
                             {dept.nombre.split(' ')[0]}
                           </span>

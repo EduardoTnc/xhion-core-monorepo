@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   FileText,
   Plus,
@@ -23,16 +22,78 @@ interface DepartmentContextViewProps {
   departamentoNombre: string;
   onEdit: () => void;
   onCreate: () => void;
+  variant?: "default" | "condensed";
 }
 
 export function DepartmentContextView({
   contexto,
-  departamentoId,
+  departamentoId: _departamentoId,
   departamentoNombre,
   onEdit,
   onCreate,
+  variant = "default",
 }: DepartmentContextViewProps) {
+  const sections = [
+    {
+      title: "Funciones",
+      icon: Lightbulb,
+      content: contexto?.funciones,
+      color: "text-blue-500",
+      bgColor: "bg-blue-100 dark:bg-blue-900",
+      description: "Actividades principales del departamento",
+    },
+    {
+      title: "Responsabilidades",
+      icon: CheckSquare,
+      content: contexto?.responsabilidades,
+      color: "text-green-500",
+      bgColor: "bg-green-100 dark:bg-green-900",
+      description: "Obligaciones y compromisos del equipo",
+    },
+    {
+      title: "Procesos Clave",
+      icon: TrendingUp,
+      content: contexto?.procesosClave,
+      color: "text-purple-500",
+      bgColor: "bg-purple-100 dark:bg-purple-900",
+      description: "Flujos de trabajo y procedimientos importantes",
+    },
+    {
+      title: "Objetivos",
+      icon: Target,
+      content: contexto?.objetivos,
+      color: "text-orange-500",
+      bgColor: "bg-orange-100 dark:bg-orange-900",
+      description: "Metas y resultados esperados",
+    },
+    {
+      title: "KPIs",
+      icon: BarChart3,
+      content: contexto?.kpis,
+      color: "text-pink-500",
+      bgColor: "bg-pink-100 dark:bg-pink-900",
+      description: "Indicadores clave de rendimiento",
+    },
+  ];
+
   if (!contexto) {
+    if (variant === "condensed") {
+      return (
+        <div className="space-y-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <span>Contexto pendiente</span>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={onCreate}>
+              Configurar
+            </Button>
+          </div>
+          <p>
+            Define funciones, objetivos y KPIs del departamento {departamentoNombre} para habilitar la
+            asistencia contextual.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <EmptyState
         icon={FileText}
@@ -42,55 +103,53 @@ export function DepartmentContextView({
         onAction={onCreate}
         secondaryActionLabel="¿Qué es el contexto?"
         onSecondaryAction={() => {
-          // TODO: Mostrar ayuda sobre contexto
           console.log("Mostrar ayuda");
         }}
       />
     );
   }
 
-  const sections = [
-    {
-      title: "Funciones",
-      icon: Lightbulb,
-      content: contexto.funciones,
-      color: "text-blue-500",
-      bgColor: "bg-blue-100 dark:bg-blue-900",
-      description: "Actividades principales del departamento",
-    },
-    {
-      title: "Responsabilidades",
-      icon: CheckSquare,
-      content: contexto.responsabilidades,
-      color: "text-green-500",
-      bgColor: "bg-green-100 dark:bg-green-900",
-      description: "Obligaciones y compromisos del equipo",
-    },
-    {
-      title: "Procesos Clave",
-      icon: TrendingUp,
-      content: contexto.procesosClave,
-      color: "text-purple-500",
-      bgColor: "bg-purple-100 dark:bg-purple-900",
-      description: "Flujos de trabajo y procedimientos importantes",
-    },
-    {
-      title: "Objetivos",
-      icon: Target,
-      content: contexto.objetivos,
-      color: "text-orange-500",
-      bgColor: "bg-orange-100 dark:bg-orange-900",
-      description: "Metas y resultados esperados",
-    },
-    {
-      title: "KPIs",
-      icon: BarChart3,
-      content: contexto.kpis,
-      color: "text-pink-500",
-      bgColor: "bg-pink-100 dark:bg-pink-900",
-      description: "Indicadores clave de rendimiento",
-    },
-  ];
+  if (variant === "condensed") {
+    const filledSections = sections.filter((s) => s.content);
+    const completionRate = (filledSections.length / sections.length) * 100;
+
+    return (
+      <div className="space-y-3 text-xs">
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>Base de conocimiento</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{Math.round(completionRate)}%</span>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={onEdit}>
+              Editar
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {sections.map((section) => (
+            <div key={section.title} className="flex items-start gap-3">
+              <section.icon className={`h-3.5 w-3.5 ${section.color}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-foreground text-[12px] uppercase tracking-wide">
+                    {section.title}
+                  </p>
+                  <span className="text-[10px] text-muted-foreground">
+                    {section.content ? "Definido" : "Pendiente"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {section.content || "Sin información capturada"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Última actualización: {new Date(contexto.fechaActualizacion).toLocaleDateString("es-ES")}
+        </p>
+      </div>
+    );
+  }
 
   const filledSections = sections.filter((s) => s.content);
   const emptySections = sections.filter((s) => !s.content);

@@ -1,35 +1,12 @@
 import { useEffect, useState } from "react"
-import {
-  ArrowLeft,
-  Users,
-  FolderKanban,
-  TrendingUp,
-  Coins,
-  Sparkles,
-  FileText,
-  MoreVertical,
-  Edit,
-  Loader2,
-  Plus,
-  Eye,
-  Map,
-} from "lucide-react"
+import { ArrowLeft, Loader2, Plus } from "lucide-react"
 import { getDepartmentIcon } from "@/lib/department-icons"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useDepartmentStore } from "@/store/departmentStore"
 import { useConocimientoStore } from "@/store/conocimientoStore"
 import { CreateDepartmentModal } from "./CreateDepartmentModal"
 import { DepartmentContextModal } from "./DepartmentContextModal"
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal"
-import { DepartmentWidgetCard } from "./DepartmentWidgetCard"
 import { DepartmentProjectsView } from "./DepartmentProjectsView"
 import { DepartmentTeamView } from "./DepartmentTeamView"
 import { DepartmentContextView } from "./DepartmentContextView"
@@ -37,8 +14,6 @@ import { DepartmentOrgChart } from "./DepartmentOrgChart"
 import { BudgetView } from "@/components/budgets/BudgetView"
 import { DepartmentDocumentsManager } from "./DepartmentDocumentsManager"
 import { useNavigate } from "react-router-dom"
-import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 
 interface DepartmentDetailWidgetsProps {
   departamentoId: string
@@ -49,7 +24,6 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
   const [showEditModal, setShowEditModal] = useState(false)
   const [showContextModal, setShowContextModal] = useState(false)
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false)
-  const [expandedWidget, setExpandedWidget] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const {
@@ -73,30 +47,7 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
     }
   }, [departamentoId])
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
   const contexto = contextosDepartamento.find((c) => c.departamentoId === departamentoId)
-
-  // Lista de widgets disponibles para navegación rápida
-  const allWidgets = [
-    { id: 'proyectos', label: 'Proyectos', icon: FolderKanban },
-    { id: 'equipo', label: 'Equipo', icon: Users },
-    { id: 'rendimiento', label: 'Rendimiento', icon: TrendingUp },
-    { id: 'presupuesto', label: 'Presupuesto', icon: Coins },
-    { id: 'contexto', label: 'Contexto', icon: Sparkles },
-    { id: 'organigrama', label: 'Organigrama', icon: Map },
-    { id: 'documentos', label: 'Documentos', icon: FileText },
-  ]
-
-  const getAvailableWidgets = (currentId: string) => 
-    allWidgets.filter(w => w.id !== currentId)
 
   if (isLoading && !departamentoActual) {
     return (
@@ -117,426 +68,285 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
   const totalTareas = estadisticas?.estadisticas.tareas.total || 0
   const tareasCompletadas = estadisticas?.estadisticas.tareas.completadas || 0
   const completionRate = totalTareas > 0 ? Math.round((tareasCompletadas / totalTareas) * 100) : 0
+  const totalEmpleados = estadisticas?.estadisticas.totalEmpleados || 0
+  const totalPuestos = estadisticas?.estadisticas.totalPuestos || 0
+  const proyectosActivos = estadisticas?.estadisticas.proyectos.activos || 0
+  const proyectosTotales = estadisticas?.estadisticas.proyectos.total || 0
+  const tareasAbiertas = estadisticas?.estadisticas.tareas.abiertas || 0
+  const puestos = departamentoActual.puestosTrabajo || []
+  const puestosConTalento = puestos.filter((puesto) => {
+    const assignedFromCount = (puesto as any)._count?.usuarios ?? 0
+    const assignedFromList = (puesto as any).empleados?.length ?? 0
+    return assignedFromCount > 0 || assignedFromList > 0
+  }).length
+  const vacantes = Math.max(puestos.length - puestosConTalento, 0)
 
-  // Obtener icono dinámico del departamento
-  const { icon: DepartmentIcon, color: iconColor } = getDepartmentIcon(departamentoActual.icono)
+  // Obtener icono dinámico del departamento y color principal
+  const { icon: DepartmentIcon } = getDepartmentIcon(departamentoActual.icono)
+  const departmentColorClass = departamentoActual.color || "bg-blue-500"
 
   return (
-    <div className="space-y-6 p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="h-16 w-16 rounded-md border-2 border-border bg-background flex items-center justify-center">
-            <DepartmentIcon className={`h-8 w-8 ${iconColor}`} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">{departamentoActual.nombre}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {departamentoActual.descripcion || "Sin descripción"}
-            </p>
-          </div>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <MoreVertical className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowEditModal(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar Departamento
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowContextModal(true)}>
-              <FileText className="mr-2 h-4 w-4" />
-              {contexto ? "Editar Contexto" : "Agregar Contexto"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* AI Insights Banner */}
-      {contexto && (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="p-6">
+    <div className="bg-background px-4 py-6 lg:px-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+        <section className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
-                <Sparkles className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Contexto del Departamento</h3>
-                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                  {contexto.objetivos || "No hay objetivos definidos"}
-                </p>
-                <div className="mt-3 flex items-center gap-4">
-                  <Badge variant="outline">
-                    KPIs: {contexto.kpis ? "Definidos" : "Sin definir"}
-                  </Badge>
-                  <Badge variant="outline">
-                    Procesos: {contexto.procesosClave ? "Documentados" : "Sin documentar"}
-                  </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onBack}
+                className="h-10 w-10 rounded-full border border-border/70 shadow-sm"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <span>Departamento estratégico</span>
+                  <div className={`h-8 w-8 rounded-xl ${departmentColorClass} flex items-center justify-center shadow-inner`}>
+                    <DepartmentIcon className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-foreground lg:text-3xl">
+                    {departamentoActual.nombre}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    {departamentoActual.descripcion || "Sin descripción"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
+                  <div>
+                    <p className="uppercase tracking-[0.18em]">Líder</p>
+                    <p className="text-foreground font-medium">
+                      {departamentoActual.jefe?.nombreCompleto || "Sin asignar"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="uppercase tracking-[0.18em]">Creado</p>
+                    <p className="text-foreground font-medium">
+                      {new Date(departamentoActual.fechaCreacion).toLocaleDateString("es-ES")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="uppercase tracking-[0.18em]">Contexto</p>
+                    <p className="text-foreground font-medium">{contexto ? "Documentado" : "Pendiente"}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Widgets Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr relative">
-        {/* Widget: Proyectos */}
-        <DepartmentWidgetCard
-          title="Proyectos"
-          icon={FolderKanban}
-          iconColor="text-blue-600"
-          isExpanded={expandedWidget === 'proyectos'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'proyectos'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'proyectos' ? null : 'proyectos')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('proyectos')}
-          summary={
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Total:</span>
-                <span className="font-semibold">{estadisticas?.estadisticas.proyectos.total || 0}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Activos:</span>
-                <span className="font-semibold text-green-600">{estadisticas?.estadisticas.proyectos.activos || 0}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Completados:</span>
-                <span className="font-semibold text-blue-600">{estadisticas?.estadisticas.proyectos.completados || 0}</span>
-              </div>
+            <div className="flex flex-wrap gap-3 text-xs">
+              <Button className="h-10 rounded-full px-4 font-semibold shadow-sm" onClick={() => setShowCreateProjectModal(true)}>
+                <Plus className="mr-2 h-3.5 w-3.5" /> Nuevo proyecto
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 rounded-full border-dashed px-4 font-semibold"
+                onClick={() => setShowContextModal(true)}
+              >
+                Actualizar contexto
+              </Button>
+              <Button
+                variant="secondary"
+                className="h-10 rounded-full px-4 font-semibold"
+                onClick={() => setShowEditModal(true)}
+              >
+                Editar ficha
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-10 rounded-full px-4 font-semibold text-primary underline-offset-4"
+                onClick={() => navigate("/proyectos")}
+              >
+                Ver portafolio
+              </Button>
             </div>
-          }
-          quickActions={
-            <>
-              <Button size="sm" variant="outline" onClick={(e) => {
-                e.stopPropagation()
-                setShowCreateProjectModal(true)
-              }}>
-                <Plus className="h-3 w-3 mr-1" />
-                Nuevo
-              </Button>
-              <Button size="sm" variant="ghost" onClick={(e) => {
-                e.stopPropagation()
-                navigate('/proyectos')
-              }}>
-                <Eye className="h-3 w-3 mr-1" />
-                Ver Todos
-              </Button>
-            </>
-          }
-          fullContent={
-            <DepartmentProjectsView
-              proyectos={departamentoActual.proyectos}
-              departamentoId={departamentoId}
-              departamentoNombre={departamentoActual.nombre}
-              onProjectClick={(projectId) => navigate(`/proyectos/${projectId}`)}
-              onCreateProject={() => setShowCreateProjectModal(true)}
-              onViewAllProjects={() => navigate('/proyectos')}
-            />
-          }
-        />
+          </div>
+        </section>
 
-        {/* Widget: Equipo */}
-        <DepartmentWidgetCard
-          title="Equipo"
-          icon={Users}
-          iconColor="text-purple-600"
-          isExpanded={expandedWidget === 'equipo'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'equipo'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'equipo' ? null : 'equipo')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('equipo')}
-          summary={
+        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm text-xs">
+          <p className="uppercase tracking-[0.2em] text-muted-foreground">Indicadores clave</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                label: "Proyectos activos",
+                value: proyectosActivos,
+                helper: `${proyectosTotales} totales`,
+              },
+              {
+                label: "Equipo asignado",
+                value: totalEmpleados,
+                helper: `${totalPuestos} puestos`,
+              },
+              {
+                label: "Tasa de completación",
+                value: `${completionRate}%`,
+                helper: `${tareasCompletadas} de ${totalTareas} tareas`,
+              },
+              {
+                label: "Vacantes estructurales",
+                value: vacantes,
+                helper: `${puestosConTalento}/${puestos.length} puestos cubiertos`,
+              },
+            ].map((metric) => (
+              <div key={metric.label} className="space-y-1 rounded-xl border border-border/50 bg-background/50 p-3 shadow-inner">
+                <p className="uppercase tracking-[0.2em] text-muted-foreground">{metric.label}</p>
+                <p className="text-lg font-semibold text-foreground">{metric.value}</p>
+                <p className="text-muted-foreground">{metric.helper}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 p-4">
+          <header className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium">
+            <div>
+              <p className="uppercase tracking-[0.2em] text-muted-foreground">Portafolio y carga</p>
+              <p className="text-sm text-foreground">Proyectos y tareas activas</p>
+            </div>
+            <span className="text-muted-foreground">
+              {tareasAbiertas} tareas abiertas · {proyectosActivos} proyectos activos
+            </span>
+          </header>
+          <DepartmentProjectsView
+            proyectos={departamentoActual.proyectos}
+            departamentoId={departamentoId}
+            departamentoNombre={departamentoActual.nombre}
+            onProjectClick={(projectId) => navigate(`/proyectos/${projectId}`)}
+            onCreateProject={() => setShowCreateProjectModal(true)}
+            onViewAllProjects={() => navigate("/proyectos")}
+            variant="condensed"
+          />
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 p-4">
+          <header className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium">
+            <div>
+              <p className="uppercase tracking-[0.2em] text-muted-foreground">Talento</p>
+              <p className="text-sm text-foreground">Equipo y roles asignados</p>
+            </div>
+            <span className="text-muted-foreground">
+              {totalEmpleados} personas · {totalPuestos} puestos
+            </span>
+          </header>
+          <DepartmentTeamView
+            departamentoId={departamentoId}
+            departamentoNombre={departamentoActual.nombre}
+            jefe={departamentoActual.jefe}
+            empleados={departamentoActual.usuarios}
+            puestosTrabajo={departamentoActual.puestosTrabajo}
+            totalEmpleados={totalEmpleados}
+            variant="condensed"
+          />
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border/70 bg-card/50 p-4 text-xs">
+          <header className="flex flex-wrap items-center justify-between gap-3 font-medium">
+            <div>
+              <p className="uppercase tracking-[0.2em] text-muted-foreground">Finanzas</p>
+              <p className="text-sm text-foreground">Presupuesto operativo</p>
+            </div>
+          </header>
+          <BudgetView entityId={departamentoId} entityType="departamento" entityName={departamentoActual.nombre} variant="condensed" />
+        </section>
+
+        <section className="space-y-4 text-xs">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4 rounded-2xl border border-border/70 bg-card/60 p-4">
+              <header>
+                <p className="uppercase tracking-[0.2em] text-muted-foreground">Base de conocimiento</p>
+                <p className="text-sm text-foreground">Contexto documentado</p>
+              </header>
+              <DepartmentContextView
+                contexto={contexto}
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
+                onEdit={() => setShowContextModal(true)}
+                onCreate={() => setShowContextModal(true)}
+                variant="condensed"
+              />
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-border/70 bg-card/60 p-4">
+              <header>
+                <p className="uppercase tracking-[0.2em] text-muted-foreground">Documentación</p>
+                <p className="text-sm text-foreground">Entregables y notas</p>
+              </header>
+              <DepartmentDocumentsManager
+                departamentoId={departamentoId}
+                departamentoNombre={departamentoActual.nombre}
+                variant="condensed"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 p-4 text-xs">
+          <header className="flex flex-wrap items-center justify-between gap-3 font-medium">
+            <div>
+              <p className="uppercase tracking-[0.2em] text-muted-foreground">Organigrama</p>
+              <p className="text-sm text-foreground">Estructura y puestos</p>
+            </div>
+            <span className="text-muted-foreground">
+              {puestos.length} puestos definidos · {vacantes} vacantes
+            </span>
+          </header>
+          {puestos.length > 0 ? (
             <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>Total Empleados:</span>
-                <span className="font-semibold">{estadisticas?.estadisticas.totalEmpleados || 0}</span>
-              </div>
-              {estadisticas?.jefe && (
-                <div className="flex items-center gap-2 pt-2 border-t">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={estadisticas.jefe.avatarUrl} />
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                      {getInitials(estadisticas.jefe.nombreCompleto)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{estadisticas.jefe.nombreCompleto}</p>
-                    <p className="text-xs text-muted-foreground">Líder</p>
-                  </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/50 bg-background/60 p-3 shadow-inner">
+                  <p className="uppercase tracking-[0.2em] text-muted-foreground">Puestos</p>
+                  <p className="text-lg font-semibold text-foreground">{puestos.length}</p>
                 </div>
-              )}
-            </div>
-          }
-          fullContent={
-            <DepartmentTeamView
-              departamentoId={departamentoId}
-              departamentoNombre={departamentoActual.nombre}
-              jefe={departamentoActual.jefe}
-              empleados={departamentoActual.usuarios}
-              puestosTrabajo={departamentoActual.puestosTrabajo}
-              totalEmpleados={estadisticas?.estadisticas.totalEmpleados || 0}
-            />
-          }
-        />
-
-        {/* Widget: Rendimiento */}
-        <DepartmentWidgetCard
-          title="Rendimiento"
-          icon={TrendingUp}
-          iconColor="text-green-600"
-          isExpanded={expandedWidget === 'rendimiento'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'rendimiento'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'rendimiento' ? null : 'rendimiento')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('rendimiento')}
-          summary={
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Tasa de Completación</span>
-                  <span className="font-semibold">{completionRate}%</span>
+                <div className="rounded-xl border border-border/50 bg-background/60 p-3 shadow-inner">
+                  <p className="uppercase tracking-[0.2em] text-muted-foreground">Cubiertos</p>
+                  <p className="text-lg font-semibold text-foreground">{puestosConTalento}</p>
                 </div>
-                <Progress value={completionRate} className="h-2" />
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <p className="text-muted-foreground">Tareas Abiertas</p>
-                  <p className="font-semibold">{estadisticas?.estadisticas.tareas.abiertas || 0}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Completadas</p>
-                  <p className="font-semibold text-green-600">{tareasCompletadas}</p>
+                <div className="rounded-xl border border-border/50 bg-background/60 p-3 shadow-inner">
+                  <p className="uppercase tracking-[0.2em] text-muted-foreground">Vacantes</p>
+                  <p className="text-lg font-semibold text-foreground">{vacantes}</p>
                 </div>
               </div>
-            </div>
-          }
-          fullContent={
-            <Card className="border-border bg-card">
-              <CardContent className="p-6 space-y-6">
-                <div>
-                  <h3 className="font-semibold text-lg mb-4">Métricas de Rendimiento</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Tasa de Completación</span>
-                        <span className="font-semibold text-foreground">{completionRate}%</span>
-                      </div>
-                      <Progress value={completionRate} />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Proyectos Activos</span>
-                        <span className="font-semibold text-foreground">
-                          {estadisticas?.estadisticas.proyectos.activos || 0} /{" "}
-                          {estadisticas?.estadisticas.proyectos.total || 0}
-                        </span>
-                      </div>
-                      <Progress
-                        value={
-                          estadisticas?.estadisticas.proyectos.total
-                            ? (estadisticas.estadisticas.proyectos.activos /
-                                estadisticas.estadisticas.proyectos.total) *
-                              100
-                            : 0
-                        }
-                      />
-                    </div>
-                  </div>
+              <details className="rounded-xl border border-dashed border-border/60 bg-background/40 p-3">
+                <summary className="cursor-pointer text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Ver organigrama completo
+                </summary>
+                <div className="mt-4 rounded-xl border border-border/60 bg-card/70 p-3">
+                  <DepartmentOrgChart
+                    departamentoId={departamentoId}
+                    departamentoNombre={departamentoActual.nombre}
+                  />
                 </div>
+              </details>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No se han definido puestos para este departamento.</p>
+          )}
+        </section>
 
-                <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-3">Estadísticas Detalladas</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Total Proyectos</p>
-                      <p className="text-2xl font-bold">{estadisticas?.estadisticas.proyectos.total || 0}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Completados</p>
-                      <p className="text-2xl font-bold text-green-600">{estadisticas?.estadisticas.proyectos.completados || 0}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Tareas Abiertas</p>
-                      <p className="text-2xl font-bold">{estadisticas?.estadisticas.tareas.abiertas || 0}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Puestos</p>
-                      <p className="text-2xl font-bold">{estadisticas?.estadisticas.totalPuestos || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          }
+        <CreateDepartmentModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          departamento={departamentoActual}
         />
 
-        {/* Widget: Presupuesto */}
-        <DepartmentWidgetCard
-          title="Presupuesto"
-          icon={Coins}
-          iconColor="text-yellow-600"
-          isExpanded={expandedWidget === 'presupuesto'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'presupuesto'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'presupuesto' ? null : 'presupuesto')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('presupuesto')}
-          summary={
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Gestión financiera y control de gastos del departamento
-              </p>
-              <Button size="sm" variant="outline" className="w-full" onClick={(e) => e.stopPropagation()}>
-                <Eye className="h-3 w-3 mr-1" />
-                Ver Detalles
-              </Button>
-            </div>
-          }
-          fullContent={
-            <BudgetView
-              entityId={departamentoId}
-              entityType="departamento"
-              entityName={departamentoActual.nombre}
-            />
-          }
+        <DepartmentContextModal
+          open={showContextModal}
+          onOpenChange={setShowContextModal}
+          departamentoId={departamentoId}
+          departamentoNombre={departamentoActual.nombre}
+          contextoExistente={contexto}
         />
 
-        {/* Widget: Contexto */}
-        <DepartmentWidgetCard
-          title="Contexto"
-          icon={Sparkles}
-          iconColor="text-pink-600"
-          isExpanded={expandedWidget === 'contexto'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'contexto'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'contexto' ? null : 'contexto')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('contexto')}
-          summary={
-            <div className="space-y-2">
-              {contexto ? (
-                <>
-                  <p className="text-xs line-clamp-2">{contexto.objetivos || "Sin objetivos"}</p>
-                  <div className="flex gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {contexto.kpis ? "KPIs ✓" : "Sin KPIs"}
-                    </Badge>
-                  </div>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground">No hay contexto definido</p>
-              )}
-            </div>
-          }
-          quickActions={
-            <Button size="sm" variant="outline" onClick={(e) => {
-              e.stopPropagation()
-              setShowContextModal(true)
-            }}>
-              <Edit className="h-3 w-3 mr-1" />
-              {contexto ? "Editar" : "Crear"}
-            </Button>
-          }
-          fullContent={
-            <DepartmentContextView
-              contexto={contexto}
-              departamentoId={departamentoId}
-              departamentoNombre={departamentoActual.nombre}
-              onEdit={() => setShowContextModal(true)}
-              onCreate={() => setShowContextModal(true)}
-            />
-          }
-        />
-
-        {/* Widget: Organigrama */}
-        <DepartmentWidgetCard
-          title="Organigrama"
-          icon={Map}
-          iconColor="text-indigo-600"
-          isExpanded={expandedWidget === 'organigrama'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'organigrama'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'organigrama' ? null : 'organigrama')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('organigrama')}
-          summary={
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Puestos de Trabajo:</span>
-                <span className="font-semibold">{estadisticas?.estadisticas.totalPuestos || 0}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Estructura jerárquica del departamento
-              </p>
-            </div>
-          }
-          fullContent={
-            <DepartmentOrgChart
-              departamentoId={departamentoId}
-              departamentoNombre={departamentoActual.nombre}
-            />
-          }
-        />
-
-        {/* Widget: Documentos */}
-        <DepartmentWidgetCard
-          title="Documentos"
-          icon={FileText}
-          iconColor="text-orange-600"
-          isExpanded={expandedWidget === 'documentos'}
-          isOtherExpanded={expandedWidget !== null && expandedWidget !== 'documentos'}
-          onToggleExpand={() => setExpandedWidget(expandedWidget === 'documentos' ? null : 'documentos')}
-          onChangeWidget={(widgetId: string) => setExpandedWidget(widgetId)}
-          availableWidgets={getAvailableWidgets('documentos')}
-          summary={
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Gestión de documentos y archivos del departamento
-              </p>
-              <Button size="sm" variant="outline" className="w-full" onClick={(e) => e.stopPropagation()}>
-                <Eye className="h-3 w-3 mr-1" />
-                Ver Documentos
-              </Button>
-            </div>
-          }
-          fullContent={
-            <DepartmentDocumentsManager
-              departamentoId={departamentoId}
-              departamentoNombre={departamentoActual.nombre}
-            />
-          }
+        <CreateProjectModal
+          open={showCreateProjectModal}
+          onOpenChange={setShowCreateProjectModal}
+          departamentoIdPredeterminado={departamentoId}
+          onSuccess={() => {
+            fetchDepartamentoById(departamentoId)
+            fetchEstadisticas(departamentoId)
+          }}
         />
       </div>
-
-      {/* Modals */}
-      <CreateDepartmentModal
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
-        departamento={departamentoActual}
-      />
-
-      <DepartmentContextModal
-        open={showContextModal}
-        onOpenChange={setShowContextModal}
-        departamentoId={departamentoId}
-        departamentoNombre={departamentoActual.nombre}
-        contextoExistente={contexto}
-      />
-
-      <CreateProjectModal
-        open={showCreateProjectModal}
-        onOpenChange={setShowCreateProjectModal}
-        departamentoIdPredeterminado={departamentoId}
-        onSuccess={() => {
-          fetchDepartamentoById(departamentoId)
-          fetchEstadisticas(departamentoId)
-        }}
-      />
     </div>
   )
 }

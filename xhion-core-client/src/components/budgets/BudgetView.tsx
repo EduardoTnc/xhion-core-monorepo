@@ -87,6 +87,7 @@ interface BudgetViewProps {
   entityId: string
   entityType: "departamento" | "proyecto"
   entityName: string
+  variant?: "default" | "condensed"
 }
 
 const estadoColors: Record<EstadoPresupuestoType, string> = {
@@ -111,9 +112,10 @@ const tipoColors: Record<TipoMovimientoPresupuestoType, string> = {
   [TipoMovimientoPresupuesto.Transferencia]: "text-purple-500",
 }
 
-export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps) {
+export function BudgetView({ entityId, entityType, entityName, variant = "default" }: BudgetViewProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showMovementModal, setShowMovementModal] = useState(false)
+  const isCondensed = variant === "condensed"
 
   const {
     presupuestosDepartamento,
@@ -150,36 +152,81 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
     }
   }
 
+  const renderModals = (currentPresupuesto?: Presupuesto) => (
+    <>
+      {entityType === "departamento" && (
+        <CreateBudgetDepartmentModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          departamentoId={entityId}
+          departamentoNombre={entityName}
+          presupuestoExistente={currentPresupuesto as any}
+        />
+      )}
+
+      {currentPresupuesto && (
+        <CreateMovementModal
+          open={showMovementModal}
+          onOpenChange={setShowMovementModal}
+          presupuestoId={currentPresupuesto.id}
+          tipo={entityType}
+          montoDisponible={Number(currentPresupuesto.montoDisponible)}
+        />
+      )}
+    </>
+  )
+
   if (!presupuesto) {
-    return (
-      <Card className="border-border bg-card p-8">
-        <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-              <Coins className="h-8 w-8 text-muted-foreground" />
+    if (isCondensed) {
+      return (
+        <>
+          <div className="space-y-2 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Presupuesto</p>
+                <p className="text-sm text-muted-foreground">Sin presupuesto asignado</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-[11px]"
+                onClick={() => setShowCreateModal(true)}
+              >
+                Configurar
+              </Button>
             </div>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">Sin Presupuesto Asignado</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Este {entityType} aún no tiene un presupuesto configurado
+            <p className="text-muted-foreground">
+              Registra un monto disponible para comenzar el seguimiento financiero de este {entityType}.
             </p>
           </div>
-          <Button onClick={() => setShowCreateModal(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Crear Presupuesto
-          </Button>
-        </div>
+          {renderModals(undefined)}
+        </>
+      )
+    }
 
-        {entityType === "departamento" && (
-          <CreateBudgetDepartmentModal
-            open={showCreateModal}
-            onOpenChange={setShowCreateModal}
-            departamentoId={entityId}
-            departamentoNombre={entityName}
-          />
-        )}
-      </Card>
+    return (
+      <>
+        <Card className="border-border bg-card p-8">
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                <Coins className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Sin Presupuesto Asignado</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Este {entityType} aún no tiene un presupuesto configurado
+              </p>
+            </div>
+            <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear Presupuesto
+            </Button>
+          </div>
+        </Card>
+        {renderModals(undefined)}
+      </>
     )
   }
 
@@ -187,6 +234,102 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
   const montoGastado = Number(presupuesto.montoGastado)
   const montoDisponible = Number(presupuesto.montoDisponible)
   const porcentajeGastado = montoTotal > 0 ? (montoGastado / montoTotal) * 100 : 0
+
+  if (isCondensed) {
+    const latestMovement = presupuesto.movimientos && presupuesto.movimientos.length > 0
+      ? [...presupuesto.movimientos].sort(
+          (a, b) => new Date(b.fechaMovimiento).getTime() - new Date(a.fechaMovimiento).getTime()
+        )[0]
+      : null
+
+    return (
+      <>
+        <div className="space-y-4 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Presupuesto</p>
+              {"periodo" in presupuesto && presupuesto.periodo ? (
+                <p className="text-sm text-muted-foreground">Periodo {presupuesto.periodo}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Sin periodo definido</p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-[11px]"
+                onClick={() => setShowMovementModal(true)}
+              >
+                Registrar movimiento
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-3 text-[11px]"
+                onClick={() => setShowCreateModal(true)}
+              >
+                Ajustar presupuesto
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 text-sm">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Asignado</p>
+              <p className="text-base font-semibold text-foreground">{formatCurrency(montoTotal)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Gastado</p>
+              <p className="text-base font-semibold text-foreground">{formatCurrency(montoGastado)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Disponible</p>
+              <p className="text-base font-semibold text-foreground">{formatCurrency(montoDisponible)}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>Consumo total</span>
+              <span className="text-foreground font-medium">{porcentajeGastado.toFixed(1)}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-border/60 overflow-hidden">
+              <div
+                className="h-full bg-primary"
+                style={{ width: `${Math.min(100, porcentajeGastado)}%` }}
+              />
+            </div>
+          </div>
+
+          {latestMovement ? (
+            <div className="flex flex-col gap-1 text-muted-foreground">
+              <p className="text-[11px] uppercase tracking-[0.18em]">Último movimiento</p>
+              <div className="flex items-center justify-between text-sm text-foreground">
+                <span className="font-medium line-clamp-1">{latestMovement.descripcion}</span>
+                <span
+                  className={
+                    latestMovement.tipo === TipoMovimientoPresupuesto.Gasto
+                      ? "text-red-500"
+                      : "text-green-500"
+                  }
+                >
+                  {latestMovement.tipo === TipoMovimientoPresupuesto.Gasto ? "-" : "+"}
+                  {formatCurrency(Number(latestMovement.monto))}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {format(new Date(latestMovement.fechaMovimiento), "dd MMM yyyy", { locale: es })} · {latestMovement.registradoPor.nombreCompleto}
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Aún no hay movimientos registrados.</p>
+          )}
+        </div>
+        {renderModals(presupuesto)}
+      </>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -418,24 +561,7 @@ export function BudgetView({ entityId, entityType, entityName }: BudgetViewProps
         </TabsContent>
       </Tabs>
 
-      {/* Modales */}
-      {entityType === "departamento" && (
-        <CreateBudgetDepartmentModal
-          open={showCreateModal}
-          onOpenChange={setShowCreateModal}
-          departamentoId={entityId}
-          departamentoNombre={entityName}
-          presupuestoExistente={presupuesto as any}
-        />
-      )}
-
-      <CreateMovementModal
-        open={showMovementModal}
-        onOpenChange={setShowMovementModal}
-        presupuestoId={presupuesto.id}
-        tipo={entityType}
-        montoDisponible={montoDisponible}
-      />
+      {renderModals(presupuesto)}
     </div>
   )
 }

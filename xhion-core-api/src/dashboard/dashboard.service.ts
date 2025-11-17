@@ -58,6 +58,7 @@ export class DashboardService {
           select: {
             id: true,
             nombre: true,
+            color: true,
           },
         },
         miembros: {
@@ -79,6 +80,8 @@ export class DashboardService {
             fechaInicio: true,
             fechaFin: true,
             estado: true,
+            color: true,
+            orden: true,
           },
         },
         tareas: {
@@ -136,16 +139,26 @@ export class DashboardService {
           riesgos,
         );
 
-        // Transformar hitos (etapas)
-        const hitos = (proyecto.etapas || []).map((etapa: any, index: number) => ({
+        const etapas = (proyecto.etapas || []).map((etapa: any) => ({
           id: etapa.id,
           nombre: etapa.nombre,
-          fecha: etapa.fechaInicio?.toISOString() || new Date().toISOString(),
+          fechaInicio: etapa.fechaInicio?.toISOString() || proyecto.fechaInicio?.toISOString() || new Date().toISOString(),
+          fechaFin: etapa.fechaFin?.toISOString() || etapa.fechaInicio?.toISOString() || proyecto.fechaFin?.toISOString() || new Date().toISOString(),
+          estado: etapa.estado,
+          color: etapa.color,
+          orden: etapa.orden,
+        }));
+
+        // Transformar hitos (mantener compatibilidad)
+        const hitos = etapas.map((etapa: any, index: number) => ({
+          id: etapa.id,
+          nombre: etapa.nombre,
+          fecha: etapa.fechaInicio,
           completado: etapa.estado === 'Completada',
           tipo:
             index === 0
               ? 'inicio'
-              : index === (proyecto.etapas?.length || 0) - 1
+              : index === (etapas.length || 0) - 1
                 ? 'fin'
                 : 'intermedio',
         }));
@@ -167,6 +180,7 @@ export class DashboardService {
           fechaFinProyectada: this.calcularFechaProyectada(proyecto, progreso),
           progreso: Math.round(progreso),
           salud,
+          etapas,
           hitos,
           alertas,
           riesgos,
@@ -193,12 +207,14 @@ export class DashboardService {
           departamento: {
             id: proyecto.departamento?.id || '',
             nombre: proyecto.departamento?.nombre || '',
+            color: proyecto.departamento?.color || '#3b82f6',
           },
           responsable: {
             id: proyecto.responsable.id,
             nombre: proyecto.responsable.nombreCompleto,
             avatar: proyecto.responsable.avatarUrl || '',
           },
+          color: proyecto.color || '#3b82f6',
         };
       }),
     );

@@ -47,6 +47,7 @@ export interface DepartamentoDetalle extends Departamento {
     fechaCreacion: string;
     fechaInicio?: string;
     fechaFin?: string;
+    descripcion?: string | null;
     responsable: {
       id: string;
       nombreCompleto: string;
@@ -110,6 +111,8 @@ export interface EstadisticasDepartamento {
 export interface CreateDepartamentoDto {
   nombre: string;
   descripcion?: string;
+  objetivos?: string;
+  icono?: string;
   color?: string;
   jefeId?: string;
 }
@@ -117,6 +120,8 @@ export interface CreateDepartamentoDto {
 export interface UpdateDepartamentoDto {
   nombre?: string;
   descripcion?: string;
+  objetivos?: string;
+  icono?: string;
   color?: string;
   jefeId?: string;
 }

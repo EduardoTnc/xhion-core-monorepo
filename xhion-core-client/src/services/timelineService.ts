@@ -13,6 +13,16 @@ export interface Hito {
   descripcion?: string
 }
 
+export interface EtapaTimeline {
+  id: string
+  nombre: string
+  fechaInicio: string
+  fechaFin: string
+  estado?: string
+  color?: string
+  orden?: number
+}
+
 export interface Alerta {
   id: string
   tipo: 'retraso' | 'presupuesto' | 'calidad' | 'equipo' | 'dependencia'
@@ -67,6 +77,7 @@ export interface ProyectoTimeline {
   
   // Hitos
   hitos: Hito[]
+  etapas: EtapaTimeline[]
   
   // Alertas y Riesgos
   alertas: Alerta[]
@@ -109,12 +120,14 @@ export interface ProyectoTimeline {
   departamento: {
     id: string
     nombre: string
+    color?: string
   }
   responsable: {
     id: string
     nombre: string
     avatar: string
   }
+  color?: string
 }
 
 export interface TimelineData {

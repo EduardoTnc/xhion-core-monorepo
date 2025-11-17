@@ -1,35 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react"
 import {
   FolderKanban,
   Plus,
-  Users,
-  Calendar,
   TrendingUp,
-  MoreVertical,
-  Eye,
-  Edit,
-  Trash2,
   CheckCircle2,
-  Clock,
   AlertCircle,
   XCircle,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { EmptyState } from "@/components/ui/empty-state";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { EditProjectModal } from "@/components/projects/EditProjectModal";
-import { useProjectStore } from "@/store/projectStore";
-import { toast } from "sonner";
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { EditProjectModal } from "@/components/projects/EditProjectModal"
+import { useProjectStore } from "@/store/projectStore"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +21,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import type { Proyecto as ProyectoCompleto } from "@/services/projectService";
+} from "@/components/ui/alert-dialog"
+import type { Proyecto as ProyectoCompleto } from "@/services/projectService"
 
 // Tipo simplificado de proyecto que viene del endpoint de departamentos
 interface Proyecto {
@@ -64,12 +46,13 @@ interface Proyecto {
 }
 
 interface DepartmentProjectsViewProps {
-  proyectos?: Proyecto[];
-  departamentoId: string;
-  departamentoNombre: string;
-  onProjectClick?: (projectId: string) => void;
-  onCreateProject?: () => void;
-  onViewAllProjects?: () => void;
+  proyectos?: Proyecto[]
+  departamentoId: string
+  departamentoNombre: string
+  onProjectClick?: (projectId: string) => void
+  onCreateProject?: () => void
+  onViewAllProjects?: () => void
+  variant?: "default" | "condensed"
 }
 
 const estadoConfig = {
@@ -102,15 +85,23 @@ export function DepartmentProjectsView({
   onProjectClick,
   onCreateProject,
   onViewAllProjects,
+  variant = "default",
 }: DepartmentProjectsViewProps) {
-  const [filter, setFilter] = useState<string>("all");
-  const [editingProject, setEditingProject] = useState<Proyecto | null>(null);
-  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [editingProject, setEditingProject] = useState<Proyecto | null>(null)
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null)
 
-  const filteredProyectos =
-    filter === "all"
-      ? proyectos
-      : proyectos?.filter((p) => p.estado === filter);
+  const estadisticas = useMemo(() => {
+    if (!proyectos) {
+      return { total: 0, activos: 0, completados: 0, enPausa: 0, archivados: 0 }
+    }
+    return {
+      total: proyectos.length,
+      activos: proyectos.filter((p) => p.estado === "Activo").length,
+      completados: proyectos.filter((p) => p.estado === "Completado").length,
+      enPausa: proyectos.filter((p) => p.estado === "En_Pausa").length,
+      archivados: proyectos.filter((p) => p.estado === "Archivado").length,
+    }
+  }, [proyectos])
 
   if (!proyectos || proyectos.length === 0) {
     return (
@@ -126,247 +117,63 @@ export function DepartmentProjectsView({
     );
   }
 
-  const estadisticas = {
-    total: proyectos.length,
-    activos: proyectos.filter((p) => p.estado === "Activo").length,
-    completados: proyectos.filter((p) => p.estado === "Completado").length,
-    enPausa: proyectos.filter((p) => p.estado === "En_Pausa").length,
-    archivados: proyectos.filter((p) => p.estado === "Archivado").length,
-  };
+  const filteredProyectos = proyectos || []
 
   return (
-    <div className="space-y-6">
-      {/* Header con Estadísticas */}
+    <div className={`${variant === "condensed" ? "space-y-4" : "space-y-6"}`}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Proyectos</h2>
-          <p className="text-sm text-muted-foreground">
-            {estadisticas.total} proyecto{estadisticas.total !== 1 ? "s" : ""} en total
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Proyectos</p>
+          <p className="text-sm text-foreground">
+            {estadisticas.total} total · {estadisticas.activos} activos · {estadisticas.completados} completados
           </p>
         </div>
-        <Button className="gap-2" onClick={onCreateProject}>
+        <Button size="sm" variant={variant === "condensed" ? "ghost" : "default"} className="gap-2" onClick={onCreateProject}>
           <Plus className="h-4 w-4" />
-          Nuevo Proyecto
+          Nuevo
         </Button>
       </div>
 
       {/* Cards de Estadísticas */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="text-2xl font-bold text-foreground">{estadisticas.total}</p>
-            </div>
-            <FolderKanban className="h-8 w-8 text-muted-foreground" />
-          </div>
-        </Card>
-
-        <Card className="border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Activos</p>
-              <p className="text-2xl font-bold text-blue-600">{estadisticas.activos}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-blue-600" />
-          </div>
-        </Card>
-
-        <Card className="border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Completados</p>
-              <p className="text-2xl font-bold text-green-600">{estadisticas.completados}</p>
-            </div>
-            <CheckCircle2 className="h-8 w-8 text-green-600" />
-          </div>
-        </Card>
-
-        <Card className="border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">En Pausa</p>
-              <p className="text-2xl font-bold text-orange-600">{estadisticas.enPausa}</p>
-            </div>
-            <AlertCircle className="h-8 w-8 text-orange-600" />
-          </div>
-        </Card>
+      <div className="space-y-1 text-xs text-muted-foreground">
+        <span>Activos {estadisticas.activos}</span> · <span>Completados {estadisticas.completados}</span> ·
+        <span> En pausa {estadisticas.enPausa}</span>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2">
-        <Button
-          variant={filter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("all")}
-        >
-          Todos
-        </Button>
-        <Button
-          variant={filter === "Activo" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("Activo")}
-        >
-          Activos
-        </Button>
-        <Button
-          variant={filter === "Completado" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("Completado")}
-        >
-          Completados
-        </Button>
-        <Button
-          variant={filter === "En_Pausa" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("En_Pausa")}
-        >
-          En Pausa
-        </Button>
-        <Button
-          variant={filter === "Archivado" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("Archivado")}
-        >
-          Archivados
-        </Button>
-      </div>
-
-      {/* Lista de Proyectos */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {filteredProyectos?.map((proyecto) => {
+      <div className="divide-y divide-border">
+        {filteredProyectos.map((proyecto) => {
           const config = estadoConfig[proyecto.estado as keyof typeof estadoConfig] || {
             icon: FolderKanban,
-            color: "bg-gray-100 text-gray-800",
+            color: "text-muted-foreground",
             label: proyecto.estado,
-          };
-          const EstadoIcon = config.icon;
+          }
+          const EstadoIcon = config.icon
 
           return (
-            <Card 
-              key={proyecto.id} 
-              className="border-border bg-card p-6 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => onProjectClick?.(proyecto.id)}
-            >
-              <div className="space-y-4">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <FolderKanban className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{proyecto.nombre}</h3>
-                      {proyecto.descripcion && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {proyecto.descripcion}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onProjectClick?.(proyecto.id);
-                        }}
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver Detalles
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingProject(proyecto);
-                        }}
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingProjectId(proyecto.id);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Estado */}
-                <Badge className={config.color}>
-                  <EstadoIcon className="mr-1 h-3 w-3" />
+            <div key={proyecto.id} className="py-3 text-sm">
+              <div className="flex items-center gap-3">
+                <button className="text-left" onClick={() => onProjectClick?.(proyecto.id)}>
+                  <p className="font-semibold text-foreground">{proyecto.nombre}</p>
+                  {proyecto.descripcion && (
+                    <p className="text-xs text-muted-foreground line-clamp-1">{proyecto.descripcion}</p>
+                  )}
+                </button>
+                <div className={`ml-auto flex items-center gap-1 text-xs ${config.color}`}>
+                  <EstadoIcon className="h-3 w-3" />
                   {config.label}
-                </Badge>
-
-                {/* Estadísticas */}
-                <div className="grid grid-cols-3 gap-4 pt-2 border-t border-border">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">{proyecto._count?.tareas ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Tareas</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">{proyecto._count?.miembros ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Miembros</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-foreground">{proyecto._count?.etapas ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Etapas</p>
-                  </div>
                 </div>
-
-                {/* Fechas */}
-                {(proyecto.fechaInicio || proyecto.fechaFin) && (
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t border-border">
-                    {proyecto.fechaInicio && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          Inicio: {format(new Date(proyecto.fechaInicio), "dd MMM yyyy", { locale: es })}
-                        </span>
-                      </div>
-                    )}
-                    {proyecto.fechaFin && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          Fin: {format(new Date(proyecto.fechaFin), "dd MMM yyyy", { locale: es })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
-            </Card>
-          );
+              <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <span>Responsable: {proyecto.responsable?.nombreCompleto || "Sin asignar"}</span>
+                <span>Tareas: {proyecto._count?.tareas ?? 0}</span>
+                <span>Miembros: {proyecto._count?.miembros ?? 0}</span>
+                <span>Etapas: {proyecto._count?.etapas ?? 0}</span>
+                <span>Creado: {new Date(proyecto.fechaCreacion).toLocaleDateString("es-ES")}</span>
+              </div>
+            </div>
+          )
         })}
       </div>
-
-      {filteredProyectos && filteredProyectos.length === 0 && (
-        <Card className="border-dashed border-2 border-border bg-muted/30 p-12">
-          <div className="text-center space-y-2">
-            <p className="text-muted-foreground">No hay proyectos con el filtro seleccionado</p>
-            <Button variant="link" onClick={() => setFilter("all")}>
-              Ver todos los proyectos
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Modal de Editar Proyecto */}
       {editingProject && (

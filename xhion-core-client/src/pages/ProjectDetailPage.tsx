@@ -375,7 +375,7 @@ export default function ProjectDetailPage() {
         {/* Etapas Tab */}
         <TabsContent value="etapas" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Etapas del Proyecto</h2>
+            <h2 className="text-xl font-semibold">Eta del Proyecto</h2>
             <Button size="sm" onClick={handleCreateEtapa}>
               <Plus className="mr-2 h-4 w-4" />
               Nueva Etapa

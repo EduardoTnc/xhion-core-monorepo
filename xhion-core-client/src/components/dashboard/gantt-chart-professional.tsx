@@ -43,24 +43,33 @@ import {
 import { useTimelineStore } from "@/store/timelineStore"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
-import { format, differenceInDays } from "date-fns"
+import { format, differenceInDays, subDays } from "date-fns"
 import { es } from "date-fns/locale"
-import { Gantt as ReactGantt, ViewMode as GTViewMode, TitleColumn, DateStartColumn, DateEndColumn, DependenciesColumn } from "@wamra/gantt-task-react"
-import type { Task as GTTask, TaskOrEmpty as GTTaskOrEmpty } from "@wamra/gantt-task-react"
-import type { ProyectoTimeline, Hito } from "@/services/timelineService"
+import { Gantt as ReactGantt, ViewMode as GTViewMode, TitleColumn } from "@wamra/gantt-task-react"
+import type { Task as GTTask, TaskOrEmpty as GTTaskOrEmpty, ColumnProps } from "@wamra/gantt-task-react"
+import type { ProyectoTimeline, Hito, EtapaTimeline } from "@/services/timelineService"
 import { timelineService } from "@/services/timelineService"
 import { toast } from "sonner"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 import "@wamra/gantt-task-react/dist/style.css"
 import "@/styles/gantt-task-react-overrides.css"
+import { getDepartmentIcon } from "@/lib/department-icons"
 
 type ContentFilter = "all" | "projects" | "tasks"
 
+type TaskVisualMeta = {
+  iconName?: string | null
+  deptColor?: string
+  projectColor?: string
+}
+
+const OUTDATED_THRESHOLD_DAYS = 60
+
 /**
- * Diagrama de Gantt Profesional con Frappe Gantt - v2.0
+ * Diagrama de Gantt Profesional con Gantt Task React - v2.0
  * 
- * Librería: frappe-gantt (Open Source, MIT License)
+ * Librería: Gantt Task React 
  * - Ligera y rápida
  * - Interactiva con drag & drop
  * - Múltiples vistas (día, semana, mes, año)
@@ -99,8 +108,9 @@ export function GanttChartProfessional() {
   const [selectedEstado, setSelectedEstado] = useState<string>('all')
   const [showCompleted, setShowCompleted] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [showMilestones, setShowMilestones] = useState(true)
+  const [showMilestones, setShowMilestones] = useState(false)
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all')
+  const [hideOutdated, setHideOutdated] = useState(false)
   const [localTasks, setLocalTasks] = useState<GTTask[]>([])
   const [containerWidth, setContainerWidth] = useState(0)
   const [isDarkTheme, setIsDarkTheme] = useState(false)
@@ -111,6 +121,20 @@ export function GanttChartProfessional() {
   const ganttContainerRef = useRef<HTMLDivElement>(null)
   const proyectoByTaskIdRef = useRef<Map<string, ProyectoTimeline>>(new Map())
   const parentTaskIdsRef = useRef<string[]>([])
+  const taskMetaRef = useRef<Map<string, TaskVisualMeta>>(new Map())
+  const stageByTaskIdRef = useRef<Map<string, { stage: EtapaTimeline; proyecto: ProyectoTimeline }>>(new Map())
+
+  const parseLocalDate = useCallback((value: string | Date) => {
+    if (value instanceof Date) return value
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value)
+    if (match) {
+      const y = Number(match[1])
+      const m = Number(match[2]) - 1
+      const d = Number(match[3])
+      return new Date(y, m, d)
+    }
+    return new Date(value)
+  }, [])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -161,6 +185,12 @@ export function GanttChartProfessional() {
   }, [timelineData])
 
   // Filtrar proyectos
+  const isProjectOutdated = useCallback((proyecto: ProyectoTimeline) => {
+    const cutoff = subDays(new Date(), OUTDATED_THRESHOLD_DAYS)
+    const endDate = parseLocalDate(proyecto.fechaFin || proyecto.fechaFinProyectada || proyecto.fechaInicio)
+    return endDate < cutoff
+  }, [parseLocalDate])
+
   const proyectosFiltrados = useMemo(() => {
     if (!timelineData) return []
 
@@ -181,8 +211,12 @@ export function GanttChartProfessional() {
       proyectos = proyectos.filter(p => p.progreso < 100)
     }
 
+    if (hideOutdated) {
+      proyectos = proyectos.filter((p) => !isProjectOutdated(p))
+    }
+
     return proyectos
-  }, [timelineData, selectedDepartamento, selectedEstado, showCompleted])
+  }, [timelineData, selectedDepartamento, selectedEstado, showCompleted, hideOutdated, isProjectOutdated])
 
   // Paleta de colores dependiente del tema (más simple y enfocada en lectura)
   const ganttColors = useMemo(() => (
@@ -241,20 +275,88 @@ export function GanttChartProfessional() {
         }
   ), [isDarkTheme])
 
+  const mapTailwindBgToHex = (value?: string) => {
+    switch (value) {
+      case "bg-blue-500":
+      case "bg-blue-600":
+        return "#2563eb"
+      case "bg-indigo-700":
+        return "#4338ca"
+      case "bg-sky-700":
+        return "#0369a1"
+      case "bg-teal-600":
+        return "#0d9488"
+      case "bg-green-500":
+      case "bg-emerald-700":
+        return "#047857"
+      case "bg-lime-600":
+        return "#65a30d"
+      case "bg-amber-600":
+        return "#d97706"
+      case "bg-orange-500":
+      case "bg-orange-600":
+        return "#ea580c"
+      case "bg-rose-600":
+        return "#e11d48"
+      case "bg-fuchsia-700":
+        return "#a21caf"
+      case "bg-purple-500":
+      case "bg-purple-700":
+        return "#6d28d9"
+      case "bg-pink-500":
+        return "#ec4899"
+      case "bg-yellow-500":
+        return "#eab308"
+      case "bg-red-500":
+        return "#ef4444"
+      case "bg-cyan-500":
+      case "bg-cyan-600":
+        return "#0891b2"
+      case "bg-neutral-700":
+        return "#404040"
+      case "bg-slate-800":
+        return "#1e293b"
+      case "bg-gray-900":
+        return "#111827"
+      case "bg-zinc-700":
+        return "#3f3f46"
+      case "bg-blue-600-old":
+        return "#2563eb"
+      default:
+        return undefined
+    }
+  }
+
+  const getEffectiveColor = (value?: string) => {
+    const v = value?.trim()
+    if (!v) return undefined
+    if (v.startsWith("bg-")) return mapTailwindBgToHex(v)
+    return v
+  }
+
+  const hexToRgba = (value?: string, alpha = 0.18) => {
+    if (!value) return undefined
+    if (!value.startsWith("#")) return value
+    let hex = value.replace("#", "")
+    if (hex.length === 3) {
+      hex = hex.split("").map((c) => c + c).join("")
+    }
+    const parsed = parseInt(hex.slice(0, 6), 16)
+    if (Number.isNaN(parsed)) return value
+    const r = (parsed >> 16) & 255
+    const g = (parsed >> 8) & 255
+    const b = parsed & 255
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
   // Distancias responsivas para equilibrar tabla vs. timeline
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
   const computedDistances = useMemo(() => {
     const w = containerWidth || 1024
-    const tableWidth = clamp(Math.round(w * 0.34), 280, 420)
-    const dateCellWidth = clamp(Math.round(w * 0.09), 80, 120)
-    const dependenciesCellWidth = clamp(Math.round(w * 0.06), 40, 80)
+    const tableWidth = clamp(Math.round(w * 0.36), 260, 420)
     const actionColumnWidth = 56
     const expandIconWidth = 18
-    const titleCellWidth = clamp(
-      tableWidth - dateCellWidth * 2 - dependenciesCellWidth - actionColumnWidth - expandIconWidth,
-      160,
-      320
-    )
+    const titleCellWidth = clamp(tableWidth - actionColumnWidth - expandIconWidth, 200, tableWidth)
     const columnWidth =
       viewMode === GTViewMode.Year
         ? 160
@@ -271,8 +373,6 @@ export function GanttChartProfessional() {
       barFill: 60,
       arrowIndent: 8,
       titleCellWidth,
-      dateCellWidth,
-      dependenciesCellWidth,
       actionColumnWidth,
       expandIconWidth,
       headerHeight: 42,
@@ -293,17 +393,39 @@ export function GanttChartProfessional() {
   }, [containerWidth, viewMode])
 
   // Columnas responsivas del listado izquierdo
+  const TitleCell: React.FC<ColumnProps> = useCallback((props) => {
+    const { task } = props.data
+    const meta = taskMetaRef.current.get(task.id)
+    const { icon: DeptIcon } = getDepartmentIcon(meta?.iconName || undefined)
+    const accent = meta?.deptColor || meta?.projectColor
+    const halo = hexToRgba(accent, task.id.startsWith("dept-") ? 0.35 : 0.12)
+    return (
+      <div className="flex items-center gap-2 pr-2">
+        <div
+          className={cn(
+            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border text-[11px] font-semibold",
+            !accent && "bg-muted/50 text-muted-foreground"
+          )}
+          style={{
+            backgroundColor: halo,
+            borderColor: accent ? hexToRgba(accent, 0.4) : undefined,
+            color: accent || undefined,
+          }}
+        >
+          {DeptIcon ? <DeptIcon className="h-4 w-4" /> : <Layers className="h-4 w-4 opacity-60" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <TitleColumn {...props} />
+        </div>
+      </div>
+    )
+  }, [])
+
   const columns = useMemo(() => {
-    const isMobile = containerWidth > 0 && containerWidth < 640
-    const cols: any[] = []
-    cols.push({ id: 'title', Cell: TitleColumn, width: computedDistances.titleCellWidth, title: 'Nombre' })
-    if (!isMobile) {
-      cols.push({ id: 'from', Cell: DateStartColumn, width: computedDistances.dateCellWidth, title: 'Desde' })
-      cols.push({ id: 'to', Cell: DateEndColumn, width: computedDistances.dateCellWidth, title: 'Hasta' })
-      cols.push({ id: 'deps', Cell: DependenciesColumn, width: computedDistances.dependenciesCellWidth, title: 'Deps.' })
-    }
-    return cols
-  }, [containerWidth, computedDistances])
+    return [
+      { id: 'title', Cell: TitleCell, width: computedDistances.titleCellWidth, title: 'Elemento' },
+    ]
+  }, [computedDistances.titleCellWidth, TitleCell])
 
   // Guardar cambios de fechas (Backend Integration)
   const handleDateChange = useCallback((task: GTTaskOrEmpty) => {
@@ -357,33 +479,23 @@ export function GanttChartProfessional() {
     }
   }, [])
 
-  // Parsear fechas como locales para evitar desfases por zona horaria
-  const parseLocalDate = useCallback((value: string | Date) => {
-    if (value instanceof Date) return value
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
-    if (m) {
-      const y = Number(m[1])
-      const mo = Number(m[2]) - 1
-      const d = Number(m[3])
-      return new Date(y, mo, d)
-    }
-    return new Date(value)
-  }, [])
-
   // Convertir proyectos a formato GTTask (gantt-task-react)
   const derivedTasks = useMemo(() => {
     const tasks: GTTask[] = []
     const map = new Map<string, ProyectoTimeline>()
+    const meta = new Map<string, TaskVisualMeta>()
+    const stageAssociations = new Map<string, { stage: EtapaTimeline; proyecto: ProyectoTimeline }>()
     let order = 0
     parentTaskIdsRef.current = []
 
-    const addDeptGroup = (grupo: { departamento: { id: string; nombre: string }; proyectos: ProyectoTimeline[] }) => {
+    const addDeptGroup = (grupo: { departamento: { id: string; nombre: string; color?: string; icono?: string | null }; proyectos: ProyectoTimeline[] }) => {
       if (!grupo.proyectos.length) return
 
       const deptId = `dept-${grupo.departamento.id}`
       parentTaskIdsRef.current.push(deptId)
-      const minStart = new Date(Math.min(...grupo.proyectos.map(p => parseLocalDate(p.fechaInicio).getTime())))
-      const maxEnd = new Date(Math.max(...grupo.proyectos.map(p => parseLocalDate(p.fechaFin).getTime())))
+      const deptColor = getEffectiveColor(grupo.departamento.color) || ganttColors.projectBackgroundColor
+      const deptIconName = (grupo.departamento as any)?.icono
+      const minStart = parseLocalDate(grupo.proyectos[0].fechaInicio)
 
       // Fila de agrupación por departamento sin barra visible en el timeline.
       // Solo sirve como contenedor y título para sus proyectos.
@@ -392,7 +504,7 @@ export function GanttChartProfessional() {
         type: "project",
         name: `DEP · ${grupo.departamento.nombre.toUpperCase()}`,
         start: minStart,
-        end: maxEnd,
+        end: minStart,
         progress: 0,
         isDisabled: true,
         displayOrder: order++,
@@ -403,6 +515,7 @@ export function GanttChartProfessional() {
           projectProgressSelectedColor: "transparent",
         },
       })
+      meta.set(deptId, { iconName: deptIconName, deptColor })
     }
 
     if (selectedDepartamento === 'all') {
@@ -411,6 +524,8 @@ export function GanttChartProfessional() {
 
     proyectosFiltrados.forEach((proyecto) => {
       const tareaList = Array.isArray((proyecto as any).tareas) ? (proyecto as any).tareas : []
+      const baseColor = getEffectiveColor((proyecto as any).color) || getEffectiveColor(proyecto.departamento.color)
+      const projectColor = baseColor || ganttColors.projectBackgroundColor
       if (contentFilter === 'tasks' && tareaList.length === 0) {
         return
       }
@@ -427,10 +542,10 @@ export function GanttChartProfessional() {
           parent: parentDept,
           displayOrder: order++,
           styles: {
-            projectBackgroundColor: ganttColors.projectBackgroundColor,
-            projectBackgroundSelectedColor: ganttColors.projectBackgroundSelectedColor,
-            projectProgressColor: ganttColors.projectProgressColor,
-            projectProgressSelectedColor: ganttColors.projectProgressSelectedColor,
+            projectBackgroundColor: projectColor,
+            projectBackgroundSelectedColor: projectColor,
+            projectProgressColor: projectColor,
+            projectProgressSelectedColor: projectColor,
           },
         }
         tasks.push(projTask)
@@ -445,6 +560,44 @@ export function GanttChartProfessional() {
             ownTarget: 'startOfTask',
           }))
         }
+      }
+
+      // Etapas
+      if (proyecto.etapas && proyecto.etapas.length && contentFilter !== 'tasks') {
+        proyecto.etapas
+          .slice()
+          .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+          .forEach((etapa) => {
+            const stageId = `stage-${etapa.id}`
+            const stageStart = parseLocalDate(etapa.fechaInicio || proyecto.fechaInicio)
+            const stageEnd = parseLocalDate(etapa.fechaFin || etapa.fechaInicio || proyecto.fechaFin)
+            const stageColor = getEffectiveColor(etapa.color) || projectColor
+            const stageProgress = etapa.estado === 'Completada' ? 100 : etapa.estado === 'En_Progreso' ? 55 : 15
+            tasks.push({
+              id: stageId,
+              type: "task",
+              name: etapa.nombre,
+              start: stageStart,
+              end: stageEnd,
+              progress: stageProgress,
+              isDisabled: true,
+              parent: projId,
+              displayOrder: order++,
+              styles: {
+                barBackgroundColor: stageColor,
+                barBackgroundSelectedColor: stageColor,
+                barProgressColor: stageColor,
+                barProgressSelectedColor: stageColor,
+              },
+            })
+            map.set(stageId, proyecto)
+            meta.set(stageId, {
+              iconName: (proyecto.departamento as any)?.icono,
+              deptColor: stageColor,
+              projectColor,
+            })
+            stageAssociations.set(stageId, { stage: etapa, proyecto })
+          })
       }
 
       // Subtareas (si existen como array)
@@ -462,10 +615,10 @@ export function GanttChartProfessional() {
             parent: contentFilter === 'tasks' ? parentDept : projId,
             displayOrder: order++,
             styles: {
-              barBackgroundColor: ganttColors.barBackgroundColor,
-              barBackgroundSelectedColor: ganttColors.barBackgroundSelectedColor,
-              barProgressColor: ganttColors.barProgressColor,
-              barProgressSelectedColor: ganttColors.barProgressSelectedColor,
+              barBackgroundColor: projectColor,
+              barBackgroundSelectedColor: projectColor,
+              barProgressColor: projectColor,
+              barProgressSelectedColor: projectColor,
             },
           })
           map.set(taskId, proyecto)
@@ -493,6 +646,11 @@ export function GanttChartProfessional() {
             },
           })
           map.set(milestoneId, proyecto)
+          meta.set(milestoneId, {
+            iconName: (proyecto.departamento as any)?.icono,
+            deptColor: getEffectiveColor(proyecto.departamento.color),
+            projectColor,
+          })
         })
       }
     })
@@ -500,8 +658,10 @@ export function GanttChartProfessional() {
     // Orden estable
     tasks.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
     proyectoByTaskIdRef.current = map
+    taskMetaRef.current = meta
+    stageByTaskIdRef.current = stageAssociations
     return tasks
-  }, [proyectosFiltrados, proyectosPorDepartamento, selectedDepartamento, showMilestones, contentFilter, ganttColors])
+  }, [contentFilter, ganttColors, parseLocalDate, proyectosFiltrados, proyectosPorDepartamento, selectedDepartamento, showMilestones])
 
   // Mantener tasks locales sincronizados con los derivados del store
   useEffect(() => {
@@ -563,7 +723,24 @@ export function GanttChartProfessional() {
   // Tooltip personalizado para gantt-task-react
   const TooltipTemplate = ({ task }: { task: GTTask; fontSize: string; fontFamily: string }) => {
     const proyecto = proyectoByTaskIdRef.current.get(task.id)
+    const stageInfo = stageByTaskIdRef.current.get(task.id)
+    const meta = taskMetaRef.current.get(task.id)
+    const { icon: DeptIcon } = getDepartmentIcon(meta?.iconName || undefined)
+    const accent = meta?.deptColor || meta?.projectColor
     if (!proyecto) {
+      if (stageInfo) {
+        return (
+          <div className="p-2 text-xs">
+            <div className="font-semibold">{stageInfo.stage.nombre}</div>
+            <div className="text-muted-foreground">
+              <div>Inicio: {format(task.start, 'dd/MM/yyyy', { locale: es })}</div>
+              <div>Fin: {format(task.end, 'dd/MM/yyyy', { locale: es })}</div>
+              {stageInfo.stage.estado && <div>Estado: {stageInfo.stage.estado.replace('_', ' ')}</div>}
+            </div>
+          </div>
+        )
+      }
+
       return (
         <div className="p-2 text-xs">
           <div className="font-semibold">{task.name}</div>
@@ -575,6 +752,7 @@ export function GanttChartProfessional() {
         </div>
       )
     }
+
     const startD = parseLocalDate(proyecto.fechaInicio)
     const endD = parseLocalDate(proyecto.fechaFin)
     const duracion = differenceInDays(endD, startD)
@@ -582,7 +760,22 @@ export function GanttChartProfessional() {
     return (
       <div className="p-2 text-xs">
         <div className="font-semibold">{proyecto.nombre}</div>
-        <div className="text-muted-foreground mb-1">{proyecto.departamento.nombre}</div>
+        <div className="mb-2 flex items-center gap-2">
+          <span
+            className="flex h-7 w-7 items-center justify-center rounded-md border"
+            style={{
+              backgroundColor: hexToRgba(accent, 0.2),
+              borderColor: accent ? hexToRgba(accent, 0.45) : undefined,
+              color: accent || undefined,
+            }}
+          >
+            {DeptIcon ? <DeptIcon className="h-4 w-4" /> : <Layers className="h-4 w-4 opacity-60" />}
+          </span>
+          <div className="text-xs">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Departamento</p>
+            <p className="text-foreground">{proyecto.departamento.nombre}</p>
+          </div>
+        </div>
         <div className="space-y-0.5">
           <div><strong>Salud:</strong> {saludBadge} {proyecto.salud}</div>
           <div><strong>Progreso:</strong> {proyecto.progreso}%</div>
@@ -590,7 +783,16 @@ export function GanttChartProfessional() {
           <div><strong>Tareas:</strong> {(proyecto as any).tareas?.total || 0} ({(proyecto as any).tareas?.completadas || 0} completadas)</div>
           <div><strong>Equipo:</strong> {(proyecto as any).equipo?.length || 0} miembros</div>
         </div>
-        {proyecto.hitos && proyecto.hitos.length > 0 && (
+        {stageInfo && (
+          <div className="mt-2 pt-1 border-t">
+            <div className="font-medium mb-1">Etapa</div>
+            <div><strong>Nombre:</strong> {stageInfo.stage.nombre}</div>
+            <div><strong>Inicio:</strong> {format(task.start, 'dd/MM/yyyy', { locale: es })}</div>
+            <div><strong>Fin:</strong> {format(task.end, 'dd/MM/yyyy', { locale: es })}</div>
+            {stageInfo.stage.estado && <div><strong>Estado:</strong> {stageInfo.stage.estado.replace('_', ' ')}</div>}
+          </div>
+        )}
+        {!stageInfo && proyecto.hitos && proyecto.hitos.length > 0 && (
           <div className="mt-2 pt-1 border-t">
             <div className="font-medium mb-1">🎯 Hitos ({proyecto.hitos.length}):</div>
             {proyecto.hitos.slice(0, 3).map((h, i) => (
@@ -957,130 +1159,161 @@ export function GanttChartProfessional() {
             </div>
           )}
 
-          {/* Fila 3: Filtros y Vista */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Filtros */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+          {/* Fila 3: Filtros y Vista (una sola línea con scroll horizontal si es necesario) */}
+          <div className="w-full overflow-x-auto gantt-scroll">
+            <div className="flex items-center gap-3 min-w-max">
+              {/* Filtros */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
 
-              <Select value={selectedDepartamento} onValueChange={setSelectedDepartamento}>
-                <SelectTrigger className="h-8 w-[140px] text-xs">
-                  <SelectValue placeholder="Departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {proyectosPorDepartamento.map((grupo) => (
-                    <SelectItem key={grupo.departamento.id} value={grupo.departamento.id}>
-                      {grupo.departamento.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={selectedDepartamento} onValueChange={setSelectedDepartamento}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue placeholder="Departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {proyectosPorDepartamento.map((grupo) => (
+                      <SelectItem key={grupo.departamento.id} value={grupo.departamento.id}>
+                        {grupo.departamento.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={selectedEstado} onValueChange={setSelectedEstado}>
-                <SelectTrigger className="h-8 w-[120px] text-xs">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="Activo">Activo</SelectItem>
-                  <SelectItem value="En Pausa">En Pausa</SelectItem>
-                  <SelectItem value="Completado">Completado</SelectItem>
-                  <SelectItem value="Archivado">Archivado</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select value={selectedEstado} onValueChange={setSelectedEstado}>
+                  <SelectTrigger className="h-8 w-[120px] text-xs">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Activo">Activo</SelectItem>
+                    <SelectItem value="En Pausa">En Pausa</SelectItem>
+                    <SelectItem value="Completado">Completado</SelectItem>
+                    <SelectItem value="Archivado">Archivado</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Button
-                variant={showCompleted ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="h-8 gap-1.5 text-xs"
-              >
-                {showCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                Completados
-              </Button>
-
-              <Button
-                variant={showMilestones ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setShowMilestones(!showMilestones)}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <Milestone className="h-3.5 w-3.5" />
-                Hitos
-              </Button>
-
-              <div className="flex items-center gap-1 rounded-lg border p-0.5">
                 <Button
-                  variant={contentFilter === 'all' ? 'secondary' : 'ghost'}
+                  variant={showCompleted ? "secondary" : "outline"}
                   size="sm"
-                  className="h-8 px-2 text-[11px]"
-                  onClick={() => setContentFilter('all')}
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="h-8 gap-1.5 text-xs"
                 >
-                  <SquareStack className="h-3.5 w-3.5" /> Todo
+                  {showCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  Completados
                 </Button>
-                <Button
-                  variant={contentFilter === 'projects' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="h-8 px-2 text-[11px]"
-                  onClick={() => setContentFilter('projects')}
-                >
-                  <Layers className="h-3.5 w-3.5" /> Proyectos
-                </Button>
-                <Button
-                  variant={contentFilter === 'tasks' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="h-8 px-2 text-[11px]"
-                  onClick={() => setContentFilter('tasks')}
-                >
-                  <ListChecks className="h-3.5 w-3.5" /> Tareas
-                </Button>
-              </div>
-            </div>
 
-            {/* Vista */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 border rounded-lg p-0.5">
-                {[GTViewMode.Day, GTViewMode.Week, GTViewMode.Month].map((mode) => (
+                <Button
+                  variant={hideOutdated ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setHideOutdated(!hideOutdated)}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  {hideOutdated ? 'Ocultando antiguos' : 'Mostrar antiguos'}
+                </Button>
+
+                <Button
+                  variant={showMilestones ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setShowMilestones(!showMilestones)}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <Milestone className="h-3.5 w-3.5" />
+                  Hitos
+                </Button>
+
+                <div className="flex items-center gap-1 rounded-lg border p-0.5">
                   <Button
-                    key={mode}
-                    variant={viewMode === mode ? 'secondary' : 'ghost'}
+                    variant={contentFilter === 'all' ? 'secondary' : 'ghost'}
                     size="sm"
-                    onClick={() => handleViewModeChange(mode)}
-                    className="h-7 px-3 text-xs"
+                    className="h-8 px-2 text-[11px]"
+                    onClick={() => setContentFilter('all')}
                   >
-                    {mode === GTViewMode.Day ? 'Día' : mode === GTViewMode.Week ? 'Semana' : 'Mes'}
+                    <SquareStack className="h-3.5 w-3.5" /> Todo
                   </Button>
-                ))}
+                  <Button
+                    variant={contentFilter === 'projects' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-2 text-[11px]"
+                    onClick={() => setContentFilter('projects')}
+                  >
+                    <Layers className="h-3.5 w-3.5" /> Proyectos
+                  </Button>
+                  <Button
+                    variant={contentFilter === 'tasks' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-2 text-[11px]"
+                    onClick={() => setContentFilter('tasks')}
+                  >
+                    <ListChecks className="h-3.5 w-3.5" /> Tareas
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTodayClick}
-                className="h-7 px-3 text-xs flex items-center gap-1"
-              >
-                <Calendar className="h-3.5 w-3.5" />
-                Hoy
-              </Button>
-              <div className="flex items-center gap-1 border rounded-lg p-0.5">
+
+              {/* Vista */}
+              <div className="ml-auto flex items-center gap-2">
+                <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                  {[GTViewMode.Day, GTViewMode.Week, GTViewMode.Month].map((mode) => (
+                    <Button
+                      key={mode}
+                      variant={viewMode === mode ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => handleViewModeChange(mode)}
+                      className="h-7 px-3 text-xs"
+                    >
+                      {mode === GTViewMode.Day ? 'Día' : mode === GTViewMode.Week ? 'Semana' : 'Mes'}
+                    </Button>
+                  ))}
+                </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={handleExpandAll}
+                  onClick={handleTodayClick}
+                  className="h-7 px-3 text-xs flex items-center gap-1"
                 >
-                  <ChevronDown className="h-3.5 w-3.5" /> Expandir todo
+                  <Calendar className="h-3.5 w-3.5" />
+                  Hoy
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={handleCollapseAll}
-                >
-                  <ChevronUp className="h-3.5 w-3.5" /> Contraer todo
-                </Button>
+                <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={handleExpandAll}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" /> Expandir todo
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={handleCollapseAll}
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" /> Contraer todo
+                  </Button>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+              Proyecto activo
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full border border-dashed border-muted-foreground" />
+              Departamento
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              Tarea
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rotate-45 border border-orange-500" />
+              Hito
+            </span>
           </div>
         </CardHeader>
 
@@ -1096,19 +1329,39 @@ export function GanttChartProfessional() {
               onDoubleClick={(task: GTTask) => {
                 if (task.type === 'project' && task.id.startsWith('proj-')) {
                   const proyecto = proyectoByTaskIdRef.current.get(task.id)
-                  if (proyecto) navigate(`/proyectos/${proyecto.id}`)
-                } else if (task.type === 'task' || task.type === 'milestone') {
+                  if (proyecto) navigate('/proyectos', { state: { proyectoId: proyecto.id } })
+                  return
+                }
+
+                const stageInfo = stageByTaskIdRef.current.get(task.id)
+                if (stageInfo) {
+                  navigate(`/proyectos/${stageInfo.proyecto.id}`, { state: { focusStageId: stageInfo.stage.id } })
+                  return
+                }
+
+                if (task.type === 'task' || task.type === 'milestone') {
                   const proyecto = proyectoByTaskIdRef.current.get(task.id)
                   if (proyecto) navigate(`/proyectos/${proyecto.id}`, { state: { openTaskId: task.id } })
                 }
               }}
               onClick={(task: GTTaskOrEmpty) => {
-                if ((task as any).type === 'project' && (task as any).id.startsWith('proj-')) {
-                  const proyecto = proyectoByTaskIdRef.current.get((task as any).id)
-                  if (proyecto) navigate(`/proyectos/${proyecto.id}`)
-                } else if ((task as any).type === 'task' || (task as any).type === 'milestone') {
-                  const proyecto = proyectoByTaskIdRef.current.get((task as any).id)
-                  if (proyecto) navigate(`/proyectos/${proyecto.id}`, { state: { openTaskId: (task as any).id } })
+                const data = task as GTTask
+                if (!data) return
+                if (data.type === 'project' && data.id.startsWith('proj-')) {
+                  const proyecto = proyectoByTaskIdRef.current.get(data.id)
+                  if (proyecto) navigate('/proyectos', { state: { proyectoId: proyecto.id } })
+                  return
+                }
+
+                const stageInfo = stageByTaskIdRef.current.get(data.id)
+                if (stageInfo) {
+                  navigate(`/proyectos/${stageInfo.proyecto.id}`, { state: { focusStageId: stageInfo.stage.id } })
+                  return
+                }
+
+                if (data.type === 'task' || data.type === 'milestone') {
+                  const proyecto = proyectoByTaskIdRef.current.get(data.id)
+                  if (proyecto) navigate(`/proyectos/${proyecto.id}`, { state: { openTaskId: data.id } })
                 }
               }}
               dateLocale={es}

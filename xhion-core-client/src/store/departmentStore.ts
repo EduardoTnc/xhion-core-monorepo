@@ -22,7 +22,7 @@ interface DepartmentState {
   fetchDepartamentos: () => Promise<void>;
   fetchDepartamentoById: (id: string) => Promise<void>;
   fetchEstadisticas: (id: string) => Promise<void>;
-  createDepartamento: (data: CreateDepartamentoDto) => Promise<void>;
+  createDepartamento: (data: CreateDepartamentoDto) => Promise<Departamento>;
   updateDepartamento: (id: string, data: UpdateDepartamentoDto) => Promise<void>;
   deleteDepartamento: (id: string) => Promise<void>;
   restoreDepartamento: (id: string) => Promise<void>;
@@ -86,6 +86,7 @@ export const useDepartmentStore = create<DepartmentState>((set, get) => ({
         isLoading: false,
       }));
       toast.success('Departamento creado exitosamente');
+      return nuevoDepartamento;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al crear departamento';
       set({ error: errorMessage, isLoading: false });

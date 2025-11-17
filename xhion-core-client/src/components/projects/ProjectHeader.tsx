@@ -34,6 +34,8 @@ interface ProjectHeaderProps {
   onInvite: () => void;
   onDuplicate?: () => void;
   onArchive?: () => void;
+  etapasCount?: number;
+  tareasCount?: number;
 }
 
 const estadoColors = {
@@ -43,7 +45,16 @@ const estadoColors = {
   Archivado: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
-export function ProjectHeader({ proyecto, miembros, onEdit, onInvite, onDuplicate, onArchive }: ProjectHeaderProps) {
+export function ProjectHeader({
+  proyecto,
+  miembros,
+  onEdit,
+  onInvite,
+  onDuplicate,
+  onArchive,
+  etapasCount,
+  tareasCount,
+}: ProjectHeaderProps) {
   const { duplicateProyecto, updateProyecto } = useProjectStore();
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
@@ -150,8 +161,8 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite, onDuplicat
   };
 
   return (
-    <div className="border-b bg-card">
-      <div className="px-4 lg:px-6 py-4">
+    <div className="bg-background">
+      <div className="px-4 lg:px-6 py-3">
         <div className="flex flex-col lg:flex-row items-start lg:items-start justify-between gap-4">
           {/* Project Info */}
           <div className="space-y-2 flex-1 w-full lg:w-auto">
@@ -182,6 +193,26 @@ export function ProjectHeader({ proyecto, miembros, onEdit, onInvite, onDuplicat
               <div className="flex items-center gap-1.5">
                 <Users className="h-4 w-4 flex-shrink-0" />
                 <span>{miembros.length} miembros</span>
+              </div>
+            </div>
+
+            {/* Compact stats */}
+            <div className="flex flex-wrap items-center gap-4 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <span>Etapas</span>
+                <span className="text-foreground text-sm tracking-normal">
+                  {etapasCount ?? proyecto._count?.etapas ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>Tareas</span>
+                <span className="text-foreground text-sm tracking-normal">
+                  {tareasCount ?? proyecto._count?.tareas ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>Miembros</span>
+                <span className="text-foreground text-sm tracking-normal">{miembros.length}</span>
               </div>
             </div>
           </div>

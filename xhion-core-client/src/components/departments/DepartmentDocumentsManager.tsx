@@ -65,6 +65,7 @@ type DocumentoFormData = z.infer<typeof documentoSchema>
 interface DepartmentDocumentsManagerProps {
   departamentoId: string
   departamentoNombre: string
+  variant?: "default" | "condensed"
 }
 
 const tipoIcons = {
@@ -101,12 +102,14 @@ const tipoLabels = {
 export function DepartmentDocumentsManager({
   departamentoId,
   departamentoNombre,
+  variant = "default",
 }: DepartmentDocumentsManagerProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedDocumento, setSelectedDocumento] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterTipo, setFilterTipo] = useState<string>("all")
+  const isCondensed = variant === "condensed"
 
   const {
     documentosDepartamento,
@@ -202,6 +205,241 @@ export function DepartmentDocumentsManager({
     const matchesTipo = filterTipo === "all" || doc.tipo === filterTipo
     return matchesSearch && matchesTipo
   })
+
+  const modalElements = (
+    <>
+      {/* Create Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Documento</DialogTitle>
+            <DialogDescription>
+              Agrega documentación importante para el departamento
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmitCreate)} className="space-y-4 mt-4">
+            {/* Tipo */}
+            <div className="space-y-2">
+              <Label htmlFor="tipo">
+                Tipo de Documento <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={selectedTipo}
+                onValueChange={(value) => setValue("tipo", value as TipoDocumentoDepartamento)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(tipoLabels).map(([key, label]) => {
+                    const Icon = tipoIcons[key as TipoDocumentoDepartamento]
+                    return (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          {label}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Título */}
+            <div className="space-y-2">
+              <Label htmlFor="titulo">
+                Título <span className="text-destructive">*</span>
+              </Label>
+              <Input id="titulo" placeholder="Título del documento" {...register("titulo")} />
+              {errors.titulo && (
+                <p className="text-sm text-destructive">{errors.titulo.message}</p>
+              )}
+            </div>
+
+            {/* Contenido */}
+            <div className="space-y-2">
+              <Label htmlFor="contenido">
+                Contenido <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="contenido"
+                placeholder="Escribe el contenido del documento..."
+                rows={10}
+                {...register("contenido")}
+              />
+              {errors.contenido && (
+                <p className="text-sm text-destructive">{errors.contenido.message}</p>
+              )}
+            </div>
+
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCreateModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Guardar documento
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Documento</DialogTitle>
+            <DialogDescription>Actualiza la información relevante del documento</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmitEdit)} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="tipo">
+                Tipo de Documento <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={selectedTipo}
+                onValueChange={(value) => setValue("tipo", value as TipoDocumentoDepartamento)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(tipoLabels).map(([key, label]) => {
+                    const Icon = tipoIcons[key as TipoDocumentoDepartamento]
+                    return (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          {label}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="titulo">Título</Label>
+              <Input id="titulo" placeholder="Título del documento" {...register("titulo")} />
+              {errors.titulo && (
+                <p className="text-sm text-destructive">{errors.titulo.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contenido">Contenido</Label>
+              <Textarea id="contenido" rows={10} {...register("contenido")} />
+              {errors.contenido && (
+                <p className="text-sm text-destructive">{errors.contenido.message}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="gap-2">
+                <Edit className="h-4 w-4" />
+                Guardar cambios
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+
+  const latestDocument = documentosDepartamento
+    .slice()
+    .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())[0]
+
+  if (isCondensed) {
+    const recentDocs = filteredDocumentos.slice(0, 4)
+
+    return (
+      <>
+        <div className="space-y-3 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Documentos</p>
+              <p className="text-sm text-muted-foreground">
+                {filteredDocumentos.length} activos · {Object.keys(tipoLabels).length} tipos disponibles
+              </p>
+              {latestDocument && (
+                <p className="text-[11px] text-muted-foreground">
+                  Última actualización {format(new Date(latestDocument.fechaCreacion), "dd MMM yyyy", { locale: es })}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-[11px]"
+                onClick={() => setShowCreateModal(true)}
+              >
+                Nuevo documento
+              </Button>
+              {recentDocs.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-3 text-[11px]"
+                  onClick={() => handleEdit(recentDocs[0])}
+                >
+                  Editar último
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {isLoading ? (
+            <p className="text-muted-foreground">Cargando documentos...</p>
+          ) : recentDocs.length === 0 ? (
+            <p className="text-muted-foreground">No hay documentos registrados en este departamento.</p>
+          ) : (
+            <ul className="space-y-2 text-muted-foreground">
+              {recentDocs.map((documento) => (
+                <li key={documento.id} className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <button
+                      className="text-left text-sm font-medium text-foreground hover:underline line-clamp-1"
+                      onClick={() => handleEdit(documento)}
+                    >
+                      {documento.titulo}
+                    </button>
+                    <p className="text-[11px] uppercase tracking-[0.2em]">
+                      {tipoLabels[documento.tipo]}
+                    </p>
+                  </div>
+                  <div className="text-right text-[10px] uppercase tracking-[0.2em]">
+                    <p>{documento.creadoPor?.nombreCompleto || "Sistema"}</p>
+                    <p>{format(new Date(documento.fechaCreacion), "dd MMM", { locale: es })}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {modalElements}
+      </>
+    )
+  }
 
   return (
     <div className="space-y-6">

@@ -19,7 +19,9 @@ export function DepartmentCard({ department, onClick }: DepartmentCardProps) {
   const performance = 85 // Placeholder - obtener de estadísticas
   
   // Obtener icono dinámico
-  const { icon: DepartmentIcon, color: iconColor } = getDepartmentIcon(department.icono)
+  const { icon: DepartmentIcon } = getDepartmentIcon(department.icono)
+
+  const colorClass = department.color || "bg-blue-500"
   
   // Función para obtener las iniciales del nombre
   const getInitials = (name: string) => {
@@ -39,8 +41,8 @@ export function DepartmentCard({ department, onClick }: DepartmentCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center">
-            <DepartmentIcon className={`h-6 w-6 ${iconColor}`} />
+          <div className={`h-12 w-12 rounded-md flex items-center justify-center ${colorClass}`}>
+            <DepartmentIcon className="h-6 w-6 text-white" />
           </div>
           <div>
             <h3 className="font-semibold text-foreground">{department.nombre}</h3>
