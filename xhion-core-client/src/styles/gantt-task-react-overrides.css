@@ -1,25 +1,5 @@
 /* Overrides visuales para @wamra/gantt-task-react integrados con el tema oscuro de la plataforma */
 
-/*
- * Mantener visibles los encabezados de la tabla (panel izquierdo) y la barra del calendario
- * cuando se hace scroll vertical dentro del Gantt.
- */
-._ganttTable_Header_7mmcq_1,
-._calendarMain_14og3_1 {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background-color: hsl(var(--card));
-  backdrop-filter: blur(6px);
-  box-shadow: 0 1px 0 rgba(15, 15, 15, 0.04);
-}
-
-.dark ._ganttTable_Header_7mmcq_1,
-.dark ._calendarMain_14og3_1 {
-  background-color: rgba(15, 15, 15, 0.85);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
-}
-
 .dark ._ganttTable_Header_7mmcq_1 {
   border-top: 1px solid #262626;
   border-bottom: 1px solid #262626;

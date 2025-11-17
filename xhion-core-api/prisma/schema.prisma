@@ -146,6 +146,16 @@ enum RolCanal {
   admin
 }
 
+enum AiEntityType {
+  PROJECT
+  TASK
+  USER
+  IDEA
+  DOCUMENT
+  DEPARTMENT
+  KNOWLEDGE
+}
+
 enum TipoDatoConfiguracion {
   booleano
   texto
@@ -485,14 +495,31 @@ model PlantillaProyectoIA {
 /// Audita las consultas en lenguaje natural.
 model AiQueryLog {
   id                      String   @id @default(uuid()) @db.Uuid
-  usuarioId               String   @db.Uuid
+  usuarioId               String?  @db.Uuid
   consultaLenguajeNatural String
   consultaSqlGenerada     String?
   estadoEjecucion         String   @db.VarChar(50)
   fueUtil                 Boolean?
+  metadata                Json?
   fechaCreacion           DateTime @default(now())
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+}
+
+model AiEmbedding {
+  id          String       @id @default(uuid()) @db.Uuid
+  entityType  AiEntityType
+  entityId    String       @db.Uuid
+  chunkIndex  Int          @default(0)
+  chunkText   String
+  embedding   Float[]
+  source      String       @db.VarChar(50)
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([entityType, entityId, chunkIndex])
+  @@index([entityType, source])
 }
 
 // --- MODULO: GESTION DOCUMENTAL ---
