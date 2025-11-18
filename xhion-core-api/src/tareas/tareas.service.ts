@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTareaDto, UpdateTareaDto, MoveTareaDto, CreateComentarioDto } from './dto';
+import { AiEmbeddingSyncService } from '../ai/ai-embedding-sync.service';
 
 @Injectable()
 export class TareasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiEmbeddingSync: AiEmbeddingSyncService,
+  ) {}
 
   /**
    * Crear una nueva tarea
@@ -107,6 +111,8 @@ export class TareasService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncTarea(tarea.id);
 
     return tarea;
   }
@@ -384,6 +390,8 @@ export class TareasService {
       },
     });
 
+    await this.aiEmbeddingSync.syncTarea(updated.id);
+
     return updated;
   }
 
@@ -482,6 +490,8 @@ export class TareasService {
         fechaEliminacion: new Date(),
       },
     });
+
+    await this.aiEmbeddingSync.deleteTarea(id);
 
     return { message: 'Tarea eliminada exitosamente' };
   }

@@ -372,6 +372,7 @@ model Proyecto {
   descripcion        String?
   objetivos          String?        // Objetivos del proyecto
   estado             EstadoProyecto @default(Activo)
+  usaEtapas          Boolean        @default(true)
   responsableId      String         @db.Uuid
   departamentoId     String?        @db.Uuid
   fechaInicio        DateTime?      @db.Date

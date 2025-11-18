@@ -14,10 +14,14 @@ import {
   UpdateEtapaDto,
   ReorderEtapasDto,
 } from './dto';
+import { AiEmbeddingSyncService } from '../ai/ai-embedding-sync.service';
 
 @Injectable()
 export class ProyectosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiEmbeddingSync: AiEmbeddingSyncService,
+  ) {}
 
   /**
    * Crear un nuevo proyecto
@@ -91,6 +95,8 @@ export class ProyectosService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncProyecto(proyecto.id);
 
     return proyecto;
   }
@@ -273,6 +279,8 @@ export class ProyectosService {
       },
     });
 
+    await this.aiEmbeddingSync.syncProyecto(updated.id);
+
     return updated;
   }
 
@@ -294,6 +302,8 @@ export class ProyectosService {
         estado: 'Archivado',
       },
     });
+
+    await this.aiEmbeddingSync.deleteProyecto(id);
 
     return { message: 'Proyecto eliminado exitosamente' };
   }

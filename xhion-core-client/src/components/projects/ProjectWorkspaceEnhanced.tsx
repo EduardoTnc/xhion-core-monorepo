@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
 import { ProjectSidebarShadcn } from "./ProjectSidebarShadcn";
@@ -9,6 +9,7 @@ import { TaskListView } from "./TaskListView";
 import { TaskTableView } from "./TaskTableView";
 import { ProjectGanttTimeline } from "./ProjectGanttTimeline";
 import { ProjectInfoSection } from "./ProjectInfoSection";
+import { StageManagementPanel, type StageUpdateInput } from "./StageManagementPanel";
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "./TaskFilters";
 import { ExportMenu } from "./ExportMenu";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
@@ -20,7 +21,7 @@ import { CreateTaskModal } from "../tasks/CreateTaskModal";
 import { TaskDetailModal } from "../tasks/TaskDetailModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, PanelLeftClose, PanelLeftOpen, Keyboard } from "lucide-react";
+import { Loader2, PanelLeftClose, PanelLeftOpen, Keyboard, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,41 @@ import { type Etapa, type ProyectoMiembro } from "@/services/projectService";
 import { type Tarea } from "@/services/taskService";
 
 type ViewMode = "kanban" | "list" | "table" | "timeline";
+
+const DEFAULT_VIEW_STORAGE_KEY = "xhion:workspace-default-view";
+
+const STAGE_GRADIENT_PRESETS = {
+  aurora: {
+    label: "Aurora",
+    stops: ["#4f46e5", "#06b6d4"],
+  },
+  sunset: {
+    label: "Atardecer",
+    stops: ["#f97316", "#ec4899"],
+  },
+  jungle: {
+    label: "Selva",
+    stops: ["#22c55e", "#15803d"],
+  },
+} as const;
+
+type StageGradientPresetKey = keyof typeof STAGE_GRADIENT_PRESETS;
+
+const isValidViewMode = (value: string | null): value is ViewMode =>
+  value === "kanban" || value === "list" || value === "table" || value === "timeline";
+
+const getStoredDefaultView = (): ViewMode => {
+  if (typeof window === "undefined") return "kanban";
+  try {
+    const stored = window.localStorage.getItem(DEFAULT_VIEW_STORAGE_KEY);
+    if (isValidViewMode(stored)) {
+      return stored;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return "kanban";
+};
 
 const initialFilters: TaskFiltersType = {
   search: "",
@@ -58,6 +94,7 @@ export function ProjectWorkspaceEnhanced({
     fetchEtapas,
     fetchMiembros,
     deleteEtapa,
+    updateEtapa,
     setProyectoActual,
     isLoading,
   } = useProjectStore();
@@ -72,7 +109,9 @@ export function ProjectWorkspaceEnhanced({
 
   // UI State
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [defaultView, setDefaultView] = useState<ViewMode>(() => getStoredDefaultView());
+  const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredDefaultView());
+  const [stageGradientPreset, setStageGradientPreset] = useState<StageGradientPresetKey>("aurora");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [filters, setFilters] = useState<TaskFiltersType>(initialFilters);
@@ -163,6 +202,17 @@ export function ProjectWorkspaceEnhanced({
     setShowDeleteEtapaConfirm(true);
   };
 
+  const handleInlineUpdateStage = async (etapaId: string, data: StageUpdateInput) => {
+    if (!selectedProjectId) return;
+    try {
+      await updateEtapa(selectedProjectId, etapaId, data);
+      await Promise.all([fetchEtapas(selectedProjectId), fetchTareas({ proyectoId: selectedProjectId })]);
+      toast.success("Etapa actualizada");
+    } catch (error: any) {
+      toast.error(error.message || "Error al actualizar etapa");
+    }
+  };
+
   const confirmDeleteEtapa = async () => {
     if (!etapaToDelete || !selectedProjectId) return;
     try {
@@ -238,6 +288,19 @@ export function ProjectWorkspaceEnhanced({
     setShowTaskDetailModal(true);
   };
 
+  const handleSetDefaultView = (mode: ViewMode) => {
+    setDefaultView(mode);
+    setViewMode(mode);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(DEFAULT_VIEW_STORAGE_KEY, mode);
+      } catch {
+        // ignore storage errors
+      }
+    }
+    toast.success(`Vista ${mode} guardada como predeterminada`);
+  };
+
   const handleEditTask = (task: any) => {
     setTareaToEdit(task);
     setShowEditTaskModal(true);
@@ -256,6 +319,54 @@ export function ProjectWorkspaceEnhanced({
     setTareaToDelete(taskId);
     setShowDeleteConfirm(true);
   };
+
+  const interpolateChannel = (start: number, end: number, factor: number) => Math.round(start + (end - start) * factor);
+
+  const hexToRgb = (hex: string) => {
+    const sanitized = hex.replace("#", "");
+    const bigint = Number.parseInt(sanitized.length === 3 ? sanitized.repeat(2) : sanitized, 16);
+    return {
+      r: (bigint >> 16) & 255,
+      g: (bigint >> 8) & 255,
+      b: bigint & 255,
+    };
+  };
+
+  const rgbToHex = (r: number, g: number, b: number) =>
+    `#${[r, g, b]
+      .map((channel) => channel.toString(16).padStart(2, "0"))
+      .join("")}`;
+
+  const interpolateHex = (start: string, end: string, factor: number) => {
+    const startRgb = hexToRgb(start);
+    const endRgb = hexToRgb(end);
+    return rgbToHex(
+      interpolateChannel(startRgb.r, endRgb.r, factor),
+      interpolateChannel(startRgb.g, endRgb.g, factor),
+      interpolateChannel(startRgb.b, endRgb.b, factor)
+    );
+  };
+
+  const getGradientColor = (stops: readonly string[], ratio: number) => {
+    if (stops.length === 0) return "#6b7280";
+    if (stops.length === 1) return stops[0];
+    const segmentSize = 1 / (stops.length - 1);
+    const clampedRatio = Math.min(Math.max(ratio, 0), 1);
+    const segmentIndex = Math.min(Math.floor(clampedRatio / segmentSize), stops.length - 2);
+    const localRatio = (clampedRatio - segmentIndex * segmentSize) / segmentSize;
+    return interpolateHex(stops[segmentIndex], stops[segmentIndex + 1], Number.isFinite(localRatio) ? localRatio : 0);
+  };
+
+  const stageColorMap = useMemo(() => {
+    const preset = STAGE_GRADIENT_PRESETS[stageGradientPreset];
+    if (!preset || displayEtapas.length === 0) return {};
+    const ordered = [...displayEtapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+    return ordered.reduce<Record<string, string>>((acc, etapa, index) => {
+      const ratio = ordered.length === 1 ? 0 : index / (ordered.length - 1);
+      acc[etapa.id] = getGradientColor(preset.stops, ratio);
+      return acc;
+    }, {});
+  }, [displayEtapas, stageGradientPreset]);
 
   const confirmDeleteTask = async () => {
     if (!tareaToDelete) return;
@@ -424,92 +535,136 @@ export function ProjectWorkspaceEnhanced({
               }}
             />
 
-            {/* View Switcher with Filters and Export - Sticky */}
-            <div className="sticky top-[64px] sm:top-[68px] z-10 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-              <div className="px-3 sm:px-4 lg:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-2">
-                <TaskViewSwitcher
-                  viewMode={viewMode}
-                  onViewChange={setViewMode}
-                  onCreateTask={() => setShowCreateTaskModal(true)}
-                />
+            <section className="px-3 pt-4 sm:px-4 lg:px-6">
+              <StageManagementPanel
+                etapas={displayEtapas}
+                tareas={displayTareas}
+                stageColorMap={stageColorMap}
+                onCreateStage={() => {
+                  setEtapaToEdit(null);
+                  setShowCreateEtapaModal(true);
+                }}
+                onUpdateStage={handleInlineUpdateStage}
+                onDeleteStage={handleDeleteStage}
+              />
+            </section>
 
-                <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto flex-wrap">
-                  <TaskFilters
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    miembros={displayMiembros}
-                    etapas={displayEtapas}
-                  />
-                  <ExportMenu tareas={filteredTareas} proyecto={proyectoActual} />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowKeyboardShortcuts(true)}
-                    className="hidden sm:flex"
-                  >
-                    <Keyboard className="h-4 w-4" />
-                  </Button>
+            <section className="px-3 py-4 sm:px-4 lg:px-6">
+              <div className="rounded-3xl border border-border/50 bg-card/80 shadow-lg">
+                <div className="sticky top-[64px] sm:top-[68px] z-10 border-b border-border/40 bg-card/95/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+                  <div className="px-4 py-3 sm:px-6 space-y-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex flex-col gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="text-xs font-semibold tracking-[0.18em] text-foreground">Vistas de tareas</span>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-[0.12em]">
+                          <span className="text-muted-foreground">Degradado de etapas</span>
+                          <div className="flex items-center gap-1">
+                            {Object.entries(STAGE_GRADIENT_PRESETS).map(([key, preset]) => (
+                              <button
+                                key={key}
+                                type="button"
+                                className={cn(
+                                  "relative inline-flex h-7 min-w-[68px] items-center justify-center rounded-full px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-white",
+                                  stageGradientPreset === key
+                                    ? "ring-2 ring-offset-2 ring-offset-background ring-primary/70"
+                                    : "opacity-80 hover:opacity-100"
+                                )}
+                                style={{
+                                  backgroundImage: `linear-gradient(120deg, ${preset.stops[0]}, ${preset.stops[preset.stops.length - 1]})`,
+                                }}
+                                aria-pressed={stageGradientPreset === key}
+                                onClick={() => setStageGradientPreset(key as StageGradientPresetKey)}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
+                        <Button
+                          size="sm"
+                          className="w-full sm:w-auto gap-2"
+                          onClick={() => setShowCreateTaskModal(true)}
+                        >
+                          <Plus className="h-4 w-4" /> Nueva tarea
+                        </Button>
+                        <ExportMenu tareas={filteredTareas} proyecto={proyectoActual} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowKeyboardShortcuts(true)}
+                          className="hidden sm:flex"
+                          aria-label="Atajos del teclado"
+                        >
+                          <Keyboard className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                      <TaskViewSwitcher
+                        viewMode={viewMode}
+                        onViewChange={setViewMode}
+                        defaultView={defaultView}
+                        onSetDefaultView={handleSetDefaultView}
+                        className="flex-1"
+                      />
+                      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                        <TaskFilters
+                          filters={filters}
+                          onFiltersChange={setFilters}
+                          miembros={displayMiembros}
+                          etapas={displayEtapas}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-4 py-4 sm:px-6 sm:py-6">
+                  {viewMode === "kanban" && (
+                    <TaskKanbanViewDnD
+                      tareas={filteredTareas}
+                      onTaskClick={handleTaskClick}
+                      onEditTask={handleEditTaskDirect}
+                      onDeleteTask={handleDeleteTask}
+                      proyectoId={selectedProjectId || ""}
+                      etapas={displayEtapas}
+                      stageColorMap={stageColorMap}
+                    />
+                  )}
+                  {viewMode === "list" && (
+                    <TaskListView
+                      tareas={filteredTareas}
+                      onTaskClick={handleTaskClick}
+                      onEditTask={handleEditTaskDirect}
+                      onDeleteTask={handleDeleteTask}
+                      etapas={displayEtapas}
+                      stageColorMap={stageColorMap}
+                    />
+                  )}
+                  {viewMode === "table" && (
+                    <TaskTableView 
+                      tareas={filteredTareas} 
+                      onTaskClick={handleTaskClick}
+                      onEditTask={handleEditTaskDirect}
+                      onDeleteTask={handleDeleteTask}
+                      etapas={displayEtapas}
+                      stageColorMap={stageColorMap}
+                    />
+                  )}
+                  {viewMode === "timeline" && proyectoActual && (
+                    <ProjectGanttTimeline
+                      proyecto={proyectoActual}
+                      etapas={etapas}
+                      tareas={filteredTareas}
+                      onTaskClick={handleTaskClick}
+                    />
+                  )}
                 </div>
               </div>
-            </div>
-
-            {/* Task Views - Sin restricciones de altura para expansión completa */}
-            <div className="w-full px-4 py-4 sm:px-6 sm:py-5">
-              {viewMode === "kanban" && (
-                <TaskKanbanViewDnD
-                  tareas={filteredTareas}
-                  onTaskClick={handleTaskClick}
-                  onEditTask={handleEditTaskDirect}
-                  onDeleteTask={handleDeleteTask}
-                  proyectoId={selectedProjectId || ""}
-                  etapas={displayEtapas}
-                  onCreateStage={() => setShowCreateEtapaModal(true)}
-                  onEditStage={(etapa) => {
-                    setEtapaToEdit(etapa);
-                    setShowCreateEtapaModal(true);
-                  }}
-                  onDeleteStage={handleDeleteStage}
-                />
-              )}
-              {viewMode === "list" && (
-                <TaskListView 
-                  tareas={filteredTareas} 
-                  onTaskClick={handleTaskClick}
-                  onEditTask={handleEditTaskDirect}
-                  onDeleteTask={handleDeleteTask}
-                  etapas={displayEtapas}
-                  onCreateStage={() => setShowCreateEtapaModal(true)}
-                  onEditStage={(etapa) => {
-                    setEtapaToEdit(etapa);
-                    setShowCreateEtapaModal(true);
-                  }}
-                  onDeleteStage={handleDeleteStage}
-                />
-              )}
-              {viewMode === "table" && (
-                <TaskTableView 
-                  tareas={filteredTareas} 
-                  onTaskClick={handleTaskClick}
-                  onEditTask={handleEditTaskDirect}
-                  onDeleteTask={handleDeleteTask}
-                  etapas={displayEtapas}
-                  onCreateStage={() => setShowCreateEtapaModal(true)}
-                  onEditStage={(etapa) => {
-                    setEtapaToEdit(etapa);
-                    setShowCreateEtapaModal(true);
-                  }}
-                  onDeleteStage={handleDeleteStage}
-                />
-              )}
-              {viewMode === "timeline" && proyectoActual && (
-                <ProjectGanttTimeline
-                  proyecto={proyectoActual}
-                  etapas={etapas}
-                  tareas={filteredTareas}
-                  onTaskClick={handleTaskClick}
-                />
-              )}
-            </div>
+            </section>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full space-y-4 p-4">

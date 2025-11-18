@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical, Edit, Trash2, PlusCircle, Edit3, ListChecks } from "lucide-react";
+import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical, Edit, Trash2 } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { useTaskStore } from "@/store/taskStore";
@@ -24,9 +24,8 @@ interface TaskKanbanViewDnDProps {
   onDeleteTask?: (tareaId: string) => void;
   proyectoId: string;
   etapas: Etapa[];
-  onCreateStage: () => void;
-  onEditStage: (etapa: Etapa) => void;
-  onDeleteStage: (etapa: Etapa) => void;
+  stageColorMap?: Record<string, string>;
+  stagesEnabled?: boolean;
 }
 
 const prioridadConfig = {
@@ -89,6 +88,9 @@ const hexToRgba = (hex: string, alpha = 0.12) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const formatStageOrder = (orden?: number) =>
+  typeof orden === "number" ? orden.toString().padStart(2, "0") : "—";
+
 const buildColumnsFromTasks = (taskList: Tarea[]): Record<EstadoColumnKey, Tarea[]> => {
   const base: Record<EstadoColumnKey, Tarea[]> = {
     Por_Hacer: [],
@@ -129,9 +131,8 @@ export function TaskKanbanViewDnD({
   onDeleteTask,
   proyectoId,
   etapas,
-  onCreateStage,
-  onEditStage,
-  onDeleteStage,
+  stageColorMap,
+  stagesEnabled = true,
 }: TaskKanbanViewDnDProps) {
   const { updateTarea, fetchTareas } = useTaskStore();
   const [columnsState, setColumnsState] = useState<Record<EstadoColumnKey, Tarea[]>>(() => buildColumnsFromTasks(tareas));
@@ -172,15 +173,12 @@ export function TaskKanbanViewDnD({
     tareas: columnsState[estado as EstadoColumnKey] || [],
   }));
 
-  const stageStats = useMemo(() => {
-    return etapas.map((etapa) => {
-      const tareasCount = tareas.filter((t) => t.etapa?.id === etapa.id).length;
-      return {
-        ...etapa,
-        tareasCount,
-      };
-    });
-  }, [etapas, tareas]);
+  const stageMetaMap = useMemo(() => {
+    return etapas.reduce<Record<string, Etapa>>((acc, etapa) => {
+      acc[etapa.id] = etapa;
+      return acc;
+    }, {});
+  }, [etapas]);
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -236,90 +234,6 @@ export function TaskKanbanViewDnD({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-col">
-            <p className="text-[13px] font-semibold text-foreground tracking-tight">Etapas del proyecto</p>
-            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              {etapas.length === 0 ? "Sin etapas registradas" : `${etapas.length} etapas activas`}
-            </span>
-          </div>
-          <Button size="sm" variant="outline" className="h-8 px-3 text-xs" onClick={onCreateStage}>
-            <PlusCircle className="mr-2 h-3.5 w-3.5" /> Nueva etapa
-          </Button>
-        </div>
-
-        {stageStats.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/60 px-3 py-2 text-[13px] text-muted-foreground">
-            Aún no hay etapas registradas. Crea la primera para organizar el tablero.
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {stageStats.map((stage) => {
-              const hasHexColor = isHexColor(stage.color);
-              const accentHex = hasHexColor ? stage.color! : undefined;
-              const accentClass = !hasHexColor && stage.color ? stage.color : undefined;
-              return (
-                <div
-                  key={stage.id}
-                  className={cn(
-                    "group inline-flex flex-wrap items-center gap-2 rounded-full border border-border/60 bg-card/80 px-3 py-1.5 text-xs shadow-sm",
-                    accentClass && "text-white"
-                  )}
-                  style={
-                    hasHexColor && accentHex
-                      ? {
-                          borderColor: hexToRgba(accentHex, 0.4),
-                          backgroundColor: hexToRgba(accentHex, 0.18),
-                        }
-                      : undefined
-                  }
-                >
-                  <span className="text-sm font-semibold leading-none">{stage.nombre}</span>
-                  <Badge variant="secondary" className="text-[10px] uppercase tracking-[0.16em]">
-                    Orden {stage.orden}
-                  </Badge>
-                  <Badge variant="outline" className="flex items-center gap-1 text-[10px]">
-                    <ListChecks className="h-3 w-3" /> {stage.tareasCount}
-                  </Badge>
-                  {stage.estado && (
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-[0.16em]">
-                      {stage.estado.replace(/_/g, " ")}
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                      onClick={() => onEditStage(stage)}
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="text-destructive" onClick={() => onDeleteStage(stage)}>
-                          Eliminar etapa
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       <DragDropContext onDragEnd={handleDragEnd}>
         {/* Kanban board - sin contenedor separado */}
         <div className="-mx-1 overflow-x-auto pb-2 md:mx-0 md:overflow-visible">
@@ -378,10 +292,39 @@ export function TaskKanbanViewDnD({
                                       prioridadConfig[tarea.prioridad].accent
                                     )}
                                   >
-                                    <div className="flex items-center justify-between gap-2" {...provided.dragHandleProps}>
-                                      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                                        <GripVertical className="h-3.5 w-3.5" />
-                                        <span>{tarea.etapa?.nombre || "Sin etapa"}</span>
+                                    <div className="flex items-center justify-between gap-2" >
+                                      <div className="flex items-center gap-2" {...provided.dragHandleProps}>
+                                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                        {stagesEnabled && (() => {
+                                          const stageMeta = tarea.etapa?.id ? stageMetaMap[tarea.etapa.id] : undefined;
+                                          if (!stageMeta) return null;
+                                          const gradientHex = stageColorMap?.[stageMeta.id];
+                                          const fallbackHex = stageMeta.color && isHexColor(stageMeta.color) ? stageMeta.color : undefined;
+                                          const accentHex = gradientHex || fallbackHex;
+                                          const accentClass = stageMeta.color && !isHexColor(stageMeta.color) ? stageMeta.color : undefined;
+                                          return (
+                                            <span
+                                              className={cn(
+                                                "inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[11px] font-semibold",
+                                                accentClass && "text-white"
+                                              )}
+                                              style={
+                                                accentHex
+                                                  ? {
+                                                      borderColor: hexToRgba(accentHex, 0.45),
+                                                      backgroundColor: hexToRgba(accentHex, 0.15),
+                                                      color: accentHex,
+                                                    }
+                                                  : undefined
+                                              }
+                                            >
+                                              <span className="text-[10px] font-semibold opacity-80">
+                                                #{formatStageOrder(stageMeta?.orden)}
+                                              </span>
+                                              <span>{stageMeta?.nombre}</span>
+                                            </span>
+                                          );
+                                        })()}
                                       </div>
                                       {(onEditTask || onDeleteTask) && (
                                         <DropdownMenu>

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID, MaxLength, MinLength, IsISO8601 } from 'class-validator';
+import { IsString, IsOptional, IsUUID, MaxLength, MinLength, IsISO8601, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProyectoDto {
@@ -59,4 +59,13 @@ export class CreateProyectoDto {
   @IsOptional()
   @IsISO8601({}, { message: 'La fecha de fin debe ser una fecha válida en formato ISO 8601' })
   fechaFin?: string;
+
+  @ApiPropertyOptional({
+    description: 'Define si el proyecto utiliza gestión de etapas',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'usaEtapas debe ser un valor booleano' })
+  usaEtapas?: boolean;
 }

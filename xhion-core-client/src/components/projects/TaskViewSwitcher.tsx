@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { LayoutGrid, List, Table2, GanttChart, Plus } from "lucide-react";
+import { LayoutGrid, List, Table2, GanttChart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "kanban" | "list" | "table" | "timeline";
@@ -8,77 +7,68 @@ type ViewMode = "kanban" | "list" | "table" | "timeline";
 interface TaskViewSwitcherProps {
   viewMode: ViewMode;
   onViewChange: (mode: ViewMode) => void;
-  onCreateTask: () => void;
+  defaultView: ViewMode;
+  onSetDefaultView: (mode: ViewMode) => void;
+  className?: string;
 }
 
 const views = [
-  { value: "kanban" as ViewMode, icon: LayoutGrid, label: "Kanban", hint: "Columnas por estado" },
-  { value: "list" as ViewMode, icon: List, label: "Lista", hint: "Detalle por etapa" },
-  { value: "table" as ViewMode, icon: Table2, label: "Tabla", hint: "Vista matricial" },
-  { value: "timeline" as ViewMode, icon: GanttChart, label: "Timeline", hint: "Cronograma" },
+  { value: "kanban" as ViewMode, icon: LayoutGrid, label: "Kanban" },
+  { value: "list" as ViewMode, icon: List, label: "Lista" },
+  { value: "table" as ViewMode, icon: Table2, label: "Tabla" },
+  { value: "timeline" as ViewMode, icon: GanttChart, label: "Timeline" },
 ];
 
-export function TaskViewSwitcher({
-  viewMode,
-  onViewChange,
-  onCreateTask,
-}: TaskViewSwitcherProps) {
+export function TaskViewSwitcher({ viewMode, onViewChange, defaultView, onSetDefaultView, className }: TaskViewSwitcherProps) {
   return (
-    <div className="w-full">
-      <div className="rounded-2xl border border-border/60 bg-card/80 p-3 sm:p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            <span className="block">Vistas de tareas</span>
-            <span className="text-[10px] normal-case tracking-normal text-muted-foreground/80">
-              Selecciona la perspectiva ideal y crea nuevas tareas sobre la marcha
-            </span>
-          </div>
-          <Button
-            onClick={onCreateTask}
-            size="sm"
-            className="w-full gap-2 self-start text-sm sm:w-auto sm:self-auto"
+    <ToggleGroup
+      type="single"
+      value={viewMode}
+      onValueChange={(value) => value && onViewChange(value as ViewMode)}
+      className={cn(
+        "grid w-full grid-cols-2 gap-2 sm:grid-cols-4",
+        "md:flex md:flex-wrap",
+        className
+      )}
+    >
+      {views.map((view) => {
+        const Icon = view.icon;
+        const isActive = viewMode === view.value;
+        const isDefault = defaultView === view.value;
+        const handleDefaultClick = (event: React.MouseEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onSetDefaultView(view.value);
+        };
+        return (
+          <ToggleGroupItem
+            key={view.value}
+            value={view.value}
+            aria-label={view.label}
+            className={cn(
+              "flex min-w-[120px] flex-1 items-center gap-2 rounded-xl border border-border/40 bg-background/70 px-2.5 py-1.5 text-left",
+              "transition-all hover:border-border",
+              "data-[state=on]:border-primary/60 data-[state=on]:bg-primary/5 data-[state=on]:shadow-sm"
+            )}
           >
-            <Plus className="h-4 w-4" />
-            <span>Nueva tarea</span>
-          </Button>
-        </div>
-
-        <div className="mt-4">
-          <ToggleGroup
-            type="single"
-            value={viewMode}
-            onValueChange={(value) => value && onViewChange(value as ViewMode)}
-            className="flex w-full flex-wrap gap-2"
-          >
-            {views.map((view) => {
-              const Icon = view.icon;
-              const isActive = viewMode === view.value;
-              return (
-                <ToggleGroupItem
-                  key={view.value}
-                  value={view.value}
-                  aria-label={view.label}
-                  className={cn(
-                    "flex min-w-[140px] flex-1 items-start gap-2 rounded-xl border border-border/40 bg-background/70 px-3 py-2 text-left",
-                    "transition-all hover:border-border",
-                    "data-[state=on]:border-primary/60 data-[state=on]:bg-primary/5 data-[state=on]:shadow-sm"
-                  )}
-                >
-                  <Icon className={cn("mt-0.5 h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold leading-tight text-foreground">
-                      {view.label}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground tracking-normal">
-                      {view.hint}
-                    </span>
-                  </div>
-                </ToggleGroupItem>
-              );
-            })}
-          </ToggleGroup>
-        </div>
-      </div>
-    </div>
+            <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+            <span className="text-xs font-semibold leading-tight text-foreground">{view.label}</span>
+            <button
+              type="button"
+              onClick={handleDefaultClick}
+              aria-label={`Establecer ${view.label} como vista predeterminada`}
+              className={cn(
+                "ml-auto rounded-full p-1 transition",
+                isDefault
+                  ? "text-amber-500 hover:text-amber-400"
+                  : "text-muted-foreground/60 hover:text-foreground"
+              )}
+            >
+              <Star className={cn("h-3.5 w-3.5", isDefault && "fill-current")} />
+            </button>
+          </ToggleGroupItem>
+        );
+      })}
+    </ToggleGroup>
   );
 }

@@ -5,7 +5,16 @@ import { PermissionsGuard } from '../auth/permissions.guard'
 import { RequiresPermission } from '../auth/permissions.decorator'
 import { Auditar } from '../auditoria/auditar.decorator'
 import { AiService } from './ai.service'
-import { AiLogFilterDto, AiReindexRequestDto, AiSearchQueryDto, AiSearchResultDto } from './dto/ai-search.dto'
+import {
+  AiIdeasAnalyzeRequestDto,
+  AiIdeasAnalyzeResponseDto,
+  AiLogFilterDto,
+  AiProjectAssistRequestDto,
+  AiProjectAssistResponseDto,
+  AiReindexRequestDto,
+  AiSearchQueryDto,
+  AiSearchResultDto,
+} from './dto/ai-search.dto'
 
 @ApiTags('Inteligencia Artificial')
 @ApiBearerAuth('JWT-auth')
@@ -30,6 +39,25 @@ export class AiController {
   @ApiOperation({ summary: 'Reconstruir embeddings de entidades' })
   async reindex(@Body() dto: AiReindexRequestDto) {
     return this.aiService.reindexKnowledgeBase(dto)
+  }
+
+  @Post('projects/assist')
+  @RequiresPermission('ai.projects.assist')
+  @Auditar('AI - Asistencia creación de proyectos')
+  @ApiOperation({ summary: 'Generar propuesta de proyecto asistida por IA' })
+  @ApiResponse({ status: 200, type: AiProjectAssistResponseDto })
+  async assistProject(@Body() dto: AiProjectAssistRequestDto, @Request() req): Promise<AiProjectAssistResponseDto> {
+    const userId: string | null = req.user?.id ?? null
+    return this.aiService.assistProject(dto, userId)
+  }
+
+  @Post('ideas/analyze')
+  @RequiresPermission('ai.ideas.analyze')
+  @Auditar('AI - Análisis estratégico de ideas')
+  @ApiOperation({ summary: 'Analizar ideas recientes y generar insights' })
+  @ApiResponse({ status: 200, type: AiIdeasAnalyzeResponseDto })
+  async analyzeIdeas(@Body() dto: AiIdeasAnalyzeRequestDto): Promise<AiIdeasAnalyzeResponseDto> {
+    return this.aiService.analyzeIdeas(dto)
   }
 
   @Get('logs')

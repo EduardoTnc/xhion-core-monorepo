@@ -8,10 +8,14 @@ import { CreateDocumentoProyectoDto } from './dto/create-documento-proyecto.dto'
 import { UpdateDocumentoProyectoDto } from './dto/update-documento-proyecto.dto';
 import { CreateDocumentoDepartamentoDto } from './dto/create-documento-departamento.dto';
 import { UpdateDocumentoDepartamentoDto } from './dto/update-documento-departamento.dto';
+import { AiEmbeddingSyncService } from '../ai/ai-embedding-sync.service';
 
 @Injectable()
 export class ConocimientoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly aiEmbeddingSync: AiEmbeddingSyncService,
+  ) {}
 
   // ==================== CONTEXTO ORGANIZACIONAL ====================
 
@@ -27,7 +31,7 @@ export class ConocimientoService {
 
     if (existente) {
       // Actualizar el existente
-      return this.prisma.contextoOrganizacional.update({
+      const updated = await this.prisma.contextoOrganizacional.update({
         where: { id: existente.id },
         data: {
           ...dto,
@@ -43,10 +47,14 @@ export class ConocimientoService {
           },
         },
       });
+
+      await this.aiEmbeddingSync.syncContextoOrganizacional(updated.id);
+
+      return updated;
     }
 
     // Crear uno nuevo
-    return this.prisma.contextoOrganizacional.create({
+    const created = await this.prisma.contextoOrganizacional.create({
       data: {
         ...dto,
         actualizadoPorId: usuarioId,
@@ -61,6 +69,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncContextoOrganizacional(created.id);
+
+    return created;
   }
 
   /**
@@ -113,7 +125,7 @@ export class ConocimientoService {
       throw new ConflictException('Este departamento ya tiene un contexto configurado');
     }
 
-    return this.prisma.contextoDepartamento.create({
+    const contexto = await this.prisma.contextoDepartamento.create({
       data: {
         ...dto,
         actualizadoPorId: usuarioId,
@@ -135,6 +147,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncDepartamento(dto.departamentoId);
+
+    return contexto;
   }
 
   /**
@@ -215,7 +231,7 @@ export class ConocimientoService {
       throw new NotFoundException(`No se encontró contexto para el departamento ${departamentoId}`);
     }
 
-    return this.prisma.contextoDepartamento.update({
+    const updated = await this.prisma.contextoDepartamento.update({
       where: { departamentoId },
       data: {
         ...dto,
@@ -238,6 +254,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncDepartamento(departamentoId);
+
+    return updated;
   }
 
   /**
@@ -255,6 +275,8 @@ export class ConocimientoService {
     await this.prisma.contextoDepartamento.delete({
       where: { departamentoId },
     });
+
+    await this.aiEmbeddingSync.syncDepartamento(departamentoId);
 
     return { message: 'Contexto de departamento eliminado exitosamente' };
   }
@@ -304,7 +326,7 @@ export class ConocimientoService {
       }
     }
 
-    return this.prisma.documentoProyecto.create({
+    const documento = await this.prisma.documentoProyecto.create({
       data: {
         ...dto,
         creadoPorId: usuarioId,
@@ -332,6 +354,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncDocumento(documento.id);
+
+    return documento;
   }
 
   /**
@@ -477,7 +503,7 @@ export class ConocimientoService {
       throw new ForbiddenException('No tienes permiso para actualizar este documento');
     }
 
-    return this.prisma.documentoProyecto.update({
+    const updated = await this.prisma.documentoProyecto.update({
       where: { id },
       data: dto,
       include: {
@@ -503,6 +529,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncDocumento(id);
+
+    return updated;
   }
 
   /**
@@ -537,6 +567,8 @@ export class ConocimientoService {
     await this.prisma.documentoProyecto.delete({
       where: { id },
     });
+
+    await this.aiEmbeddingSync.deleteDocumento(id);
 
     return { message: 'Documento eliminado exitosamente' };
   }
@@ -591,7 +623,7 @@ export class ConocimientoService {
       throw new ForbiddenException('No tienes permiso para crear documentos en este departamento');
     }
 
-    return this.prisma.documentoDepartamento.create({
+    const documento = await this.prisma.documentoDepartamento.create({
       data: {
         ...dto,
         creadoPorId: usuarioId,
@@ -612,6 +644,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncDocumento(documento.id);
+
+    return documento;
   }
 
   /**
@@ -789,7 +825,7 @@ export class ConocimientoService {
       throw new ForbiddenException('No tienes permiso para actualizar este documento');
     }
 
-    return this.prisma.documentoDepartamento.update({
+    const updated = await this.prisma.documentoDepartamento.update({
       where: { id },
       data: dto,
       include: {
@@ -808,6 +844,10 @@ export class ConocimientoService {
         },
       },
     });
+
+    await this.aiEmbeddingSync.syncDocumento(id);
+
+    return updated;
   }
 
   /**
@@ -862,6 +902,8 @@ export class ConocimientoService {
     await this.prisma.documentoDepartamento.delete({
       where: { id },
     });
+
+    await this.aiEmbeddingSync.deleteDocumento(id);
 
     return { message: 'Documento eliminado exitosamente' };
   }

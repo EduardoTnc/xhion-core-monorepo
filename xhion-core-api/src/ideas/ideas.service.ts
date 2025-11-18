@@ -1,18 +1,22 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CrearIdeaDto } from './dto/crear-idea.dto';
-import { ActualizarIdeaDto } from './dto/actualizar-idea.dto';
-import { CrearComentarioDto } from './dto/crear-comentario.dto';
-import { CategoriaIdea, EstadoIdea } from '@prisma/client';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
+import { PrismaService } from '../prisma/prisma.service'
+import { CrearIdeaDto } from './dto/crear-idea.dto'
+import { ActualizarIdeaDto } from './dto/actualizar-idea.dto'
+import { CrearComentarioDto } from './dto/crear-comentario.dto'
+import { CategoriaIdea, EstadoIdea } from '@prisma/client'
+import { AiEmbeddingSyncService } from '../ai/ai-embedding-sync.service'
 
 @Injectable()
 export class IdeasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiEmbeddingSync: AiEmbeddingSyncService,
+  ) {}
 
   // ========== CRUD DE IDEAS ==========
 
   async crear(usuarioId: string, crearIdeaDto: CrearIdeaDto) {
-    return this.prisma.idea.create({
+    const idea = await this.prisma.idea.create({
       data: {
         ...crearIdeaDto,
         autorId: usuarioId,
@@ -34,7 +38,11 @@ export class IdeasService {
           },
         },
       },
-    });
+    })
+
+    await this.aiEmbeddingSync.syncIdea(idea.id)
+
+    return idea
   }
 
   async obtenerTodas(categoria?: CategoriaIdea, estado?: EstadoIdea, busqueda?: string) {
@@ -126,7 +134,7 @@ export class IdeasService {
     });
 
     if (!idea) {
-      throw new NotFoundException('Idea no encontrada');
+      throw new NotFoundException('Idea no encontrada')
     }
 
     return idea;
@@ -135,7 +143,7 @@ export class IdeasService {
   async actualizar(ideaId: string, usuarioId: string, actualizarIdeaDto: ActualizarIdeaDto) {
     const idea = await this.prisma.idea.findUnique({
       where: { id: ideaId },
-    });
+    })
 
     if (!idea) {
       throw new NotFoundException('Idea no encontrada');
@@ -143,10 +151,10 @@ export class IdeasService {
 
     // Solo el autor puede editar (excepto el estado que puede ser cambiado por admin)
     if (idea.autorId !== usuarioId && !actualizarIdeaDto.estado) {
-      throw new ForbiddenException('No tienes permiso para editar esta idea');
+      throw new ForbiddenException('No tienes permiso para editar esta idea')
     }
 
-    return this.prisma.idea.update({
+    const updated = await this.prisma.idea.update({
       where: { id: ideaId },
       data: {
         ...actualizarIdeaDto,
@@ -186,9 +194,11 @@ export class IdeasService {
 
     await this.prisma.idea.delete({
       where: { id: ideaId },
-    });
+    })
 
-    return { message: 'Idea eliminada correctamente' };
+    await this.aiEmbeddingSync.deleteIdea(ideaId)
+
+    return { message: 'Idea eliminada correctamente' }
   }
 
   // ========== VOTOS ==========

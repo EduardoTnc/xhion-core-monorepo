@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -9,21 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  MessageSquare,
-  Calendar,
-  Flag,
-  Circle,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  MoreVertical,
-  Edit,
-  Trash2,
-  PlusCircle,
-  Edit3,
-  ListChecks,
-} from "lucide-react";
+import { MessageSquare, Calendar, Flag, Circle, CheckCircle2, Clock, XCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { cn } from "@/lib/utils";
@@ -34,9 +19,8 @@ interface TaskListViewProps {
   onEditTask?: (tareaId: string) => void;
   onDeleteTask?: (tareaId: string) => void;
   etapas: Etapa[];
-  onCreateStage: () => void;
-  onEditStage: (etapa: Etapa) => void;
-  onDeleteStage: (etapa: Etapa) => void;
+  stageColorMap?: Record<string, string>;
+  stagesEnabled?: boolean;
 }
 
 const prioridadConfig = {
@@ -81,15 +65,17 @@ const hexToRgba = (hex: string, alpha = 0.12) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const formatStageOrder = (orden?: number) =>
+  typeof orden === "number" ? orden.toString().padStart(2, "0") : "—";
+
 export function TaskListView({
   tareas,
   onTaskClick,
   onEditTask,
   onDeleteTask,
   etapas,
-  onCreateStage,
-  onEditStage,
-  onDeleteStage,
+  stageColorMap,
+  stagesEnabled = true,
 }: TaskListViewProps) {
   const getInitials = (name: string) => {
     return name
@@ -112,124 +98,81 @@ export function TaskListView({
     };
   };
 
-  const stageStats = useMemo(() => {
-    return etapas.map((etapa) => {
-      const tareasCount = tareas.filter((tarea) => tarea.etapa?.id === etapa.id).length;
-      return {
-        ...etapa,
-        tareasCount,
-      };
-    });
-  }, [etapas, tareas]);
+  const stageMetaMap = useMemo(() => {
+    return etapas.reduce<Record<string, Etapa>>((acc, etapa) => {
+      acc[etapa.id] = etapa;
+      return acc;
+    }, {});
+  }, [etapas]);
+
+  const shouldGroupByStage = stagesEnabled;
 
   // Group by etapa
-  const groupedTareas = tareas.reduce((acc, tarea) => {
-    const key = tarea.etapa?.nombre || "Sin etapa";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(tarea);
-    return acc;
-  }, {} as Record<string, Tarea[]>);
+  const groupedTareas = useMemo(() => {
+    return tareas.reduce((acc, tarea) => {
+      const etapaNombre = tarea.etapa?.nombre || "Sin etapa";
+      if (!acc[etapaNombre]) {
+        acc[etapaNombre] = [];
+      }
+      acc[etapaNombre].push(tarea);
+      return acc;
+    }, {} as Record<string, Tarea[]>);
+  }, [tareas]);
+
+  const groupedEntries = useMemo(() => {
+    if (!shouldGroupByStage) {
+      return [["Listado general", tareas]] as Array<[string, Tarea[]>];
+    }
+
+    const stageOrderMap = etapas.reduce<Record<string, number>>((acc, etapa) => {
+      acc[etapa.nombre] = etapa.orden ?? Number.MAX_SAFE_INTEGER;
+      return acc;
+    }, {});
+
+    return Object.entries(groupedTareas).sort((a, b) => {
+      const orderA = stageOrderMap[a[0]] ?? Number.MAX_SAFE_INTEGER;
+      const orderB = stageOrderMap[b[0]] ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
+  }, [groupedTareas, etapas, shouldGroupByStage, tareas]);
 
   return (
     <div className="w-full bg-background space-y-4">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-col">
-            <p className="text-[13px] font-semibold text-foreground tracking-tight">Etapas del proyecto</p>
-            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              {etapas.length === 0 ? "Sin etapas registradas" : `${etapas.length} etapas activas`}
-            </span>
-          </div>
-          <Button size="sm" variant="outline" className="h-8 px-3 text-xs" onClick={onCreateStage}>
-            <PlusCircle className="mr-2 h-3.5 w-3.5" /> Nueva etapa
-          </Button>
-        </div>
-
-        {stageStats.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/60 px-3 py-2 text-[13px] text-muted-foreground">
-            Aún no hay etapas registradas. Crea la primera para organizar las listas.
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {stageStats.map((stage) => {
-              const hasHexColor = isHexColor(stage.color);
-              const accentHex = hasHexColor ? stage.color! : undefined;
-              const accentClass = !hasHexColor && stage.color ? stage.color : undefined;
-              return (
-                <div
-                  key={stage.id}
-                  className={cn(
-                    "inline-flex flex-wrap items-center gap-2 rounded-full border border-border/60 bg-card/80 px-3 py-1.5 text-xs shadow-sm",
-                    accentClass && "text-white"
-                  )}
-                  style={
-                    hasHexColor && accentHex
-                      ? {
-                          borderColor: hexToRgba(accentHex, 0.4),
-                          backgroundColor: hexToRgba(accentHex, 0.18),
-                        }
-                      : undefined
-                  }
-                >
-                  <span className="text-sm font-semibold leading-none">{stage.nombre}</span>
-                  <Badge variant="secondary" className="text-[10px] uppercase tracking-[0.16em]">
-                    Orden {stage.orden}
-                  </Badge>
-                  <Badge variant="outline" className="flex items-center gap-1 text-[10px]">
-                    <ListChecks className="h-3 w-3" /> {stage.tareasCount}
-                  </Badge>
-                  {stage.estado && (
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-[0.16em]">
-                      {stage.estado.replace(/_/g, " ")}
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                      onClick={() => onEditStage(stage)}
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="text-destructive" onClick={() => onDeleteStage(stage)}>
-                          Eliminar etapa
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       <div className="space-y-5">
-          {Object.entries(groupedTareas).map(([etapaName, etapaTareas]) => (
+        {groupedEntries.map(([etapaName, etapaTareas]) => {
+          const etapaRef = shouldGroupByStage ? etapas.find((etapa) => etapa.nombre === etapaName) : undefined;
+          const accentHex = etapaRef?.id ? stageColorMap?.[etapaRef.id] : undefined;
+          const fallbackHex = etapaRef?.color && isHexColor(etapaRef.color) ? etapaRef.color : undefined;
+          const chipColor = accentHex || fallbackHex;
+
+          return (
             <div key={etapaName} className="rounded-xl border border-border/50 bg-card/70 p-4 shadow-sm">
               {/* Group Header */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold tracking-tight text-foreground">{etapaName}</span>
-                  <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                  <span>{etapaTareas.length} tareas</span>
+              {shouldGroupByStage ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold tracking-tight text-foreground">{etapaName}</span>
+                    <div
+                      className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
+                      style={chipColor ? { backgroundColor: chipColor } : undefined}
+                    />
+                    <span>{etapaTareas.length} tareas</span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {etapaTareas.length > 4 ? "Alta actividad" : "Monitoreo"}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-[10px]">
-                  {etapaTareas.length > 4 ? "Alta actividad" : "Monitoreo"}
-                </Badge>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Tareas del proyecto</p>
+                    <p className="text-xs text-muted-foreground">Vista sin etapas</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-[0.16em]">
+                    {etapaTareas.length} tareas
+                  </Badge>
+                </div>
+              )}
 
               {/* Tasks List */}
               <div className="space-y-3">
@@ -237,6 +180,10 @@ export function TaskListView({
                   const EstadoIcon = estadoConfig[tarea.estado].icon;
                   const PrioridadIcon = prioridadConfig[tarea.prioridad].icon;
                   const dueDate = formatDate(tarea.fechaVencimiento);
+                  const etapaId = tarea.etapa?.id;
+                  const stageBadgeHex = etapaId ? stageColorMap?.[etapaId] : undefined;
+                  const stageFallback = etapaId ? stageMetaMap[etapaId]?.color : undefined;
+                  const badgeColor = stageBadgeHex || (stageFallback && isHexColor(stageFallback) ? stageFallback : undefined);
 
                   return (
                     <div
@@ -282,9 +229,21 @@ export function TaskListView({
                               {tarea._count.comentarios}
                             </span>
                           )}
-                          {tarea.etapa && (
-                            <Badge variant="secondary" className="ml-auto text-[10px]">
-                              {tarea.etapa.nombre}
+                          {shouldGroupByStage && tarea.etapa && (
+                            <Badge
+                              variant="secondary"
+                              className="ml-auto text-[10px]"
+                              style={
+                                badgeColor
+                                  ? {
+                                      borderColor: hexToRgba(badgeColor, 0.4),
+                                      backgroundColor: hexToRgba(badgeColor, 0.12),
+                                      color: badgeColor,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              #{formatStageOrder(tarea.etapa.orden)} · {tarea.etapa.nombre}
                             </Badge>
                           )}
                         </div>
@@ -312,9 +271,12 @@ export function TaskListView({
                             {(onEditTask || onDeleteTask) && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                                  >
                                     <MoreVertical className="h-4 w-4" />
-                                  </Button>
+                                  </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   {onEditTask && (
@@ -351,14 +313,15 @@ export function TaskListView({
                 })}
               </div>
             </div>
-          ))}
+          );
+        })}
 
-          {tareas.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No hay tareas en este proyecto
-            </div>
-          )}
-        </div>
+        {tareas.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            No hay tareas en este proyecto
+          </div>
+        )}
+      </div>
     </div>
   );
 }
