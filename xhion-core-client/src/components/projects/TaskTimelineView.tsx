@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Calendar, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { Calendar, ZoomIn, ZoomOut } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ interface TaskTimelineViewProps {
   tareas: Tarea[];
   etapas: Etapa[];
   onTaskClick?: (taskId: string) => void;
+  stagesEnabled?: boolean;
 }
 
 const prioridadColors = {
@@ -35,7 +36,7 @@ const estadoProgress = {
   Bloqueado: 25,
 };
 
-export function TaskTimelineView({ tareas, etapas, onTaskClick }: TaskTimelineViewProps) {
+export function TaskTimelineView({ tareas, etapas, onTaskClick, stagesEnabled = true }: TaskTimelineViewProps) {
   const [zoom, setZoom] = useState(1);
   const getInitials = (name: string) => {
     return name
@@ -47,9 +48,10 @@ export function TaskTimelineView({ tareas, etapas, onTaskClick }: TaskTimelineVi
   };
 
   // Calculate timeline range
+  const stageDates = stagesEnabled ? etapas.flatMap((e) => [e.fechaInicio, e.fechaFin]).filter(Boolean) : [];
   const allDates = [
     ...tareas.map((t) => t.fechaVencimiento).filter(Boolean),
-    ...etapas.flatMap((e) => [e.fechaInicio, e.fechaFin]).filter(Boolean),
+    ...stageDates,
   ].map((d) => new Date(d!));
 
   if (allDates.length === 0) {
@@ -121,25 +123,39 @@ export function TaskTimelineView({ tareas, etapas, onTaskClick }: TaskTimelineVi
   const handleZoomIn = () => setZoom(Math.min(zoom * 1.2, 3));
   const handleZoomOut = () => setZoom(Math.max(zoom / 1.2, 0.5));
 
-  // Group tasks by etapa
-  const groupedTareas = etapas.map((etapa) => ({
-    etapa,
-    tareas: tareas.filter((t) => t.etapaId === etapa.id),
-  }));
+  const groupedTareas = stagesEnabled
+    ? (() => {
+        const grouped = etapas.map((etapa) => ({
+          etapa,
+          tareas: tareas.filter((t) => t.etapaId === etapa.id),
+        }));
 
-  // Add tasks without etapa
-  const tareasWithoutEtapa = tareas.filter((t) => !t.etapaId);
-  if (tareasWithoutEtapa.length > 0) {
-    groupedTareas.push({
-      etapa: { id: "none", nombre: "Sin etapa" } as any,
-      tareas: tareasWithoutEtapa,
-    });
-  }
+        const tareasWithoutEtapa = tareas.filter((t) => !t.etapaId);
+        if (tareasWithoutEtapa.length > 0) {
+          grouped.push({
+            etapa: { id: "none", nombre: "Sin etapa" } as Etapa,
+            tareas: tareasWithoutEtapa,
+          });
+        }
+
+        return grouped;
+      })()
+    : [
+        {
+          etapa: { id: "general", nombre: "Tareas del proyecto" } as Etapa,
+          tareas,
+        },
+      ];
 
   return (
     <TooltipProvider>
       <div className="flex-1 overflow-hidden bg-background">
         <div className="h-full flex flex-col">
+          {!stagesEnabled && (
+            <div className="border-b bg-amber-50/70 dark:bg-amber-950/20 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
+              Vista general del cronograma sin agrupación por etapas. Activa las etapas para segmentar el timeline.
+            </div>
+          )}
           {/* Toolbar */}
           <div className="border-b bg-card p-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
