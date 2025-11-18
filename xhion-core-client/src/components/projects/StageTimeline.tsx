@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Settings, CheckCircle2, Circle, Clock, Calendar, Target, TrendingUp, Sparkles } from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, Calendar, Target, Sparkles } from "lucide-react";
 import { type Etapa } from "@/services/projectService";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +14,7 @@ interface StageTimelineProps {
   etapas: Etapa[];
   onCreateEtapa: () => void;
   onEditEtapa: (etapa: Etapa) => void;
+  stagesEnabled?: boolean;
 }
 
 const estadoConfig = {
@@ -44,7 +44,25 @@ const estadoConfig = {
   },
 };
 
-export function StageTimeline({ etapas, onCreateEtapa, onEditEtapa }: StageTimelineProps) {
+export function StageTimeline({ etapas, onCreateEtapa, onEditEtapa, stagesEnabled = true }: StageTimelineProps) {
+  if (!stagesEnabled) {
+    return (
+      <div className="border-b bg-card">
+        <div className="px-6 py-6">
+          <div className="flex flex-col items-center justify-center space-y-3 text-center">
+            <Sparkles className="h-10 w-10 text-muted-foreground/40" />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">Gestión de etapas desactivada</p>
+              <p className="text-xs text-muted-foreground max-w-md">
+                Activa las etapas para planificar hitos y visualizar su progreso cronológico dentro de este proyecto.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const sortedEtapas = [...etapas].sort((a, b) => a.orden - b.orden);
 
   const formatDate = (dateString?: string) => {

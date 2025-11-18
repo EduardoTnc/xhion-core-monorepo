@@ -9,6 +9,7 @@ interface ProjectState {
   miembros: ProyectoMiembro[];
   isLoading: boolean;
   error: string | null;
+  updateStagesEnabled: (proyectoId: string, enabled: boolean) => Promise<Proyecto>;
 
   // Acciones - Proyectos
   fetchProyectos: (filters?: { estado?: string; departamentoId?: string }) => Promise<void>;
@@ -36,7 +37,7 @@ interface ProjectState {
   reset: () => void;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set) => ({
   // Estado inicial
   proyectos: [],
   proyectoActual: null,
@@ -91,6 +92,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set((state) => ({
         proyectos: state.proyectos.map((p) => (p.id === id ? proyecto : p)),
         proyectoActual: state.proyectoActual?.id === id ? proyecto : state.proyectoActual,
+        isLoading: false,
+      }));
+      return proyecto;
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  updateStagesEnabled: async (proyectoId, enabled) => {
+    set({ isLoading: true, error: null });
+    try {
+      const proyecto = await projectService.update(proyectoId, { usaEtapas: enabled });
+      set((state) => ({
+        proyectos: state.proyectos.map((p) => (p.id === proyectoId ? proyecto : p)),
+        proyectoActual: state.proyectoActual?.id === proyectoId ? proyecto : state.proyectoActual,
         isLoading: false,
       }));
       return proyecto;

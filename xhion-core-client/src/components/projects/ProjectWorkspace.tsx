@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
-import { ProjectSidebar } from "./ProjectSidebar"
+import { ProjectSidebar } from "./ProjectSidebar";
 import { ProjectHeader } from "./ProjectHeader";
 import { StageTimeline } from "./StageTimeline";
 import { TaskViewSwitcher } from "./TaskViewSwitcher";
@@ -93,6 +93,8 @@ export function ProjectWorkspace() {
     }
   }, [proyectos, selectedProjectId]);
 
+  const stagesEnabled = proyectoActual?.usaEtapas ?? true;
+
   if (isLoading && proyectos.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -131,32 +133,30 @@ export function ProjectWorkspace() {
                 setEtapaToEdit(etapa);
                 setShowCreateEtapaModal(true);
               }}
+              stagesEnabled={stagesEnabled}
             />
 
             {/* View Switcher */}
             <TaskViewSwitcher
               viewMode={viewMode}
               onViewChange={setViewMode}
-              onCreateTask={() => setShowCreateTaskModal(true)}
+              defaultView={viewMode}
+              onSetDefaultView={setViewMode}
             />
 
             {/* Task Views */}
             <div className="flex-1 overflow-hidden">
               {viewMode === "kanban" && (
-                <TaskKanbanView
-                  tareas={tareas}
-                  etapas={etapas}
-                  onTaskClick={handleTaskClick}
-                />
+                <TaskKanbanView tareas={tareas} etapas={etapas} onTaskClick={handleTaskClick} stagesEnabled={stagesEnabled} />
               )}
               {viewMode === "list" && (
-                <TaskListView tareas={tareas} onTaskClick={handleTaskClick} />
+                <TaskListView tareas={tareas} onTaskClick={handleTaskClick} etapas={etapas} stagesEnabled={stagesEnabled} />
               )}
               {viewMode === "table" && (
-                <TaskTableView tareas={tareas} onTaskClick={handleTaskClick} />
+                <TaskTableView tareas={tareas} etapas={etapas} onTaskClick={handleTaskClick} stagesEnabled={stagesEnabled} />
               )}
               {viewMode === "timeline" && (
-                <TaskTimelineView tareas={tareas} etapas={etapas} onTaskClick={handleTaskClick} />
+                <TaskTimelineView tareas={tareas} etapas={etapas} onTaskClick={handleTaskClick} stagesEnabled={stagesEnabled} />
               )}
             </div>
           </>
@@ -223,7 +223,8 @@ export function ProjectWorkspace() {
             fetchTareas({ proyectoId: selectedProjectId });
           }
         }}
-        proyectoId={selectedProjectId}
+        proyectoId={selectedProjectId || ""}
+        stagesEnabled={stagesEnabled}
       />
 
       <TaskDetailModal

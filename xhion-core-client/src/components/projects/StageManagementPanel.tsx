@@ -40,7 +40,7 @@ interface StageManagementPanelProps {
   gradientPresets: GradientPresetMap;
   onGradientPresetChange: (preset: string) => void;
   stagesEnabled: boolean;
-  onToggleStages: (enabled: boolean) => void;
+  onToggleStages: (enabled: boolean) => Promise<void> | void;
 }
 
 const STATUS_OPTIONS: { value: Etapa["estado"]; label: string }[] = [
@@ -123,6 +123,7 @@ export function StageManagementPanel({
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, InlineStageForm>>({});
   const [savingStageId, setSavingStageId] = useState<string | null>(null);
+  const [togglingStages, setTogglingStages] = useState(false);
 
   const ensureForm = (stage: Etapa) => {
     if (!forms[stage.id]) {
@@ -163,6 +164,15 @@ export function StageManagementPanel({
     }
   };
 
+  const handleToggleStages = async (enabled: boolean) => {
+    try {
+      setTogglingStages(true);
+      await onToggleStages(enabled);
+    } finally {
+      setTogglingStages(false);
+    }
+  };
+
   const renderGradientSelector = () => (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Degradado</span>
@@ -179,7 +189,7 @@ export function StageManagementPanel({
               backgroundImage: `linear-gradient(120deg, ${preset.stops[0]}, ${preset.stops[preset.stops.length - 1]})`,
               filter: !stagesEnabled ? "grayscale(0.6)" : undefined,
             }}
-            disabled={!stagesEnabled}
+            disabled={!stagesEnabled || togglingStages}
             onClick={() => onGradientPresetChange(key)}
           >
             {preset.label}
@@ -201,7 +211,12 @@ export function StageManagementPanel({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="uppercase tracking-[0.2em]">Etapas</span>
-            <Switch checked={stagesEnabled} onCheckedChange={onToggleStages} aria-label="Activar etapas" />
+            <Switch
+              checked={stagesEnabled}
+              onCheckedChange={handleToggleStages}
+              aria-label="Activar etapas"
+              disabled={togglingStages}
+            />
           </div>
           {renderGradientSelector()}
           <Button size="sm" onClick={onCreateStage} className="inline-flex items-center gap-2" disabled={!stagesEnabled}>

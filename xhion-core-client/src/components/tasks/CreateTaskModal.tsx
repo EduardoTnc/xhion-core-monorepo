@@ -31,6 +31,7 @@ interface CreateTaskModalProps {
   onOpenChange: (open: boolean) => void;
   proyectoId: string;
   tareaToEdit?: Tarea | null;
+  stagesEnabled?: boolean;
 }
 
 interface TaskFormData {
@@ -43,7 +44,7 @@ interface TaskFormData {
   fechaVencimiento?: Date;
 }
 
-export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit }: CreateTaskModalProps) {
+export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit, stagesEnabled = true }: CreateTaskModalProps) {
   const { createTarea, updateTarea, isLoading } = useTaskStore();
   const { etapas, miembros, fetchEtapas, fetchMiembros } = useProjectStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,24 +168,34 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit }:
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="etapaId">Etapa (Opcional)</Label>
-              <Select value={selectedEtapaId || undefined} onValueChange={(value) => setValue("etapaId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin etapa asignada" />
-                </SelectTrigger>
-                <SelectContent>
-                  {etapas.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No hay etapas disponibles
-                    </div>
-                  ) : (
-                    etapas.map((etapa) => (
-                      <SelectItem key={etapa.id} value={etapa.id}>
-                        {etapa.nombre}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              {stagesEnabled ? (
+                <Select
+                  value={selectedEtapaId || undefined}
+                  onValueChange={(value) => setValue("etapaId", value)}
+                  disabled={etapas.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={etapas.length > 0 ? "Sin etapa asignada" : "No hay etapas"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {etapas.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        No hay etapas disponibles
+                      </div>
+                    ) : (
+                      etapas.map((etapa) => (
+                        <SelectItem key={etapa.id} value={etapa.id}>
+                          {etapa.nombre}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  La gestión de etapas está desactivada para este proyecto.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

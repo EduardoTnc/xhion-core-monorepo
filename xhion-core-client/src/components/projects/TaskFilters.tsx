@@ -38,6 +38,7 @@ interface TaskFiltersProps {
   onFiltersChange: (filters: TaskFiltersType) => void;
   miembros: ProyectoMiembro[];
   etapas: Array<{ id: string; nombre: string }>;
+  stagesEnabled?: boolean;
 }
 
 const initialFilters: TaskFiltersType = {
@@ -50,7 +51,7 @@ const initialFilters: TaskFiltersType = {
   fechaHasta: "",
 };
 
-export function TaskFilters({ filters, onFiltersChange, miembros, etapas }: TaskFiltersProps) {
+export function TaskFilters({ filters, onFiltersChange, miembros, etapas, stagesEnabled = true }: TaskFiltersProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
     filters.fechaDesde && filters.fechaHasta
       ? { from: new Date(filters.fechaDesde), to: new Date(filters.fechaHasta) }
@@ -168,23 +169,30 @@ export function TaskFilters({ filters, onFiltersChange, miembros, etapas }: Task
           {/* Etapa */}
           <div className="space-y-2">
             <Label htmlFor="etapa">Etapa</Label>
-            <Select
-              value={filters.etapaId}
-              onValueChange={(value) => onFiltersChange({ ...filters, etapaId: value })}
-            >
-              <SelectTrigger id="etapa">
-                <SelectValue placeholder="Selecciona una etapa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las etapas</SelectItem>
-                <SelectItem value="none">Sin etapa</SelectItem>
-                {etapas.map((etapa) => (
-                  <SelectItem key={etapa.id} value={etapa.id}>
-                    {etapa.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {stagesEnabled ? (
+              <Select
+                value={filters.etapaId}
+                onValueChange={(value) => onFiltersChange({ ...filters, etapaId: value })}
+                disabled={!stagesEnabled || etapas.length === 0}
+              >
+                <SelectTrigger id="etapa">
+                  <SelectValue placeholder={etapas.length > 0 ? "Selecciona una etapa" : "No hay etapas"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las etapas</SelectItem>
+                  <SelectItem value="none">Sin etapa</SelectItem>
+                  {etapas.map((etapa) => (
+                    <SelectItem key={etapa.id} value={etapa.id}>
+                      {etapa.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                La gestión de etapas está desactivada para este proyecto.
+              </p>
+            )}
           </div>
 
           {/* Fechas */}

@@ -2,7 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Paperclip, Flag, Calendar, MoreVertical } from "lucide-react";
+import { MessageSquare, Flag, Calendar, MoreVertical } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ interface TaskKanbanViewProps {
   tareas: Tarea[];
   etapas: Etapa[];
   onTaskClick: (taskId: string) => void;
+  stagesEnabled?: boolean;
 }
 
 const prioridadConfig = {
@@ -27,7 +28,7 @@ const estadoConfig = {
   Bloqueado: { label: "Bloqueado", color: "bg-red-500" },
 };
 
-export function TaskKanbanView({ tareas, etapas, onTaskClick }: TaskKanbanViewProps) {
+export function TaskKanbanView({ tareas, etapas, onTaskClick, stagesEnabled = true }: TaskKanbanViewProps) {
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -56,10 +57,19 @@ export function TaskKanbanView({ tareas, etapas, onTaskClick }: TaskKanbanViewPr
     tareas: tareas.filter((t) => t.estado === estado),
   }));
 
+  const showEmptyStagesHint = stagesEnabled && etapas.length === 0;
+
   return (
     <div className="flex-1 overflow-hidden bg-muted/30">
       <div className="h-full p-6">
-        <div className="grid grid-cols-4 gap-4 h-full">
+        <div className="space-y-4">
+          {showEmptyStagesHint && (
+            <div className="rounded-lg border border-dashed border-border/60 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+              Define al menos una etapa en el proyecto para visualizar columnas personalizadas por fase.
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-4 gap-4 h-full mt-4">
           {columns.map(({ estado, config, tareas: columnTareas }) => (
             <div key={estado} className="flex flex-col min-w-0">
               {/* Column Header */}
@@ -116,7 +126,7 @@ export function TaskKanbanView({ tareas, etapas, onTaskClick }: TaskKanbanViewPr
                               <Flag className={cn("h-3 w-3 mr-1", prioridad.color)} />
                               {tarea.prioridad}
                             </Badge>
-                            {tarea.etapa && (
+                            {stagesEnabled && tarea.etapa && (
                               <Badge variant="secondary" className="text-xs">
                                 {tarea.etapa.nombre}
                               </Badge>

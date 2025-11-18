@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateProyectoDto } from './create-proyecto.dto';
 
@@ -19,4 +19,12 @@ export class UpdateProyectoDto extends PartialType(CreateProyectoDto) {
   @IsOptional()
   @IsEnum(EstadoProyecto, { message: 'El estado debe ser un valor válido' })
   estado?: EstadoProyecto;
+
+  @ApiPropertyOptional({
+    description: 'Permite activar/desactivar la gestión de etapas en el proyecto',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'usaEtapas debe ser un valor booleano' })
+  usaEtapas?: boolean;
 }

@@ -49,6 +49,7 @@ export default function ProjectDetailPage() {
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
   const [etapaToEdit, setEtapaToEdit] = useState<any>(null);
+  const stagesEnabled = proyectoActual?.usaEtapas ?? true;
 
   useEffect(() => {
     if (id) {
@@ -117,6 +118,10 @@ export default function ProjectDetailPage() {
   };
 
   const handleCreateEtapa = () => {
+    if (!stagesEnabled) {
+      toast.info("Las etapas están desactivadas para este proyecto");
+      return;
+    }
     setEtapaToEdit(null);
     setShowCreateEtapaModal(true);
   };
@@ -254,9 +259,9 @@ export default function ProjectDetailPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{etapas.length}</div>
+            <div className="text-2xl font-bold">{stagesEnabled ? etapas.length : "—"}</div>
             <p className="text-xs text-muted-foreground">
-              {etapas.filter((e) => e.estado === "Completada").length} completadas
+              {stagesEnabled ? `${etapas.filter((e) => e.estado === "Completada").length} completadas` : "Gestión desactivada"}
             </p>
           </CardContent>
         </Card>
@@ -376,13 +381,25 @@ export default function ProjectDetailPage() {
         <TabsContent value="etapas" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Eta del Proyecto</h2>
-            <Button size="sm" onClick={handleCreateEtapa}>
+            <Button size="sm" onClick={handleCreateEtapa} disabled={!stagesEnabled}>
               <Plus className="mr-2 h-4 w-4" />
               Nueva Etapa
             </Button>
           </div>
 
-          {etapas.length === 0 ? (
+          {!stagesEnabled ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                <Calendar className="h-12 w-12 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Gestión de etapas desactivada</p>
+                  <p className="text-xs text-muted-foreground">
+                    Activa las etapas desde el nuevo Workspace para planificar fases y colores.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : etapas.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
@@ -508,6 +525,7 @@ export default function ProjectDetailPage() {
         }}
         proyectoId={id || ""}
         tareaToEdit={taskToEdit}
+        stagesEnabled={stagesEnabled}
       />
 
       <CreateEtapaModal

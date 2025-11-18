@@ -121,7 +121,7 @@ export function TaskListView({
 
   const groupedEntries = useMemo(() => {
     if (!shouldGroupByStage) {
-      return [["Listado general", tareas]] as Array<[string, Tarea[]>];
+      return [["Listado general", tareas]] as [string, Tarea[]][];
     }
 
     const stageOrderMap = etapas.reduce<Record<string, number>>((acc, etapa) => {

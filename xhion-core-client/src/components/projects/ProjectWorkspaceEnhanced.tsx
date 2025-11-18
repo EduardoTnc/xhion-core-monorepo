@@ -97,6 +97,7 @@ export function ProjectWorkspaceEnhanced({
     updateEtapa,
     setProyectoActual,
     isLoading,
+    updateStagesEnabled,
   } = useProjectStore();
 
   const { tareas: taskStoreTareas, fetchTareas } = useTaskStore();
@@ -283,6 +284,8 @@ export function ProjectWorkspaceEnhanced({
     }));
   }, [selectedProjectId, lastFetchedProjectId, etapas, miembros, taskStoreTareas]);
 
+  const stagesEnabled = proyectoActual?.usaEtapas ?? true;
+
   const handleTaskClick = (taskId: string) => {
     setSelectedTaskId(taskId);
     setShowTaskDetailModal(true);
@@ -386,6 +389,22 @@ export function ProjectWorkspaceEnhanced({
 
   // Apply filters to tasks
   const filteredTareas = applyTaskFilters(displayTareas, filters);
+  const stageFilterOptions = stagesEnabled
+    ? displayEtapas.map((etapa) => ({ id: etapa.id, nombre: etapa.nombre }))
+    : [];
+
+  const handleToggleStagesSetting = async (enabled: boolean) => {
+    if (!selectedProjectId) return;
+    try {
+      await updateStagesEnabled(selectedProjectId, enabled);
+      if (!enabled) {
+        setFilters((prev) => ({ ...prev, etapaId: "all" }));
+      }
+      toast.success(enabled ? "Gestión de etapas activada" : "Gestión de etapas desactivada");
+    } catch (error: any) {
+      toast.error(error.message || "Error al actualizar la configuración de etapas");
+    }
+  };
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -540,12 +559,17 @@ export function ProjectWorkspaceEnhanced({
                 etapas={displayEtapas}
                 tareas={displayTareas}
                 stageColorMap={stageColorMap}
+                gradientPresetKey={stageGradientPreset}
+                gradientPresets={STAGE_GRADIENT_PRESETS}
+                onGradientPresetChange={(preset) => setStageGradientPreset(preset as StageGradientPresetKey)}
                 onCreateStage={() => {
                   setEtapaToEdit(null);
                   setShowCreateEtapaModal(true);
                 }}
                 onUpdateStage={handleInlineUpdateStage}
                 onDeleteStage={handleDeleteStage}
+                stagesEnabled={stagesEnabled}
+                onToggleStages={handleToggleStagesSetting}
               />
             </section>
 
@@ -554,32 +578,11 @@ export function ProjectWorkspaceEnhanced({
                 <div className="sticky top-[64px] sm:top-[68px] z-10 border-b border-border/40 bg-card/95/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
                   <div className="px-4 py-3 sm:px-6 space-y-3">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex flex-col gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                      <div className="flex flex-col gap-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                         <span className="text-xs font-semibold tracking-[0.18em] text-foreground">Vistas de tareas</span>
-                        <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-[0.12em]">
-                          <span className="text-muted-foreground">Degradado de etapas</span>
-                          <div className="flex items-center gap-1">
-                            {Object.entries(STAGE_GRADIENT_PRESETS).map(([key, preset]) => (
-                              <button
-                                key={key}
-                                type="button"
-                                className={cn(
-                                  "relative inline-flex h-7 min-w-[68px] items-center justify-center rounded-full px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-white",
-                                  stageGradientPreset === key
-                                    ? "ring-2 ring-offset-2 ring-offset-background ring-primary/70"
-                                    : "opacity-80 hover:opacity-100"
-                                )}
-                                style={{
-                                  backgroundImage: `linear-gradient(120deg, ${preset.stops[0]}, ${preset.stops[preset.stops.length - 1]})`,
-                                }}
-                                aria-pressed={stageGradientPreset === key}
-                                onClick={() => setStageGradientPreset(key as StageGradientPresetKey)}
-                              >
-                                {preset.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <p className="text-[10px] normal-case tracking-[0.05em] text-muted-foreground/80">
+                          Cambia entre Kanban, Lista o Tabla según tu flujo de trabajo.
+                        </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
                         <Button
@@ -615,7 +618,8 @@ export function ProjectWorkspaceEnhanced({
                           filters={filters}
                           onFiltersChange={setFilters}
                           miembros={displayMiembros}
-                          etapas={displayEtapas}
+                          etapas={stageFilterOptions}
+                          stagesEnabled={stagesEnabled}
                         />
                       </div>
                     </div>
@@ -632,6 +636,7 @@ export function ProjectWorkspaceEnhanced({
                       proyectoId={selectedProjectId || ""}
                       etapas={displayEtapas}
                       stageColorMap={stageColorMap}
+                      stagesEnabled={stagesEnabled}
                     />
                   )}
                   {viewMode === "list" && (
@@ -642,6 +647,7 @@ export function ProjectWorkspaceEnhanced({
                       onDeleteTask={handleDeleteTask}
                       etapas={displayEtapas}
                       stageColorMap={stageColorMap}
+                      stagesEnabled={stagesEnabled}
                     />
                   )}
                   {viewMode === "table" && (
@@ -652,6 +658,7 @@ export function ProjectWorkspaceEnhanced({
                       onDeleteTask={handleDeleteTask}
                       etapas={displayEtapas}
                       stageColorMap={stageColorMap}
+                      stagesEnabled={stagesEnabled}
                     />
                   )}
                   {viewMode === "timeline" && proyectoActual && (
@@ -727,6 +734,7 @@ export function ProjectWorkspaceEnhanced({
           }
         }}
         proyectoId={selectedProjectId || ""}
+        stagesEnabled={stagesEnabled}
       />
 
       <CreateTaskModal
@@ -742,6 +750,7 @@ export function ProjectWorkspaceEnhanced({
         }}
         proyectoId={selectedProjectId || ""}
         tareaToEdit={tareaToEdit}
+        stagesEnabled={stagesEnabled}
       />
 
       <TaskDetailModal

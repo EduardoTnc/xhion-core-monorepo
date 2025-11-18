@@ -29,6 +29,7 @@ interface TaskTableViewProps {
   onDeleteTask?: (tareaId: string) => void;
   etapas: Etapa[];
   stageColorMap?: Record<string, string>;
+  stagesEnabled?: boolean;
 }
 
 const prioridadColors = {
@@ -86,6 +87,7 @@ export function TaskTableView({
   onDeleteTask,
   etapas,
   stageColorMap,
+  stagesEnabled = true,
 }: TaskTableViewProps) {
   const [sortField, setSortField] = useState<SortField>("titulo");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -237,7 +239,7 @@ export function TaskTableView({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {tarea.etapa ? (
+                      {stagesEnabled && tarea.etapa ? (
                         <div
                           className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-xs font-semibold"
                           style={(() => {

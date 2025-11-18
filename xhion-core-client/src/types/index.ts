@@ -254,6 +254,7 @@ export interface Proyecto {
     fechaCreacion: string; // ISO Date String
     fechaActualizacion?: string; // ISO Date String
     fechaEliminacion?: string | null; // ISO Date String
+    usaEtapas?: boolean;
 
     // Relaciones que podrías incluir en las respuestas de la API
     responsable: UsuarioSimple;
