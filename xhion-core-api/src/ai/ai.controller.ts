@@ -9,6 +9,7 @@ import {
   AiIdeasAnalyzeRequestDto,
   AiIdeasAnalyzeResponseDto,
   AiLogFilterDto,
+  AiFeedbackDto,
   AiProjectAssistRequestDto,
   AiProjectAssistResponseDto,
   AiReindexRequestDto,
@@ -31,6 +32,15 @@ export class AiController {
   async search(@Body() dto: AiSearchQueryDto, @Request() req) {
     const userId: string | null = req.user?.id ?? null
     return this.aiService.search(dto, userId)
+  }
+
+  @Post('search/feedback')
+  @RequiresPermission('ai.search')
+  @Auditar('AI - Feedback búsqueda IA')
+  @ApiOperation({ summary: 'Registrar feedback de resultados IA' })
+  async submitFeedback(@Body() dto: AiFeedbackDto, @Request() req) {
+    const userId: string | null = req.user?.id ?? null
+    return this.aiService.submitSearchFeedback(dto, userId)
   }
 
   @Post('reindex')

@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
 import { ProjectSidebar } from "./ProjectSidebar";
 import { ProjectHeader } from "./ProjectHeader";
-import { StageTimeline } from "./StageTimeline";
 import { TaskViewSwitcher } from "./TaskViewSwitcher";
 import { TaskKanbanView } from "./TaskKanbanView";
 import { TaskListView } from "./TaskListView";
@@ -11,11 +10,14 @@ import { TaskTableView } from "./TaskTableView";
 import { TaskTimelineView } from "./TaskTimelineView";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { EditProjectModal } from "./EditProjectModal";
-import { CreateEtapaModal } from "./CreateEtapaModal";
 import { AddMiembroModal } from "./AddMiembroModal";
 import { CreateTaskModal } from "../tasks/CreateTaskModal";
 import { TaskDetailModal } from "../tasks/TaskDetailModal";
+import { StageManagementPanel, type StageCreateInput, type StageUpdateInput } from "./StageManagementPanel";
+import { STAGE_GRADIENT_PRESETS, buildStageColorMap, type StageGradientPresetKey } from "./stageGradients";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Loader2 } from "lucide-react";
+import { type Etapa } from "@/services/projectService";
 import { toast } from "sonner";
 
 type ViewMode = "kanban" | "list" | "table" | "timeline";
@@ -30,6 +32,10 @@ export function ProjectWorkspace() {
     fetchProyectoById,
     fetchEtapas,
     fetchMiembros,
+    createEtapa,
+    updateEtapa,
+    deleteEtapa,
+    updateStagesEnabled,
     isLoading,
   } = useProjectStore();
 
@@ -39,12 +45,13 @@ export function ProjectWorkspace() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
-  const [showCreateEtapaModal, setShowCreateEtapaModal] = useState(false);
   const [showAddMiembroModal, setShowAddMiembroModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
-  const [etapaToEdit, setEtapaToEdit] = useState<any>(null);
+  const [etapaToDelete, setEtapaToDelete] = useState<Etapa | null>(null);
+  const [showDeleteEtapaConfirm, setShowDeleteEtapaConfirm] = useState(false);
+  const [stageGradientPreset, setStageGradientPreset] = useState<StageGradientPresetKey>("aurora");
 
   useEffect(() => {
     loadProyectos();
@@ -94,6 +101,74 @@ export function ProjectWorkspace() {
   }, [proyectos, selectedProjectId]);
 
   const stagesEnabled = proyectoActual?.usaEtapas ?? true;
+  const stageColorMap = useMemo(() => buildStageColorMap(etapas, stageGradientPreset), [etapas, stageGradientPreset]);
+
+  const handleInlineCreateStage = async (data: StageCreateInput) => {
+    if (!selectedProjectId) return;
+    try {
+      await createEtapa(selectedProjectId, {
+        nombre: data.nombre,
+        descripcion: data.descripcion ?? undefined,
+        orden: data.orden,
+        fechaInicio: data.fechaInicio ?? undefined,
+        fechaFin: data.fechaFin ?? undefined,
+      });
+      toast.success("Etapa creada");
+      await Promise.all([
+        fetchEtapas(selectedProjectId),
+        fetchTareas({ proyectoId: selectedProjectId }),
+      ]);
+    } catch (error: any) {
+      const message = error?.message || "Error al crear etapa";
+      toast.error(message);
+      throw new Error(message);
+    }
+  };
+
+  const handleInlineUpdateStage = async (etapaId: string, data: StageUpdateInput) => {
+    if (!selectedProjectId) return;
+    try {
+      await updateEtapa(selectedProjectId, etapaId, data);
+      await Promise.all([
+        fetchEtapas(selectedProjectId),
+        fetchTareas({ proyectoId: selectedProjectId }),
+      ]);
+      toast.success("Etapa actualizada");
+    } catch (error: any) {
+      toast.error(error?.message || "Error al actualizar etapa");
+    }
+  };
+
+  const handleDeleteStage = (etapa: Etapa) => {
+    setEtapaToDelete(etapa);
+    setShowDeleteEtapaConfirm(true);
+  };
+
+  const confirmDeleteStage = async () => {
+    if (!etapaToDelete || !selectedProjectId) return;
+    try {
+      await deleteEtapa(selectedProjectId, etapaToDelete.id);
+      toast.success("Etapa eliminada");
+      setEtapaToDelete(null);
+      setShowDeleteEtapaConfirm(false);
+      await Promise.all([
+        fetchEtapas(selectedProjectId),
+        fetchTareas({ proyectoId: selectedProjectId }),
+      ]);
+    } catch (error: any) {
+      toast.error(error?.message || "Error al eliminar etapa");
+    }
+  };
+
+  const handleToggleStagesSetting = async (enabled: boolean) => {
+    if (!selectedProjectId) return;
+    try {
+      await updateStagesEnabled(selectedProjectId, enabled);
+      toast.success(enabled ? "Gestión de etapas activada" : "Gestión de etapas desactivada");
+    } catch (error: any) {
+      toast.error(error?.message || "Error al actualizar la configuración de etapas");
+    }
+  };
 
   if (isLoading && proyectos.length === 0) {
     return (
@@ -125,16 +200,22 @@ export function ProjectWorkspace() {
               onInvite={() => setShowAddMiembroModal(true)}
             />
 
-            {/* Stage Timeline */}
-            <StageTimeline
-              etapas={etapas}
-              onCreateEtapa={() => setShowCreateEtapaModal(true)}
-              onEditEtapa={(etapa) => {
-                setEtapaToEdit(etapa);
-                setShowCreateEtapaModal(true);
-              }}
-              stagesEnabled={stagesEnabled}
-            />
+            {/* Stage Management */}
+            <div className="p-4">
+              <StageManagementPanel
+                etapas={etapas}
+                tareas={tareas}
+                stageColorMap={stageColorMap}
+                gradientPresetKey={stageGradientPreset}
+                gradientPresets={STAGE_GRADIENT_PRESETS}
+                onGradientPresetChange={(preset) => setStageGradientPreset(preset as StageGradientPresetKey)}
+                onCreateStage={handleInlineCreateStage}
+                onUpdateStage={handleInlineUpdateStage}
+                onDeleteStage={handleDeleteStage}
+                stagesEnabled={stagesEnabled}
+                onToggleStages={handleToggleStagesSetting}
+              />
+            </div>
 
             {/* View Switcher */}
             <TaskViewSwitcher
@@ -193,19 +274,6 @@ export function ProjectWorkspace() {
         proyecto={proyectoActual}
       />
 
-      <CreateEtapaModal
-        open={showCreateEtapaModal}
-        onOpenChange={(open) => {
-          setShowCreateEtapaModal(open);
-          if (!open) {
-            setEtapaToEdit(null);
-            if (selectedProjectId) fetchEtapas(selectedProjectId);
-          }
-        }}
-        proyectoId={selectedProjectId || ""}
-        etapaToEdit={etapaToEdit}
-      />
-
       <AddMiembroModal
         open={showAddMiembroModal}
         onOpenChange={(open) => {
@@ -231,6 +299,17 @@ export function ProjectWorkspace() {
         tareaId={selectedTaskId}
         open={showTaskDetailModal}
         onOpenChange={setShowTaskDetailModal}
+      />
+
+      <ConfirmDialog
+        open={showDeleteEtapaConfirm}
+        onOpenChange={setShowDeleteEtapaConfirm}
+        onConfirm={confirmDeleteStage}
+        title="¿Eliminar etapa?"
+        description="Esta acción no se puede deshacer. Las tareas asociadas perderán esta etapa."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="destructive"
       />
     </div>
   );

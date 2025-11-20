@@ -1,6 +1,6 @@
 "use client"
 
-import { type FormEvent, useEffect, useMemo } from "react"
+import { type FormEvent, useEffect, useMemo, useState } from "react"
 import {
   Search,
   Sparkles,
@@ -12,6 +12,8 @@ import {
   Lightbulb,
   Loader2,
   AlertCircle,
+  ThumbsUp,
+  ThumbsDown,
   ArrowUpRight,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -23,6 +25,14 @@ import { Button } from "@/components/ui/button"
 import { useAiSearchStore } from "@/store/aiSearchStore"
 import type { AiActionSuggestion } from "@/services/aiService"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+
+const ENTITY_SECTIONS = [
+  { key: "projects", label: "Proyectos", icon: FolderKanban },
+  { key: "tasks", label: "Tareas", icon: FileText },
+  { key: "users", label: "Usuarios", icon: Users },
+  { key: "documents", label: "Documentos", icon: Calendar },
+] as const
 
 interface AISearchModalProps {
   open: boolean
@@ -37,30 +47,88 @@ const quickActions = [
 ]
 
 export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
-  const { query, setQuery, results, isLoading, error, recentQueries, search, clearResults } = useAiSearchStore()
+  const {
+    query,
+    setQuery,
+    results,
+    isLoading,
+    error,
+    recentQueries,
+    search,
+    clearResults,
+    submitFeedback,
+    feedbackStatus,
+    feedbackError,
+  } = useAiSearchStore()
   const navigate = useNavigate()
+
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [feedbackGiven, setFeedbackGiven] = useState<'up' | 'down' | null>(null)
 
   const resultsByEntity = results?.resultsByEntity || {}
   const totalItems = useMemo(() => Object.values(resultsByEntity).reduce((acc, arr) => acc + arr.length, 0), [resultsByEntity])
   const hasResults = Boolean(results && totalItems > 0)
 
-  const entitySections = [
-    { key: 'projects', label: 'Proyectos', icon: FolderKanban },
-    { key: 'tasks', label: 'Tareas', icon: FileText },
-    { key: 'users', label: 'Usuarios', icon: Users },
-    { key: 'documents', label: 'Documentos', icon: Calendar },
-  ]
+  // Build flat list for keyboard navigation
+  const flatItems = useMemo(() => {
+    if (!results) return []
+    const items: { type: "result" | "suggestion"; data: any; section?: string }[] = []
+
+    results.actionSuggestions?.forEach((suggestion) => {
+      items.push({ type: "suggestion", data: suggestion })
+    })
+
+    ENTITY_SECTIONS.forEach((section) => {
+      const sectionItems = resultsByEntity[section.key] || []
+      sectionItems.forEach((item) => {
+        items.push({ type: "result", data: item, section: section.key })
+      })
+    })
+
+    return items
+  }, [results, resultsByEntity])
+
+  useEffect(() => {
+    setSelectedIndex(-1)
+    setFeedbackGiven(null)
+  }, [results])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault()
         onOpenChange(!open)
+        return
+      }
+
+      if (!open) return
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault()
+          setSelectedIndex(prev => (prev < flatItems.length - 1 ? prev + 1 : prev))
+          break
+        case "ArrowUp":
+          e.preventDefault()
+          setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev))
+          break
+        case "Enter":
+          if (selectedIndex >= 0 && flatItems[selectedIndex]) {
+            e.preventDefault()
+            const item = flatItems[selectedIndex]
+            if (item.type === 'suggestion') {
+              handleActionSuggestion(item.data)
+            } else {
+              handleResultNavigation(item.section!, item.data)
+            }
+          }
+          break
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [open, onOpenChange])
+  }, [open, onOpenChange, flatItems, selectedIndex])
+
 
   useEffect(() => {
     if (!open) {
@@ -138,6 +206,22 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
     }
   }
 
+  const handleFeedback = async (type: 'up' | 'down') => {
+    if (!results?.queryId || feedbackStatus === 'submitting') {
+      return
+    }
+
+    setFeedbackGiven(type)
+
+    try {
+      await submitFeedback({ queryId: results.queryId, useful: type === 'up' })
+      toast.success(type === 'up' ? '¡Gracias por tu feedback!' : 'Gracias por ayudarnos a mejorar los resultados de IA')
+    } catch (err) {
+      toast.error(feedbackError || 'No pudimos registrar tu feedback, intenta nuevamente')
+      setFeedbackGiven(null)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl gap-0 p-0">
@@ -159,9 +243,21 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
         <ScrollArea className="max-h-[500px]">
           <div className="p-4">
             {error && (
-              <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                {error}
+              <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => search({ query })}>
+                    Reintentar búsqueda
+                  </Button>
+                  {results && (
+                    <Button size="sm" variant="ghost" onClick={() => setQuery(results.summary.slice(0, 80))}>
+                      Ajustar consulta
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -227,6 +323,34 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
                             <span className="text-xs text-muted-foreground">
                               {results.processingTimeMs} ms • Intención: {results.intent}
                             </span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-6 w-6",
+                                  feedbackGiven === 'up' && "text-green-500",
+                                  feedbackStatus === 'submitting' && "opacity-60"
+                                )}
+                                disabled={feedbackStatus === 'submitting'}
+                                onClick={() => handleFeedback('up')}
+                              >
+                                <ThumbsUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-6 w-6",
+                                  feedbackGiven === 'down' && "text-red-500",
+                                  feedbackStatus === 'submitting' && "opacity-60"
+                                )}
+                                disabled={feedbackStatus === 'submitting'}
+                                onClick={() => handleFeedback('down')}
+                              >
+                                <ThumbsDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                           <p className="mt-2 text-sm text-muted-foreground">{results.summary}</p>
                         </div>
@@ -234,7 +358,7 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
                     </div>
                   )}
 
-                  {entitySections.map(({ key, label, icon: Icon }) => {
+                  {ENTITY_SECTIONS.map(({ key, label, icon: Icon }) => {
                     const items = resultsByEntity[key] || []
                     if (!items.length) return null
 
@@ -245,36 +369,46 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
                           {label} ({items.length})
                         </div>
                         <div className="space-y-2">
-                          {items.map((item: any) => (
-                            <div key={item.id || item.title} className="rounded-xl border border-border/60 bg-card/80 p-3">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-foreground">{item.nombre || item.titulo || item.email}</p>
-                                  {item.descripcion && (
-                                    <p className="text-xs text-muted-foreground line-clamp-2">{item.descripcion}</p>
-                                  )}
-                                  {item.estado && (
-                                    <Badge variant="outline" className="mt-2 text-[10px] uppercase">
-                                      {item.estado}
-                                    </Badge>
-                                  )}
+                          {items.map((item: any) => {
+                            const isSelected = flatItems.findIndex(i => i.type === 'result' && i.data === item) === selectedIndex
+                            return (
+                              <div 
+                                key={item.id || item.title} 
+                                className={cn(
+                                  "rounded-xl border border-border/60 bg-card/80 p-3 transition-colors cursor-pointer",
+                                  isSelected && "border-primary ring-1 ring-primary bg-accent"
+                                )}
+                                onClick={() => handleResultNavigation(key, item)}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-foreground">{item.nombre || item.titulo || item.email}</p>
+                                    {item.descripcion && (
+                                      <p className="text-xs text-muted-foreground line-clamp-2">{item.descripcion}</p>
+                                    )}
+                                    {item.estado && (
+                                      <Badge variant="outline" className="mt-2 text-[10px] uppercase">
+                                        {item.estado}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Ver detalle"
+                                    type="button"
+                                    onClick={() => handleResultNavigation(key, item)}
+                                  >
+                                    <ArrowUpRight className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  title="Ver detalle"
-                                  type="button"
-                                  onClick={() => handleResultNavigation(key, item)}
-                                >
-                                  <ArrowUpRight className="h-4 w-4" />
-                                </Button>
+                                {item.proyecto && (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">Proyecto: {item.proyecto?.nombre}</p>
+                                )}
                               </div>
-                              {item.proyecto && (
-                                <p className="mt-1 text-[11px] text-muted-foreground">Proyecto: {item.proyecto?.nombre}</p>
-                              )}
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )
@@ -287,26 +421,33 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
                         Sugerencias de acción
                       </div>
                       <div className="space-y-2">
-                        {results.actionSuggestions.map((suggestion, index) => (
-                          <div
-                            key={`${suggestion.entityType}-${index}`}
-                            className="flex items-center justify-between rounded-xl border border-border/60 bg-background/80 px-4 py-3"
-                          >
-                            <div>
-                              <p className="text-sm font-semibold text-foreground">
-                                {suggestion.entityType} • {(suggestion.confidence * 100).toFixed(0)}% confianza
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {Object.keys(suggestion.payload)
-                                  .map((key) => `${key}: ${suggestion.payload[key]}`)
-                                  .join(" • ")}
-                              </p>
+                        {results.actionSuggestions.map((suggestion, index) => {
+                          const isSelected = flatItems.findIndex(i => i.type === 'suggestion' && i.data === suggestion) === selectedIndex
+                          return (
+                            <div
+                              key={`${suggestion.entityType}-${index}`}
+                              className={cn(
+                                "flex items-center justify-between rounded-xl border border-border/60 bg-background/80 px-4 py-3 transition-colors",
+                                isSelected && "border-primary ring-1 ring-primary bg-accent"
+                              )}
+                              onClick={() => handleActionSuggestion(suggestion)}
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {suggestion.entityType} • {(suggestion.confidence * 100).toFixed(0)}% confianza
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {Object.keys(suggestion.payload)
+                                    .map((key) => `${key}: ${suggestion.payload[key]}`)
+                                    .join(" • ")}
+                                </p>
+                              </div>
+                              <Button variant="outline" size="sm" type="button" onClick={() => handleActionSuggestion(suggestion)}>
+                                Usar
+                              </Button>
                             </div>
-                            <Button variant="outline" size="sm" type="button" onClick={() => handleActionSuggestion(suggestion)}>
-                              Usar
-                            </Button>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   )}

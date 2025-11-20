@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -10,9 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { CreateTaskModal } from "@/components/tasks/CreateTaskModal";
-import { CreateEtapaModal } from "@/components/projects/CreateEtapaModal";
 import { AddMiembroModal } from "@/components/projects/AddMiembroModal";
 import { EditProjectModal } from "@/components/projects/EditProjectModal";
+import { StageManagementPanel, type StageCreateInput, type StageUpdateInput } from "@/components/projects/StageManagementPanel";
+import { STAGE_GRADIENT_PRESETS, buildStageColorMap, type StageGradientPresetKey } from "@/components/projects/stageGradients";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ArrowLeft,
   Users,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { type Etapa } from "@/services/projectService";
 
 const estadoColors = {
   Activo: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
@@ -39,17 +42,32 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { proyectoActual, etapas, miembros, fetchProyectoById, fetchEtapas, fetchMiembros, deleteEtapa, removeMiembro, isLoading } = useProjectStore();
+  const {
+    proyectoActual,
+    etapas,
+    miembros,
+    fetchProyectoById,
+    fetchEtapas,
+    fetchMiembros,
+    deleteEtapa,
+    removeMiembro,
+    createEtapa,
+    updateEtapa,
+    updateStagesEnabled,
+    isLoading,
+  } = useProjectStore();
   const { tareas, fetchTareas, deleteTarea } = useTaskStore();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
-  const [showCreateEtapaModal, setShowCreateEtapaModal] = useState(false);
   const [showAddMiembroModal, setShowAddMiembroModal] = useState(false);
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
-  const [etapaToEdit, setEtapaToEdit] = useState<any>(null);
+  const [etapaToDelete, setEtapaToDelete] = useState<Etapa | null>(null);
+  const [showDeleteEtapaConfirm, setShowDeleteEtapaConfirm] = useState(false);
+  const [stageGradientPreset, setStageGradientPreset] = useState<StageGradientPresetKey>("aurora");
   const stagesEnabled = proyectoActual?.usaEtapas ?? true;
+  const stageColorMap = useMemo(() => buildStageColorMap(etapas, stageGradientPreset), [etapas, stageGradientPreset]);
 
   useEffect(() => {
     if (id) {
@@ -117,29 +135,61 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleCreateEtapa = () => {
-    if (!stagesEnabled) {
-      toast.info("Las etapas están desactivadas para este proyecto");
-      return;
-    }
-    setEtapaToEdit(null);
-    setShowCreateEtapaModal(true);
-  };
-
-  const handleEditEtapa = (etapa: any) => {
-    setEtapaToEdit(etapa);
-    setShowCreateEtapaModal(true);
-  };
-
-  const handleDeleteEtapa = async (etapaId: string, nombre: string) => {
-    if (!confirm(`¿Estás seguro de eliminar la etapa "${nombre}"?`)) return;
-    
+  const handleInlineCreateStage = async (data: StageCreateInput) => {
+    if (!id) return;
     try {
-      if (!id) return;
-      await deleteEtapa(id, etapaId);
+      await createEtapa(id, {
+        nombre: data.nombre,
+        descripcion: data.descripcion ?? undefined,
+        orden: data.orden,
+        fechaInicio: data.fechaInicio ?? undefined,
+        fechaFin: data.fechaFin ?? undefined,
+      });
+      toast.success("Etapa creada");
+      await Promise.all([fetchEtapas(id), fetchTareas({ proyectoId: id })]);
+    } catch (error: any) {
+      const message = error?.message || "Error al crear etapa";
+      toast.error(message);
+      throw new Error(message);
+    }
+  };
+
+  const handleInlineUpdateStage = async (etapaId: string, data: StageUpdateInput) => {
+    if (!id) return;
+    try {
+      await updateEtapa(id, etapaId, data);
+      await Promise.all([fetchEtapas(id), fetchTareas({ proyectoId: id })]);
+      toast.success("Etapa actualizada");
+    } catch (error: any) {
+      toast.error(error?.message || "Error al actualizar etapa");
+    }
+  };
+
+  const handleDeleteStage = (etapa: Etapa) => {
+    setEtapaToDelete(etapa);
+    setShowDeleteEtapaConfirm(true);
+  };
+
+  const confirmDeleteEtapa = async () => {
+    if (!etapaToDelete || !id) return;
+    try {
+      await deleteEtapa(id, etapaToDelete.id);
       toast.success("Etapa eliminada exitosamente");
+      setEtapaToDelete(null);
+      setShowDeleteEtapaConfirm(false);
+      await Promise.all([fetchEtapas(id), fetchTareas({ proyectoId: id })]);
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar etapa");
+    }
+  };
+
+  const handleToggleStagesSetting = async (enabled: boolean) => {
+    if (!id) return;
+    try {
+      await updateStagesEnabled(id, enabled);
+      toast.success(enabled ? "Gestión de etapas activada" : "Gestión de etapas desactivada");
+    } catch (error: any) {
+      toast.error(error?.message || "Error al actualizar la configuración de etapas");
     }
   };
 
@@ -379,83 +429,23 @@ export default function ProjectDetailPage() {
 
         {/* Etapas Tab */}
         <TabsContent value="etapas" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Eta del Proyecto</h2>
-            <Button size="sm" onClick={handleCreateEtapa} disabled={!stagesEnabled}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Etapa
-            </Button>
-          </div>
-
-          {!stagesEnabled ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Gestión de etapas desactivada</p>
-                  <p className="text-xs text-muted-foreground">
-                    Activa las etapas desde el nuevo Workspace para planificar fases y colores.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : etapas.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">No hay etapas definidas</p>
-                <Button onClick={handleCreateEtapa}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Crear primera etapa
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {etapas.map((etapa, index) => (
-                <Card key={etapa.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{etapa.nombre}</h3>
-                          {etapa.descripcion && (
-                            <p className="text-sm text-muted-foreground">{etapa.descripcion}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={etapa.estado === "Completada" ? "default" : "secondary"}
-                        >
-                          {etapa.estado.replace("_", " ")}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEditEtapa(etapa)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDeleteEtapa(etapa.id, etapa.nombre)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <Card>
+            <CardContent className="p-4">
+              <StageManagementPanel
+                etapas={etapas}
+                tareas={tareas}
+                stageColorMap={stageColorMap}
+                gradientPresetKey={stageGradientPreset}
+                gradientPresets={STAGE_GRADIENT_PRESETS}
+                onGradientPresetChange={(preset) => setStageGradientPreset(preset as StageGradientPresetKey)}
+                onCreateStage={handleInlineCreateStage}
+                onUpdateStage={handleInlineUpdateStage}
+                onDeleteStage={handleDeleteStage}
+                stagesEnabled={stagesEnabled}
+                onToggleStages={handleToggleStagesSetting}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Miembros Tab */}
@@ -528,16 +518,6 @@ export default function ProjectDetailPage() {
         stagesEnabled={stagesEnabled}
       />
 
-      <CreateEtapaModal
-        open={showCreateEtapaModal}
-        onOpenChange={(open) => {
-          setShowCreateEtapaModal(open);
-          if (!open) setEtapaToEdit(null);
-        }}
-        proyectoId={id || ""}
-        etapaToEdit={etapaToEdit}
-      />
-
       <AddMiembroModal
         open={showAddMiembroModal}
         onOpenChange={setShowAddMiembroModal}
@@ -551,6 +531,17 @@ export default function ProjectDetailPage() {
           if (!open && id) fetchProyectoById(id);
         }}
         proyecto={proyectoActual}
+      />
+
+      <ConfirmDialog
+        open={showDeleteEtapaConfirm}
+        onOpenChange={setShowDeleteEtapaConfirm}
+        onConfirm={confirmDeleteEtapa}
+        title="¿Eliminar etapa?"
+        description="Esta acción no se puede deshacer. Las tareas asociadas perderán esta etapa."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="destructive"
       />
     </div>
   );

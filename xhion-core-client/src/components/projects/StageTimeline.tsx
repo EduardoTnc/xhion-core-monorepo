@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 
 interface StageTimelineProps {
   etapas: Etapa[];
-  onCreateEtapa: () => void;
-  onEditEtapa: (etapa: Etapa) => void;
+  onCreateEtapa?: () => void;
+  onEditEtapa?: (etapa: Etapa) => void;
   stagesEnabled?: boolean;
 }
 
@@ -124,10 +124,12 @@ export function StageTimeline({ etapas, onCreateEtapa, onEditEtapa, stagesEnable
               </span>
             </div>
           </div>
-          <Button onClick={onCreateEtapa} size="sm">
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Nueva Etapa</span>
-          </Button>
+          {onCreateEtapa && (
+            <Button onClick={onCreateEtapa} size="sm">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nueva Etapa</span>
+            </Button>
+          )}
         </div>
 
         {/* Timeline */}
@@ -146,8 +148,9 @@ export function StageTimeline({ etapas, onCreateEtapa, onEditEtapa, stagesEnable
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => onEditEtapa(etapa)}
+                          onClick={() => onEditEtapa?.(etapa)}
                           className="relative group flex flex-col items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg p-1"
+                          disabled={!onEditEtapa}
                         >
                           {/* Circle */}
                           <div

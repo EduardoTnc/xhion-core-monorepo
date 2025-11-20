@@ -9,13 +9,12 @@ import { TaskListView } from "./TaskListView";
 import { TaskTableView } from "./TaskTableView";
 import { ProjectGanttTimeline } from "./ProjectGanttTimeline";
 import { ProjectInfoSection } from "./ProjectInfoSection";
-import { StageManagementPanel, type StageUpdateInput } from "./StageManagementPanel";
+import { StageManagementPanel, type StageUpdateInput, type StageCreateInput } from "./StageManagementPanel";
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "./TaskFilters";
 import { ExportMenu } from "./ExportMenu";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { EditProjectModal } from "./EditProjectModal";
-import { CreateEtapaModal } from "./CreateEtapaModal";
 import { AddMiembroModal } from "./AddMiembroModal";
 import { CreateTaskModal } from "../tasks/CreateTaskModal";
 import { TaskDetailModal } from "../tasks/TaskDetailModal";
@@ -95,6 +94,7 @@ export function ProjectWorkspaceEnhanced({
     fetchMiembros,
     deleteEtapa,
     updateEtapa,
+    createEtapa,
     setProyectoActual,
     isLoading,
     updateStagesEnabled,
@@ -125,14 +125,12 @@ export function ProjectWorkspaceEnhanced({
   // Modals State
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
-  const [showCreateEtapaModal, setShowCreateEtapaModal] = useState(false);
   const [showAddMiembroModal, setShowAddMiembroModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
-  const [etapaToEdit, setEtapaToEdit] = useState<any>(null);
   const [etapaToDelete, setEtapaToDelete] = useState<Etapa | null>(null);
   const [showDeleteEtapaConfirm, setShowDeleteEtapaConfirm] = useState(false);
   const [tareaToEdit, setTareaToEdit] = useState<any>(null);
@@ -201,6 +199,28 @@ export function ProjectWorkspaceEnhanced({
   const handleDeleteStage = (etapa: Etapa) => {
     setEtapaToDelete(etapa);
     setShowDeleteEtapaConfirm(true);
+  };
+
+  const handleInlineCreateStage = async (data: StageCreateInput) => {
+    if (!selectedProjectId) return;
+    try {
+      await createEtapa(selectedProjectId, {
+        nombre: data.nombre,
+        descripcion: data.descripcion ?? undefined,
+        orden: data.orden,
+        fechaInicio: data.fechaInicio ?? undefined,
+        fechaFin: data.fechaFin ?? undefined,
+      });
+      toast.success("Etapa creada");
+      await Promise.all([
+        fetchEtapas(selectedProjectId),
+        fetchTareas({ proyectoId: selectedProjectId }),
+      ]);
+    } catch (error: any) {
+      const message = error?.message || "Error al crear etapa";
+      toast.error(message);
+      throw new Error(message);
+    }
   };
 
   const handleInlineUpdateStage = async (etapaId: string, data: StageUpdateInput) => {
@@ -562,10 +582,7 @@ export function ProjectWorkspaceEnhanced({
                 gradientPresetKey={stageGradientPreset}
                 gradientPresets={STAGE_GRADIENT_PRESETS}
                 onGradientPresetChange={(preset) => setStageGradientPreset(preset as StageGradientPresetKey)}
-                onCreateStage={() => {
-                  setEtapaToEdit(null);
-                  setShowCreateEtapaModal(true);
-                }}
+                onCreateStage={handleInlineCreateStage}
                 onUpdateStage={handleInlineUpdateStage}
                 onDeleteStage={handleDeleteStage}
                 stagesEnabled={stagesEnabled}
@@ -701,19 +718,6 @@ export function ProjectWorkspaceEnhanced({
           if (!open && selectedProjectId) loadProjectData(selectedProjectId);
         }}
         proyecto={proyectoActual}
-      />
-
-      <CreateEtapaModal
-        open={showCreateEtapaModal}
-        onOpenChange={(open) => {
-          setShowCreateEtapaModal(open);
-          if (!open) {
-            setEtapaToEdit(null);
-            if (selectedProjectId) fetchEtapas(selectedProjectId);
-          }
-        }}
-        proyectoId={selectedProjectId || ""}
-        etapaToEdit={etapaToEdit}
       />
 
       <AddMiembroModal

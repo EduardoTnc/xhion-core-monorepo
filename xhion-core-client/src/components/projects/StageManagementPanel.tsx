@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,18 @@ import { cn } from "@/lib/utils";
 export type StageUpdateInput = {
   nombre?: string;
   descripcion?: string | null;
-  color?: string | null;
   orden?: number;
   fechaInicio?: string | null;
   fechaFin?: string | null;
   estado?: Etapa["estado"];
+};
+
+export type StageCreateInput = {
+  nombre: string;
+  descripcion?: string | null;
+  orden: number;
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
 };
 
 type GradientPresetMap = Record<string, { label: string; stops: readonly string[] }>;
@@ -33,7 +40,7 @@ interface StageManagementPanelProps {
   etapas: Etapa[];
   tareas: Tarea[];
   stageColorMap?: Record<string, string>;
-  onCreateStage: () => void;
+  onCreateStage: (data: StageCreateInput) => Promise<void> | void;
   onUpdateStage: (etapaId: string, data: StageUpdateInput) => Promise<void> | void;
   onDeleteStage: (etapa: Etapa) => void;
   gradientPresetKey: string;
@@ -80,7 +87,6 @@ const hexToRgba = (hex: string, alpha = 0.15) => {
 type InlineStageForm = {
   nombre: string;
   descripcion: string;
-  color: string;
   orden: number | string;
   fechaInicio?: string;
   fechaFin?: string;
@@ -90,11 +96,19 @@ type InlineStageForm = {
 const buildFormFromStage = (stage: Etapa): InlineStageForm => ({
   nombre: stage.nombre,
   descripcion: stage.descripcion ?? "",
-  color: stage.color ?? "#4f46e5",
   orden: stage.orden,
   fechaInicio: stage.fechaInicio ? stage.fechaInicio.slice(0, 10) : undefined,
   fechaFin: stage.fechaFin ? stage.fechaFin.slice(0, 10) : undefined,
   estado: stage.estado,
+});
+
+const buildNewStageForm = (order: number): InlineStageForm => ({
+  nombre: "",
+  descripcion: "",
+  orden: order,
+  fechaInicio: undefined,
+  fechaFin: undefined,
+  estado: "Pendiente",
 });
 
 export function StageManagementPanel({
@@ -124,6 +138,14 @@ export function StageManagementPanel({
   const [forms, setForms] = useState<Record<string, InlineStageForm>>({});
   const [savingStageId, setSavingStageId] = useState<string | null>(null);
   const [togglingStages, setTogglingStages] = useState(false);
+  const [creatingStage, setCreatingStage] = useState(false);
+  const nextStageOrder = etapas.length + 1;
+  const [newStageForm, setNewStageForm] = useState<InlineStageForm>(() => buildNewStageForm(nextStageOrder));
+  const [newStageError, setNewStageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNewStageForm((prev) => (prev.nombre.trim().length > 0 ? prev : { ...prev, orden: nextStageOrder }));
+  }, [nextStageOrder]);
 
   const ensureForm = (stage: Etapa) => {
     if (!forms[stage.id]) {
@@ -131,6 +153,13 @@ export function StageManagementPanel({
       return buildFormFromStage(stage);
     }
     return forms[stage.id];
+  };
+
+  const handleNewStageFieldChange = (field: keyof InlineStageForm, value: string | number) => {
+    setNewStageForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleFieldChange = (stage: Etapa, field: keyof InlineStageForm, value: string | number) => {
@@ -143,12 +172,38 @@ export function StageManagementPanel({
     }));
   };
 
+  const handleCreateStage = async () => {
+    const nombre = newStageForm.nombre.trim();
+    if (!nombre) {
+      setNewStageError("El nombre es obligatorio");
+      return;
+    }
+
+    const payload: StageCreateInput = {
+      nombre,
+      descripcion: newStageForm.descripcion.trim() || null,
+      orden: Number(newStageForm.orden) || nextStageOrder,
+      fechaInicio: newStageForm.fechaInicio ? new Date(newStageForm.fechaInicio).toISOString() : null,
+      fechaFin: newStageForm.fechaFin ? new Date(newStageForm.fechaFin).toISOString() : null,
+    };
+
+    try {
+      setCreatingStage(true);
+      setNewStageError(null);
+      await onCreateStage(payload);
+      setNewStageForm(buildNewStageForm(nextStageOrder + 1));
+    } catch (error: any) {
+      setNewStageError(error?.message || "Error al crear la etapa");
+    } finally {
+      setCreatingStage(false);
+    }
+  };
+
   const handleSaveStage = async (stage: Etapa) => {
     const form = forms[stage.id] ?? buildFormFromStage(stage);
     const payload: StageUpdateInput = {
       nombre: form.nombre.trim() || stage.nombre,
       descripcion: form.descripcion.trim() || null,
-      color: form.color || null,
       orden: Number(form.orden) || stage.orden,
       fechaInicio: form.fechaInicio ? new Date(form.fechaInicio).toISOString() : null,
       fechaFin: form.fechaFin ? new Date(form.fechaFin).toISOString() : null,
@@ -219,9 +274,6 @@ export function StageManagementPanel({
             />
           </div>
           {renderGradientSelector()}
-          <Button size="sm" onClick={onCreateStage} className="inline-flex items-center gap-2" disabled={!stagesEnabled}>
-            <PlusCircle className="h-4 w-4" /> Nueva etapa
-          </Button>
         </div>
       </div>
 
@@ -230,12 +282,90 @@ export function StageManagementPanel({
           <p className="font-medium text-foreground">Gestión desactivada</p>
           <p className="text-xs">Activa las etapas para planificar fases, colores y seguimiento del flujo de trabajo.</p>
         </div>
-      ) : stageStats.length === 0 ? (
-        <div className="mt-3 rounded-xl border border-dashed border-border/50 bg-background/70 px-4 py-4 text-center text-sm text-muted-foreground">
-          Aún no hay etapas registradas. Crea la primera para organizar tu flujo.
-        </div>
       ) : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="rounded-xl border border-dashed border-primary/30 bg-background/80 p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <PlusCircle className="h-4 w-4 text-primary" /> Nueva etapa
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Completa los campos para crear una etapa sin salir del panel.</p>
+            <div className="mt-3 space-y-2 text-xs">
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase tracking-[0.2em]">Nombre</Label>
+                <Input
+                  value={newStageForm.nombre}
+                  onChange={(event) => handleNewStageFieldChange("nombre", event.target.value)}
+                  placeholder="Ej. Planificación"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase tracking-[0.2em]">Descripción</Label>
+                <Textarea
+                  rows={2}
+                  value={newStageForm.descripcion}
+                  onChange={(event) => handleNewStageFieldChange("descripcion", event.target.value)}
+                  placeholder="Contexto u objetivo de la etapa"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px] uppercase tracking-[0.2em]">Orden</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={newStageForm.orden}
+                    onChange={(event) => handleNewStageFieldChange("orden", Number(event.target.value))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] uppercase tracking-[0.2em]">Estado inicial</Label>
+                  <Select
+                    value={newStageForm.estado}
+                    onValueChange={(value) => handleNewStageFieldChange("estado", value)}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Pendiente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px] uppercase tracking-[0.2em]">Inicio</Label>
+                  <Input
+                    type="date"
+                    value={newStageForm.fechaInicio ?? ""}
+                    onChange={(event) => handleNewStageFieldChange("fechaInicio", event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] uppercase tracking-[0.2em]">Fin</Label>
+                  <Input
+                    type="date"
+                    value={newStageForm.fechaFin ?? ""}
+                    onChange={(event) => handleNewStageFieldChange("fechaFin", event.target.value)}
+                  />
+                </div>
+              </div>
+              {newStageError && <p className="text-[11px] text-destructive">{newStageError}</p>}
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={handleCreateStage}
+                disabled={creatingStage}
+              >
+                {creatingStage && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Guardar etapa
+              </Button>
+            </div>
+          </div>
+
           {stageStats.map((stage) => {
             const gradientHex = stageColorMap?.[stage.id];
             const fallbackHex = isHexColor(stage.color) ? stage.color! : undefined;
@@ -338,14 +468,6 @@ export function StageManagementPanel({
                           min={1}
                           value={formValues.orden}
                           onChange={(event) => handleFieldChange(stage, "orden", Number(event.target.value))}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] uppercase tracking-[0.2em]">Color</Label>
-                        <Input
-                          type="color"
-                          value={formValues.color}
-                          onChange={(event) => handleFieldChange(stage, "color", event.target.value)}
                         />
                       </div>
                     </div>

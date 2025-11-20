@@ -49,6 +49,10 @@ export class AiActionSuggestionDto {
 }
 
 export class AiSearchResultDto {
+  @ApiProperty({ description: 'Identificador del log asociado a esta consulta' })
+  @IsString()
+  queryId!: string
+
   @ApiProperty({ description: 'Resumen narrativo generado por la IA' })
   @IsString()
   summary!: string
@@ -69,6 +73,23 @@ export class AiSearchResultDto {
   @ApiProperty({ description: 'Tiempo total de procesamiento en milisegundos' })
   @IsNumber()
   processingTimeMs!: number
+}
+
+export class AiFeedbackDto {
+  @ApiProperty({ description: 'Identificador del log (queryId) devuelto por la búsqueda' })
+  @IsString()
+  @IsNotEmpty()
+  queryId!: string
+
+  @ApiProperty({ description: 'Indica si el resultado fue útil para el usuario' })
+  @IsBoolean()
+  useful!: boolean
+
+  @ApiProperty({ required: false, description: 'Comentario adicional del usuario' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string
 }
 
 export class AiReindexRequestDto {

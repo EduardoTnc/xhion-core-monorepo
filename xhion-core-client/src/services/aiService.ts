@@ -16,6 +16,7 @@ export interface AiActionSuggestion {
 }
 
 export interface AiSearchResult {
+  queryId: string;
   summary: string;
   resultsByEntity: Record<string, any[]>;
   intent: string;
@@ -28,9 +29,19 @@ export interface AiSearchPayload {
   context?: Record<string, any>;
 }
 
+export interface AiSearchFeedbackPayload {
+  queryId: string;
+  useful: boolean;
+  notes?: string;
+}
+
 export const aiService = {
   async search(payload: AiSearchPayload): Promise<AiSearchResult> {
     const response = await apiClient.post<AiSearchResult>("/ai/search", payload);
     return response.data;
+  },
+
+  async sendFeedback(payload: AiSearchFeedbackPayload): Promise<void> {
+    await apiClient.post("/ai/search/feedback", payload);
   },
 };

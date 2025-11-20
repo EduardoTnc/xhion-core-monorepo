@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Prisma, AiEntityType } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import {
   AiActionSuggestionDto,
+  AiFeedbackDto,
   AiIdeasAnalyzeRequestDto,
   AiIdeasAnalyzeResponseDto,
   AiIdeaClusterDto,
@@ -163,7 +164,7 @@ export class AiService {
       const summary = await this.generateNarrative(dto.query, context)
       const actionSuggestions = this.buildActionSuggestions(intent, dto.query, context)
 
-      await this.logQuery({
+      const logEntry = await this.logQuery({
         userId,
         query: dto.query,
         status: 'SUCCESS',
@@ -179,6 +180,7 @@ export class AiService {
       })
 
       return {
+        queryId: logEntry.id,
         summary,
         resultsByEntity: {
           projects: context.projects,
@@ -632,19 +634,51 @@ Entrega un resumen estratégico de máximo 120 palabras en español y resalta re
     }
   }
 
+  async submitSearchFeedback(dto: AiFeedbackDto, userId: string | null) {
+    const queryLog = await this.prisma.aiQueryLog.findUnique({ where: { id: dto.queryId } })
+    if (!queryLog) {
+      throw new NotFoundException('No se encontró el historial de búsqueda indicado')
+    }
+
+    const existingMetadata = (queryLog.metadata as Record<string, any> | null) ?? {}
+    const updatedMetadata = {
+      ...existingMetadata,
+      feedback: {
+        useful: dto.useful,
+        notes: dto.notes ?? null,
+        submittedAt: new Date().toISOString(),
+        submittedBy: userId,
+      },
+    }
+
+    await this.prisma.aiQueryLog.update({
+      where: { id: dto.queryId },
+      data: {
+        fueUtil: dto.useful,
+        metadata: updatedMetadata,
+      },
+    })
+
+    return {
+      queryId: dto.queryId,
+      useful: dto.useful,
+    }
+  }
+
   private async logQuery(params: {
     userId: string | null
     query: string
     status: string
     metadata?: Record<string, any>
-  }) {
-    await this.prisma.aiQueryLog.create({
+  }): Promise<{ id: string }> {
+    return this.prisma.aiQueryLog.create({
       data: {
         usuarioId: params.userId,
         consultaLenguajeNatural: params.query,
         estadoEjecucion: params.status,
         metadata: params.metadata,
       },
+      select: { id: true },
     })
   }
 
