@@ -40,6 +40,14 @@ export function TaskViewSwitcher({ viewMode, onViewChange, defaultView, onSetDef
           event.stopPropagation();
           onSetDefaultView(view.value);
         };
+
+        const handleDefaultKeyDown = (event: React.KeyboardEvent) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            event.stopPropagation();
+            onSetDefaultView(view.value);
+          }
+        };
         return (
           <ToggleGroupItem
             key={view.value}
@@ -53,9 +61,11 @@ export function TaskViewSwitcher({ viewMode, onViewChange, defaultView, onSetDef
           >
             <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
             <span className="text-xs font-semibold leading-tight text-foreground">{view.label}</span>
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={handleDefaultClick}
+              onKeyDown={handleDefaultKeyDown}
               aria-label={`Establecer ${view.label} como vista predeterminada`}
               className={cn(
                 "ml-auto rounded-full p-1 transition",
@@ -65,7 +75,7 @@ export function TaskViewSwitcher({ viewMode, onViewChange, defaultView, onSetDef
               )}
             >
               <Star className={cn("h-3.5 w-3.5", isDefault && "fill-current")} />
-            </button>
+            </span>
           </ToggleGroupItem>
         );
       })}

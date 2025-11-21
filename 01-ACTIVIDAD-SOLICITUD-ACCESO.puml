@@ -1,0 +1,57 @@
+@startuml XHION-CORE-ACTIVIDAD-SOLICITUD-ACCESO
+skinparam shadowing false
+skinparam roundcorner 15
+skinparam activity {
+  BackgroundColor #FDFDFD
+  BorderColor #555555
+}
+
+|Solicitante Externo|
+start
+:Abre portal público y completa formulario (datos, empresa, mensaje);
+:Envía solicitud;
+
+|Backend XHION|
+:Verifica email duplicado en solicitudes pendientes;
+if (Existe solicitud pendiente?) then (Sí)
+  :Retorna error "ya existe";
+  |Solicitante Externo|
+  :Lee mensaje y espera revisión;
+  stop
+else (No)
+endif
+:Valida que el email no esté registrado en Usuarios;
+if (Email ocupa cuenta activa?) then (Sí)
+  :Responde "inicia sesión";
+  |Solicitante Externo|
+  :Redirige a login;
+  stop
+else (No)
+endif
+
+:Calcula fechaExpiracion (+30 días) y registra SolicitudAcceso (estado Pendiente, IP, metadata);
+:Envía correo de confirmación al solicitante;
+:Busca administradores con permiso usuarios.invitar;
+:Dispara correo de notificación a administradores;
+
+|Administrador (Revisor)|
+:Recibe alerta (panel + email) y abre detalle;
+:Verifica datos, adjunta notas internas y selecciona acción;
+if (Aprueba?) then (Sí)
+  :Define rol y departamento sugerido;
+  |Backend XHION|
+  :Genera token de invitación (7 días) y relación con solicitud;
+  :Actualiza estado a Aprobada, registra revisor y comentario;
+  :Envía correo "Solicitud aprobada" con link de registro;
+  |Solicitante Externo|
+  :Abre enlace, completa onboarding y crea contraseña;
+  stop
+else (No)
+  :Establece motivo de rechazo o expiración;
+  |Backend XHION|
+  :Actualiza estado (Rechazada/Expirada) y registra auditoría;
+  :Envía correo informando decisión;
+  stop
+endif
+
+@enduml

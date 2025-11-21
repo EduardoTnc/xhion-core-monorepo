@@ -11,14 +11,27 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { TareasService } from './tareas.service';
-import { CreateTareaDto, UpdateTareaDto, MoveTareaDto, CreateComentarioDto } from './dto';
+import {
+  CreateTareaDto,
+  UpdateTareaDto,
+  MoveTareaDto,
+  CreateComentarioDto,
+  UploadAdjuntoDto,
+  ResponderActividadDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequiresPermission } from '../auth/permissions.decorator';
 import { Auditar } from '../auditoria/auditar.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import type { Express } from 'express';
 
 @ApiTags('Tareas')
 @ApiBearerAuth('JWT-auth')
@@ -162,5 +175,87 @@ export class TareasController {
     @Request() req,
   ) {
     return this.tareasService.removeComentario(id, comentarioId, req.user.id);
+  }
+
+  // ==================== GESTIÓN DE ADJUNTOS ====================
+
+  @Post(':id/adjuntos')
+  @RequiresPermission('tareas.editar')
+  @Auditar('Agregar Adjunto a Tarea')
+  @ApiOperation({ summary: 'Subir un archivo adjunto a una tarea' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        archivo: {
+          type: 'string',
+          format: 'binary',
+        },
+        descripcion: {
+          type: 'string',
+        },
+      },
+      required: ['archivo'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('archivo', {
+      storage: diskStorage({
+        destination: './uploads/tareas',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `tarea-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      limits: {
+        fileSize: 25 * 1024 * 1024, // 25MB
+      },
+    }),
+  )
+  uploadAdjunto(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() uploadAdjuntoDto: UploadAdjuntoDto,
+    @Request() req,
+  ) {
+    return this.tareasService.addAdjunto(id, file, uploadAdjuntoDto, req.user.id);
+  }
+
+  @Get(':id/adjuntos')
+  @RequiresPermission('tareas.ver')
+  @ApiOperation({ summary: 'Listar adjuntos de una tarea' })
+  getAdjuntos(@Param('id') id: string, @Request() req) {
+    return this.tareasService.getAdjuntos(id, req.user.id);
+  }
+
+  @Delete(':id/adjuntos/:archivoId')
+  @RequiresPermission('tareas.editar')
+  @Auditar('Eliminar Adjunto de Tarea')
+  @ApiOperation({ summary: 'Eliminar un archivo adjunto de una tarea' })
+  removeAdjunto(@Param('id') id: string, @Param('archivoId') archivoId: string, @Request() req) {
+    return this.tareasService.removeAdjunto(id, archivoId, req.user.id);
+  }
+
+  // ==================== ACTIVIDAD ====================
+
+  @Get(':id/actividad')
+  @RequiresPermission('tareas.ver')
+  @ApiOperation({ summary: 'Obtener la actividad cronológica de una tarea' })
+  getActividad(@Param('id') id: string, @Request() req) {
+    return this.tareasService.getActividad(id, req.user.id);
+  }
+
+  @Post(':id/actividad/:actividadId/responder')
+  @RequiresPermission('tareas.comentar')
+  @Auditar('Responder actividad de tarea')
+  @ApiOperation({ summary: 'Responder a un evento dentro de la actividad de la tarea' })
+  responderActividad(
+    @Param('id') id: string,
+    @Param('actividadId') actividadId: string,
+    @Body() responderActividadDto: ResponderActividadDto,
+    @Request() req,
+  ) {
+    return this.tareasService.responderActividad(id, actividadId, responderActividadDto, req.user.id);
   }
 }

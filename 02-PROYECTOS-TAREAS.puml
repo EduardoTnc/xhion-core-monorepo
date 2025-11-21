@@ -1,0 +1,196 @@
+@startuml XHION-CORE-CLASES-PROYECTOS-TAREAS
+left to right direction
+
+skinparam shadowing false
+skinparam roundcorner 15
+skinparam class {
+  BackgroundColor #FDFDFD
+  ArrowColor #555
+  FontSize 13
+  StereotypeFontSize 12
+}
+
+title DIAGRAMA DE CLASES - CORE PROYECTOS & TAREAS
+caption Arquitectura simplificada de los flujos de planificación y colaboración
+
+package "Controladores" {
+  class ProjectController <<Controller>> {
+    - logger
+    - projectService: ProjectService
+    + crearProyecto(dto)
+    + invitarMiembro(dto)
+    + toggleEtapas(id, enabled)
+  }
+
+  class TaskController <<Controller>> {
+    - logger
+    - taskService: TaskService
+    + crearTarea(dto)
+    + moverTarea(id, etapa)
+    + actualizarEstado(id, estado)
+  }
+}
+
+package "Servicios" {
+  class ProjectService <<Service>> {
+    - prisma
+    - notificationService
+    + create(dto)
+    + addMember(proyectoId, usuario, rol)
+    + reorderStages(proyectoId, etapas)
+    + syncDashboards(proyectoId)
+  }
+
+  class TaskService <<Service>> {
+    - prisma
+    - notificationService
+    + create(dto)
+    + move(id, etapa, orden)
+    + updateEstado(id, estado)
+    + registerActivity(id, evento)
+  }
+
+  class NotificationService <<Service>> {
+    - prisma
+    - wsGateway
+    + notifyAsignado(tarea)
+    + notifyEquipo(proyecto, payload)
+  }
+}
+
+package "Entidades" {
+  class Proyecto <<Entity>> {
+    + id: UUID
+    + nombre: string
+    + estado: EstadoProyecto
+    + responsableId: UUID
+    + usaEtapas: boolean
+    + fechaInicio: Date?
+    + fechaFin: Date?
+    --
+    + definirFechas()
+    + asignarResponsable()
+  }
+
+  class Etapa <<Entity>> {
+    + id: UUID
+    + nombre: string
+    + orden: int
+    + estado: EstadoEtapa
+    + proyectoId: UUID
+    --
+    + moverOrden(nuevoOrden)
+  }
+
+  class Tarea <<Entity>> {
+    + id: UUID
+    + titulo: string
+    + estado: EstadoTarea
+    + prioridad: PrioridadTarea
+    + etapaId: UUID?
+    + asignadoId: UUID?
+    + fechaVencimiento: Date?
+    --
+    + cambiarEstado()
+    + reasignar(usuarioId)
+  }
+
+  class ProyectoMiembro <<Entity>> {
+    + proyectoId: UUID
+    + usuarioId: UUID
+    + rol: RolProyecto
+    --
+    + confirmarInvitacion()
+  }
+
+  class Notificacion <<Entity>> {
+    + id: UUID
+    + tipo: TipoNotificacion
+    + estado: EstadoNotificacion
+    + usuarioId: UUID
+    + tareaId: UUID?
+    + proyectoId: UUID?
+    --
+    + marcarLeida()
+  }
+
+  class Usuario <<Entity>> {
+    + id: UUID
+    + nombreCompleto: string
+    + email: string
+  }
+}
+
+enum EstadoProyecto <<enumeration>> {
+  Activo
+  Completado
+  En_Pausa
+  Archivado
+}
+enum EstadoEtapa <<enumeration>> {
+  Pendiente
+  En_Progreso
+  Completada
+}
+enum EstadoTarea <<enumeration>> {
+  Por_Hacer
+  En_Progreso
+  Hecho
+  Bloqueado
+}
+enum PrioridadTarea <<enumeration>> {
+  Baja
+  Media
+  Alta
+  Urgente
+}
+enum RolProyecto <<enumeration>> {
+  Responsable
+  Miembro
+  Observador
+}
+enum TipoNotificacion <<enumeration>> {
+  Sistema
+  Tarea
+  Proyecto
+  Evento
+  Comentario
+}
+enum EstadoNotificacion <<enumeration>> {
+  NoLeida
+  Leida
+  Archivada
+}
+
+ProjectController ..> ProjectService : utiliza
+TaskController ..> TaskService : utiliza
+ProjectService ..> NotificationService : emite alertas
+TaskService ..> NotificationService : emite alertas
+
+ProjectService --> Proyecto : gestiona
+ProjectService --> Etapa : crea/reordena
+ProjectService --> ProyectoMiembro : asigna
+TaskService --> Tarea : gestiona
+TaskService --> Etapa : mueve tarjetas
+TaskService --> Notificacion : dispara
+
+ProyectoMiembro --> Usuario : pertenece a
+Tarea --> Usuario : asignado a
+Proyecto --> ProyectoMiembro : define equipo
+Proyecto --> Etapa : contiene fases
+Etapa --> Tarea : agrupa tarjetas
+Notificacion --> Usuario : destinatario
+
+Proyecto ..> EstadoProyecto
+Etapa ..> EstadoEtapa
+Tarea ..> EstadoTarea
+Tarea ..> PrioridadTarea
+ProyectoMiembro ..> RolProyecto
+Notificacion ..> TipoNotificacion
+Notificacion ..> EstadoNotificacion
+
+legend top right
+  <b>Resumen</b>\nControladores orquestan llamadas\nServicios aplican lógica con Prisma\nEntidades representan tablas claves
+endlegend
+
+@enduml

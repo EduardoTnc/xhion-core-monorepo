@@ -1,11 +1,21 @@
 import { create } from 'zustand';
-import { taskService, type Tarea, type Comentario, type TaskFilters } from '../services/taskService';
+import {
+  taskService,
+  type Tarea,
+  type Comentario,
+  type TaskFilters,
+  type TareaAdjunto,
+  type TareaActividad,
+  type ResponderActividadPayload,
+} from '../services/taskService';
 
 interface TaskState {
   // Estado
   tareas: Tarea[];
   tareaActual: Tarea | null;
   comentarios: Comentario[];
+  adjuntos: Record<string, TareaAdjunto[]>;
+  actividad: Record<string, TareaActividad[]>;
   misTareas: Tarea[];
   isLoading: boolean;
   error: string | null;
@@ -25,6 +35,19 @@ interface TaskState {
   addComentario: (tareaId: string, contenido: string) => Promise<void>;
   deleteComentario: (tareaId: string, comentarioId: string) => Promise<void>;
 
+  // Acciones - Adjuntos
+  fetchAdjuntos: (tareaId: string) => Promise<TareaAdjunto[]>;
+  uploadAdjunto: (tareaId: string, file: File, descripcion?: string) => Promise<TareaAdjunto>;
+  deleteAdjunto: (tareaId: string, archivoId: string) => Promise<void>;
+
+  // Acciones - Actividad
+  fetchActividad: (tareaId: string) => Promise<TareaActividad[]>;
+  responderActividad: (
+    tareaId: string,
+    actividadId: string,
+    payload: ResponderActividadPayload,
+  ) => Promise<TareaActividad>;
+
   // Utilidades
   clearError: () => void;
   reset: () => void;
@@ -35,6 +58,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   tareas: [],
   tareaActual: null,
   comentarios: [],
+  adjuntos: {},
+  actividad: {},
   misTareas: [],
   isLoading: false,
   error: null,
@@ -48,6 +73,91 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       set({ tareas, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // ==================== ADJUNTOS ====================
+
+  fetchAdjuntos: async (tareaId) => {
+    try {
+      const adjuntos = await taskService.getAdjuntos(tareaId);
+      set((state) => ({
+        adjuntos: {
+          ...state.adjuntos,
+          [tareaId]: adjuntos,
+        },
+      }));
+      return adjuntos;
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  uploadAdjunto: async (tareaId, file, descripcion) => {
+    try {
+      const adjunto = await taskService.uploadAdjunto(tareaId, { file, descripcion });
+      set((state) => ({
+        adjuntos: {
+          ...state.adjuntos,
+          [tareaId]: [adjunto, ...(state.adjuntos[tareaId] || [])],
+        },
+      }));
+      return adjunto;
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  deleteAdjunto: async (tareaId, archivoId) => {
+    try {
+      await taskService.deleteAdjunto(tareaId, archivoId);
+      set((state) => ({
+        adjuntos: {
+          ...state.adjuntos,
+          [tareaId]: (state.adjuntos[tareaId] || []).filter((adj) => adj.archivoId !== archivoId),
+        },
+      }));
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  // ==================== ACTIVIDAD ====================
+
+  fetchActividad: async (tareaId) => {
+    try {
+      const actividad = await taskService.getActividad(tareaId);
+      set((state) => ({
+        actividad: {
+          ...state.actividad,
+          [tareaId]: actividad,
+        },
+      }));
+      return actividad;
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  responderActividad: async (tareaId, actividadId, payload) => {
+    try {
+      const respuesta = await taskService.responderActividad(tareaId, actividadId, payload);
+      set((state) => ({
+        actividad: {
+          ...state.actividad,
+          [tareaId]: (state.actividad[tareaId] || []).map((item) =>
+            item.id === actividadId ? { ...item, respuestas: [...(item.respuestas || []), respuesta] } : item,
+          ),
+        },
+      }));
+      return respuesta;
+    } catch (error: any) {
+      set({ error: error.message });
       throw error;
     }
   },
@@ -210,6 +320,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       tareas: [],
       tareaActual: null,
       comentarios: [],
+      adjuntos: {},
+      actividad: {},
       misTareas: [],
       isLoading: false,
       error: null,

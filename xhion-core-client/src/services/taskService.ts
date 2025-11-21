@@ -48,6 +48,57 @@ export interface Tarea {
   };
 }
 
+export interface TareaAdjunto {
+  archivoId: string;
+  entidadPadreTipo: string;
+  entidadPadreId: string;
+  descripcion?: string;
+  archivo: {
+    id: string;
+    nombreArchivo: string;
+    urlArchivo: string;
+    tipoArchivo?: string;
+    tamanoBytes?: number;
+    fechaCreacion: string;
+  };
+}
+
+export type TipoActividadTarea =
+  | 'CREACION'
+  | 'ACTUALIZACION'
+  | 'COMENTARIO'
+  | 'RESPUESTA_COMENTARIO'
+  | 'ADJUNTO_AGREGADO'
+  | 'ADJUNTO_ELIMINADO'
+  | 'CAMBIO_ESTADO'
+  | 'CAMBIO_ETAPA';
+
+export interface TareaActividad {
+  id: string;
+  tareaId: string;
+  tipoEvento: TipoActividadTarea;
+  descripcion?: string | null;
+  payload?: Record<string, any> | null;
+  comentarioId?: string | null;
+  archivoId?: string | null;
+  actividadPadreId?: string | null;
+  creadoPorId: string;
+  fechaCreacion: string;
+  creadoPor: {
+    id: string;
+    nombreCompleto: string;
+    avatarUrl?: string | null;
+  };
+  archivo?: TareaAdjunto['archivo'] | null;
+  comentario?: Comentario | null;
+  respuestas?: TareaActividad[];
+}
+
+export interface ResponderActividadPayload {
+  descripcion: string;
+  metadata?: Record<string, any>;
+}
+
 export interface Comentario {
   id: string;
   contenido: string;
@@ -241,6 +292,82 @@ export const taskService = {
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al eliminar comentario';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // ==================== ADJUNTOS ====================
+
+  async getAdjuntos(tareaId: string): Promise<TareaAdjunto[]> {
+    try {
+      const response = await apiClient.get<TareaAdjunto[]>(`/tareas/${tareaId}/adjuntos`);
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al obtener adjuntos';
+      throw new Error(errorMessage);
+    }
+  },
+
+  async uploadAdjunto(
+    tareaId: string,
+    payload: { file: File; descripcion?: string },
+  ): Promise<TareaAdjunto> {
+    try {
+      const formData = new FormData();
+      formData.append('archivo', payload.file);
+      if (payload.descripcion) {
+        formData.append('descripcion', payload.descripcion);
+      }
+
+      const response = await apiClient.post<TareaAdjunto>(`/tareas/${tareaId}/adjuntos`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al subir adjunto';
+      throw new Error(errorMessage);
+    }
+  },
+
+  async deleteAdjunto(tareaId: string, archivoId: string): Promise<{ message: string }> {
+    try {
+      const response = await apiClient.delete<{ message: string }>(
+        `/tareas/${tareaId}/adjuntos/${archivoId}`,
+      );
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al eliminar adjunto';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // ==================== ACTIVIDAD ====================
+
+  async getActividad(tareaId: string): Promise<TareaActividad[]> {
+    try {
+      const response = await apiClient.get<TareaActividad[]>(`/tareas/${tareaId}/actividad`);
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al obtener actividad';
+      throw new Error(errorMessage);
+    }
+  },
+
+  async responderActividad(
+    tareaId: string,
+    actividadId: string,
+    payload: ResponderActividadPayload,
+  ): Promise<TareaActividad> {
+    try {
+      const response = await apiClient.post<TareaActividad>(
+        `/tareas/${tareaId}/actividad/${actividadId}/responder`,
+        payload,
+      );
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al responder actividad';
       throw new Error(errorMessage);
     }
   },

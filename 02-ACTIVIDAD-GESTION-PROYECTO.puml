@@ -1,0 +1,74 @@
+@startuml XHION-CORE-ACTIVIDAD-GESTION-PROYECTO
+skinparam shadowing false
+skinparam roundcorner 15
+skinparam activity {
+  BackgroundColor #FDFDFD
+  BorderColor #555555
+}
+
+|Líder de Proyecto|
+start
+:Abre ProjectWorkspace y selecciona "Crear proyecto";
+:Completa formulario con alcance, responsable, fechas y bandera "usa etapas";
+
+|Frontend Cliente|
+:Envía DTO al store (Zustand) y muestra spinner;
+
+|Backend XHION|
+:Valida permisos, departamento y fechas;
+if (Datos válidos?) then (Sí)
+  :Crea registro Proyecto, genera slug y canal colaborativo;
+  if (¿usa etapas?) then (Sí)
+    :Crea etapas base (Backlog, En progreso, Hecho) y orden inicial;
+  else (No)
+    :Marca tablero tipo lista única;
+  endif
+  :Registra actividad inicial y sincroniza dashboard/resumenes;
+else (No)
+  |Frontend Cliente|
+  :Propaga errores al formulario;
+  |Líder de Proyecto|
+  :Corrige y reintenta;
+  detach
+endif
+
+|Líder de Proyecto|
+:Invita responsables y stakeholders desde ProjectTeamWidget;
+
+|Backend XHION|
+:Crea ProyectoMiembro con rol asignado y envía notificaciones web + email;
+
+|Equipo del Proyecto|
+:Acepta invitación, abre ProjectWorkspace y visualiza tareas actuales;
+
+|Líder de Proyecto|
+:Configura etapas adicionales y reordena columnas (drag & drop);
+:Abre CreateTaskModal para generar tareas clave;
+
+|Backend XHION|
+:Persiste tarea, asigna etapa, adjunta fechas/miembro y registra actividad "CREACION";
+:Dispara notificación al asignado y actualiza contadores (_count);
+
+|Equipo del Proyecto|
+:Gestiona tareas en Kanban (drag), TaskDetailModal y QuickActions;
+if (¿Cambio de estado/etapa?) then (Sí)
+  |Backend XHION|
+  :Actualiza estado, orden y payload, registra actividad "CAMBIO";
+  :Propaga evento vía WebSocket/WS Gateway;
+else (No)
+endif
+
+|Equipo del Proyecto|
+:Adjunta archivos, comenta y responde actividad;
+
+|Backend XHION|
+:Guarda metadatos en Archivo + TareaActividad, recalcula KPI y sincroniza dashboards (Gantt, TodayTasks, Timeline);
+
+|Líder de Proyecto|
+:Monitorea progreso, aplica filtros y usa IA Insights si está disponible;
+
+|Backend XHION|
+:Genera alertas de retraso/overdue y actualiza widgets ejecutivos;
+stop
+
+@enduml

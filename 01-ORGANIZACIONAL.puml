@@ -1,0 +1,159 @@
+@startuml XHION-CORE-CLASES-ORGANIZACIONAL
+
+skinparam shadowing false
+skinparam class {
+  BackgroundColor<<entity>> #F5F5F5
+  BackgroundColor<<enumeration>> #FFF8DC
+  BackgroundColor<<pivot>> #E1F5FE
+}
+
+class Departamento <<entity>> {
+  +id: UUID
+  +nombre: string
+  +objetivos: string?
+  +color: string?
+  +jefeId: UUID?
+  +fechaCreacion: DateTime
+  --
+  +actualizarContexto()
+  +gestionarRecursos()
+}
+
+class ContextoDepartamento <<entity>> {
+  +id: UUID
+  +funciones: string?
+  +procesosClave: string?
+  +departamentoId: UUID
+  +actualizadoPorId: UUID
+}
+
+class PuestoTrabajo <<entity>> {
+  +id: UUID
+  +titulo: string
+  +descripcion: string?
+  +departamentoId: UUID
+}
+
+class Rol <<entity>> {
+  +id: UUID
+  +nombre: string
+  +color: string
+  +descripcion: string?
+}
+
+class Usuario <<entity>> {
+  +id: UUID
+  +nombreCompleto: string
+  +email: string
+  +estado: EstadoUsuario
+  +rolId: UUID
+  +puestoTrabajoId: UUID?
+  +supervisorId: UUID?
+  +archivoCvId: UUID?
+  +fechaIngreso: Date?
+}
+
+class UsuarioContacto <<entity>> {
+  +id: UUID
+  +tipo: TipoContacto
+  +valor: string
+  +esPrivado: boolean
+}
+
+class UsuarioEnlaceProfesional <<entity>> {
+  +id: UUID
+  +tipo: TipoEnlaceProfesional
+  +url: string
+}
+
+class Invitacion <<entity>> {
+  +id: UUID
+  +nombreCompleto: string
+  +email: string
+  +token: string
+  +rolId: UUID
+  +departamentoId: UUID?
+  +fueUtilizada: boolean
+  +fechaExpiracion: DateTime
+}
+
+class SolicitudAcceso <<entity>> {
+  +id: UUID
+  +nombreCompleto: string
+  +email: string
+  +estado: EstadoSolicitud
+  +empresa: string?
+  +invitacionId: UUID?
+  +revisadoPorId: UUID?
+  +fechaExpiracion: DateTime
+}
+
+class Sesion <<entity>> {
+  +id: UUID
+  +usuarioId: UUID
+  +refreshTokenHash: string
+  +accessToken: string?
+  +ultimaIP: string?
+  +fechaExpiracion: DateTime
+}
+
+class Archivo <<entity>> {
+  +id: UUID
+  +nombreArchivo: string
+  +urlArchivo: string
+  +tipoArchivo: string?
+  +subidoPorId: UUID
+}
+
+enum EstadoUsuario <<enumeration>> {
+  INVITADO
+  ACTIVO
+  INACTIVO
+  SUSPENDIDO
+  BLOQUEADO
+  ELIMINADO
+}
+
+enum TipoContacto <<enumeration>> {
+  telefono_principal
+  telefono_secundario
+  email_personal
+}
+
+enum TipoEnlaceProfesional <<enumeration>> {
+  linkedin
+  portafolio_personal
+  blog_tecnico
+}
+
+enum EstadoSolicitud <<enumeration>> {
+  Pendiente
+  Aprobada
+  Rechazada
+  Expirada
+}
+
+Departamento --> Usuario : jefe
+Departamento --> PuestoTrabajo : define puestos
+Departamento --> ContextoDepartamento : gestiona contexto
+ContextoDepartamento --> Usuario : actualizado por
+PuestoTrabajo --> Usuario : asignado a
+Rol --> Usuario : asignado a
+Usuario --> Usuario : supervisa
+Usuario --> UsuarioContacto : publica contacto
+Usuario --> UsuarioEnlaceProfesional : comparte enlaces
+Usuario --> Sesion : inicia
+Usuario --> Archivo : adjunta CV/avatar
+Usuario --> Invitacion : genera
+Usuario --> SolicitudAcceso : revisa
+SolicitudAcceso --> Invitacion : crea invitación aprobada
+Invitacion --> Departamento : sugiere onboarding
+Invitacion --> Rol : asigna rol
+Sesion --> Usuario : pertenece a
+
+Usuario ..> EstadoUsuario : <<use>>
+UsuarioContacto ..> TipoContacto : <<use>>
+UsuarioEnlaceProfesional ..> TipoEnlaceProfesional : <<use>>
+SolicitudAcceso ..> EstadoSolicitud : <<use>>
+
+@enduml

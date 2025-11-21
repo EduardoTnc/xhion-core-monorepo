@@ -4,9 +4,18 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Prisma, TipoActividadTarea } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTareaDto, UpdateTareaDto, MoveTareaDto, CreateComentarioDto } from './dto';
+import {
+  CreateTareaDto,
+  UpdateTareaDto,
+  MoveTareaDto,
+  CreateComentarioDto,
+  UploadAdjuntoDto,
+  ResponderActividadDto,
+} from './dto';
 import { AiEmbeddingSyncService } from '../ai/ai-embedding-sync.service';
+import { Express } from 'express';
 
 @Injectable()
 export class TareasService {
@@ -14,6 +23,46 @@ export class TareasService {
     private readonly prisma: PrismaService,
     private readonly aiEmbeddingSync: AiEmbeddingSyncService,
   ) {}
+
+  private readonly ENTIDAD_TAREA = 'Tarea';
+
+  private async registrarActividad(params: {
+    tareaId: string;
+    usuarioId: string;
+    tipo: TipoActividadTarea;
+    descripcion?: string;
+    payload?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
+    comentarioId?: string;
+    archivoId?: string;
+    actividadPadreId?: string;
+  }) {
+    const { tareaId, usuarioId, tipo, descripcion, payload, comentarioId, archivoId, actividadPadreId } = params;
+
+    return this.prisma.tareaActividad.create({
+      data: {
+        tareaId,
+        tipoEvento: tipo,
+        descripcion,
+        payload,
+        comentarioId,
+        archivoId,
+        actividadPadreId,
+        creadoPorId: usuarioId,
+      },
+      include: {
+        creadoPor: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            avatarUrl: true,
+          },
+        },
+        archivo: true,
+        comentario: true,
+        respuestas: true,
+      },
+    });
+  }
 
   /**
    * Crear una nueva tarea
@@ -113,6 +162,18 @@ export class TareasService {
     });
 
     await this.aiEmbeddingSync.syncTarea(tarea.id);
+
+    await this.registrarActividad({
+      tareaId: tarea.id,
+      usuarioId,
+      tipo: TipoActividadTarea.CREACION,
+      descripcion: 'Tarea creada',
+      payload: {
+        titulo: tarea.titulo,
+        prioridad: tarea.prioridad,
+        estado: tarea.estado,
+      },
+    });
 
     return tarea;
   }
@@ -392,6 +453,14 @@ export class TareasService {
 
     await this.aiEmbeddingSync.syncTarea(updated.id);
 
+    await this.registrarActividad({
+      tareaId: id,
+      usuarioId,
+      tipo: TipoActividadTarea.ACTUALIZACION,
+      descripcion: 'La tarea fue actualizada',
+      payload: updateTareaDto as Prisma.InputJsonValue,
+    });
+
     return updated;
   }
 
@@ -523,6 +592,15 @@ export class TareasService {
       },
     });
 
+    await this.registrarActividad({
+      tareaId,
+      usuarioId,
+      tipo: TipoActividadTarea.COMENTARIO,
+      descripcion: 'Nuevo comentario agregado',
+      comentarioId: comentario.id,
+      payload: { contenido: comentario.contenido },
+    });
+
     return comentario;
   }
 
@@ -577,6 +655,14 @@ export class TareasService {
       where: { id: comentarioId },
     });
 
+    await this.registrarActividad({
+      tareaId,
+      usuarioId,
+      tipo: TipoActividadTarea.ACTUALIZACION,
+      descripcion: 'Comentario eliminado',
+      comentarioId,
+    });
+
     return { message: 'Comentario eliminado exitosamente' };
   }
 
@@ -619,5 +705,184 @@ export class TareasService {
     });
 
     return tareas;
+  }
+
+  // ==================== ADJUNTOS ====================
+
+  async getAdjuntos(tareaId: string, usuarioId: string) {
+    await this.findOne(tareaId, usuarioId);
+
+    return this.prisma.archivoAdjunto.findMany({
+      where: {
+        entidadPadreTipo: this.ENTIDAD_TAREA,
+        entidadPadreId: tareaId,
+      },
+      include: {
+        archivo: true,
+      },
+      orderBy: {
+        archivo: {
+          fechaCreacion: 'desc',
+        },
+      },
+    });
+  }
+
+  async addAdjunto(
+    tareaId: string,
+    file: Express.Multer.File,
+    uploadAdjuntoDto: UploadAdjuntoDto,
+    usuarioId: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se ha proporcionado ningún archivo');
+    }
+
+    await this.findOne(tareaId, usuarioId);
+
+    const archivo = await this.prisma.archivo.create({
+      data: {
+        nombreArchivo: file.originalname,
+        urlArchivo: `/uploads/tareas/${file.filename}`,
+        tipoArchivo: file.mimetype,
+        tamanoBytes: file.size,
+        subidoPorId: usuarioId,
+      },
+    });
+
+    const adjunto = await this.prisma.archivoAdjunto.create({
+      data: {
+        archivoId: archivo.id,
+        entidadPadreTipo: this.ENTIDAD_TAREA,
+        entidadPadreId: tareaId,
+        descripcion: uploadAdjuntoDto.descripcion,
+      },
+      include: {
+        archivo: true,
+      },
+    });
+
+    await this.registrarActividad({
+      tareaId,
+      usuarioId,
+      tipo: TipoActividadTarea.ADJUNTO_AGREGADO,
+      descripcion: uploadAdjuntoDto.descripcion ?? 'Se adjuntó un archivo',
+      archivoId: archivo.id,
+      payload: {
+        nombreArchivo: archivo.nombreArchivo,
+        tipoArchivo: archivo.tipoArchivo,
+      },
+    });
+
+    return adjunto;
+  }
+
+  async removeAdjunto(tareaId: string, archivoId: string, usuarioId: string) {
+    await this.findOne(tareaId, usuarioId);
+
+    const adjunto = await this.prisma.archivoAdjunto.findUnique({
+      where: {
+        archivoId_entidadPadreTipo_entidadPadreId: {
+          archivoId,
+          entidadPadreTipo: this.ENTIDAD_TAREA,
+          entidadPadreId: tareaId,
+        },
+      },
+      include: {
+        archivo: true,
+      },
+    });
+
+    if (!adjunto) {
+      throw new NotFoundException('Adjunto no encontrado');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.archivoAdjunto.delete({
+        where: {
+          archivoId_entidadPadreTipo_entidadPadreId: {
+            archivoId,
+            entidadPadreTipo: this.ENTIDAD_TAREA,
+            entidadPadreId: tareaId,
+          },
+        },
+      }),
+      this.prisma.archivo.update({
+        where: { id: archivoId },
+        data: { fechaEliminacion: new Date() },
+      }),
+    ]);
+
+    await this.registrarActividad({
+      tareaId,
+      usuarioId,
+      tipo: TipoActividadTarea.ADJUNTO_ELIMINADO,
+      descripcion: 'Se eliminó un adjunto',
+      archivoId,
+      payload: {
+        nombreArchivo: adjunto.archivo.nombreArchivo,
+      },
+    });
+
+    return { message: 'Adjunto eliminado exitosamente' };
+  }
+
+  // ==================== ACTIVIDAD ====================
+
+  async getActividad(tareaId: string, usuarioId: string) {
+    await this.findOne(tareaId, usuarioId);
+
+    return this.prisma.tareaActividad.findMany({
+      where: { tareaId },
+      orderBy: { fechaCreacion: 'desc' },
+      include: {
+        creadoPor: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            avatarUrl: true,
+          },
+        },
+        archivo: true,
+        comentario: true,
+        respuestas: {
+          include: {
+            creadoPor: {
+              select: {
+                id: true,
+                nombreCompleto: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async responderActividad(
+    tareaId: string,
+    actividadId: string,
+    responderActividadDto: ResponderActividadDto,
+    usuarioId: string,
+  ) {
+    await this.findOne(tareaId, usuarioId);
+
+    const actividadPadre = await this.prisma.tareaActividad.findUnique({
+      where: { id: actividadId },
+    });
+
+    if (!actividadPadre || actividadPadre.tareaId !== tareaId) {
+      throw new NotFoundException('Actividad no encontrada');
+    }
+
+    return this.registrarActividad({
+      tareaId,
+      usuarioId,
+      tipo: TipoActividadTarea.RESPUESTA_COMENTARIO,
+      descripcion: responderActividadDto.descripcion,
+      payload: responderActividadDto.metadata as Prisma.InputJsonValue,
+      actividadPadreId: actividadId,
+    });
   }
 }

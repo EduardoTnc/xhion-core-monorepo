@@ -8,8 +8,9 @@ import { UpdatePresupuestoDepartamentoDto } from './dto/update-presupuesto-depar
 import { CreatePresupuestoProyectoDto } from './dto/create-presupuesto-proyecto.dto';
 import { UpdatePresupuestoProyectoDto } from './dto/update-presupuesto-proyecto.dto';
 import { RegistrarMovimientoPresupuestoDto } from './dto/registrar-movimiento-presupuesto.dto';
-import { EstadoPresupuesto, TipoMovimientoPresupuesto } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { EstadoPresupuesto, TipoMovimientoPresupuesto, Prisma } from '@prisma/client';
+
+const { Decimal } = Prisma;
 
 @Injectable()
 export class FinanzasService {

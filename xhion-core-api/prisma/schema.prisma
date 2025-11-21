@@ -6,33 +6,31 @@
 
 // Le dice a Prisma qué debe generar y dónde.
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
 }
 
 /// Gestión de sesiones y refresh tokens de usuarios.
 model Sesion {
-  id               String    @id @default(uuid()) @db.Uuid
-  usuarioId        String    @db.Uuid
-  refreshTokenHash String    @unique @db.VarChar(255)
-  accessToken      String?   @unique @db.VarChar(500) // Token de acceso para identificar sesión actual
-  userAgent        String?   @map("user_agent")
-  direccionIp      String?   @map("direccion_ip") @db.VarChar(45)
-  fechaCreacion    DateTime  @default(now())
-  fechaUltimoUso   DateTime  @updatedAt
-  fechaExpiracion  DateTime  @default(dbgenerated("NOW() + INTERVAL '7 days'")) // Fecha de expiración del refresh token (7 días por defecto)
+  id               String   @id @default(uuid()) @db.Uuid
+  usuarioId        String   @db.Uuid
+  refreshTokenHash String   @unique @db.VarChar(255)
+  accessToken      String?  @unique @db.VarChar(500) // Token de acceso para identificar sesión actual
+  userAgent        String?  @map("user_agent")
+  direccionIp      String?  @map("direccion_ip") @db.VarChar(45)
+  fechaCreacion    DateTime @default(now())
+  fechaUltimoUso   DateTime @updatedAt
+  fechaExpiracion  DateTime @default(dbgenerated("NOW() + INTERVAL '7 days'")) // Fecha de expiración del refresh token (7 días por defecto)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  @@map("sesiones")
   @@index([usuarioId])
   @@index([fechaExpiracion])
-}
-
-// Configura la conexión a tu base de datos.
-datasource db {
-  provider  = "postgresql" // El "dialecto" de la BBDD (puede ser mysql, sqlite, etc.)
-  url       = env("DATABASE_URL") // Lee la URL desde las variables de entorno
-//directUrl = env("DIRECT_URL") // para migraciones en entornos con pooling
+  @@map("sesiones")
 }
 
 // -----------------------------------------------------------------------------
@@ -178,14 +176,14 @@ model Departamento {
   id               String    @id @default(uuid()) @db.Uuid
   nombre           String    @unique @db.VarChar(100)
   descripcion      String?
-  objetivos        String?   // Objetivos del departamento
+  objetivos        String? // Objetivos del departamento
   icono            String?   @db.VarChar(50) // Nombre del icono de lucide-react
   color            String?   @db.VarChar(50)
   jefeId           String?   @db.Uuid
   fechaCreacion    DateTime  @default(now())
   fechaEliminacion DateTime? // Para eliminación lógica.
 
-  jefe                 Usuario?                   @relation("JefeDepartamento", fields: [jefeId], references: [id])
+  jefe                 Usuario?                 @relation("JefeDepartamento", fields: [jefeId], references: [id])
   puestosTrabajo       PuestoTrabajo[]
   proyectos            Proyecto[]
   invitaciones         Invitacion[]
@@ -245,76 +243,77 @@ model Usuario {
   fechaActualizacion    DateTime      @updatedAt
   fechaEliminacion      DateTime? // Para eliminación lógica.
 
-  invitaciones_enviadas         Invitacion[]               @relation("InvitadoPor")
-  rol                           Rol                        @relation(fields: [rolId], references: [id])
-  puestoTrabajo                 PuestoTrabajo?             @relation(fields: [puestoTrabajoId], references: [id])
-  supervisor                    Usuario?                   @relation("Supervision", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subordinados                  Usuario[]                  @relation("Supervision")
-  archivoCv                     Archivo?                   @relation("CVDelUsuario", fields: [archivoCvId], references: [id])
-  contactos                     UsuarioContacto[]
-  enlacesProfesionales          UsuarioEnlaceProfesional[]
-  habilidades                   UsuarioHabilidad[]
-  departamentosACargo           Departamento[]             @relation("JefeDepartamento")
-  proyectosResponsable          Proyecto[]
-  proyectosComoMiembro          ProyectoMiembro[]
-  tareasAsignadas               Tarea[]                    @relation("TareasAsignadas")
-  tareasCreadas                 Tarea[]                    @relation("TareasCreadas")
-  comentarios                   Comentario[]
-  plantillasProyectoCreadas     PlantillaProyectoIA[]
-  logsQueriesIA                 AiQueryLog[]
-  archivosSubidos               Archivo[]                  @relation("ArchivosSubidosPorUsuario")
-  canalesCreados                Canal[]
-  miembroDeCanales              CanalMiembro[]
-  mensajesEnviados              Mensaje[]
-  estadosLecturaMensajes        MensajeEstadoLectura[]
-  configuraciones               ConfiguracionUsuario[]
-  dashboardsPropios             DashboardUsuario[]
-  logros                        UsuarioLogro[]
-  registrosPuntos               RegistroPuntos[]
-  entradasClasificacion         ClasificacionEntrada[]
-  registrosAuditoria            RegistroAuditoria[]
-  sesiones                      Sesion[]
-  contextosOrganizacionales     ContextoOrganizacional[]
-  contextosDepartamento         ContextoDepartamento[]
-  documentosProyecto            DocumentoProyecto[]
-  documentosDepartamento        DocumentoDepartamento[]
-  presupuestosDepartamentoCreados PresupuestoDepartamento[] @relation("PresupuestosDepartamentoCreados")
-  presupuestosProyectoCreados   PresupuestoProyecto[]     @relation("PresupuestosProyectoCreados")
+  invitaciones_enviadas              Invitacion[]                        @relation("InvitadoPor")
+  rol                                Rol                                 @relation(fields: [rolId], references: [id])
+  puestoTrabajo                      PuestoTrabajo?                      @relation(fields: [puestoTrabajoId], references: [id])
+  supervisor                         Usuario?                            @relation("Supervision", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subordinados                       Usuario[]                           @relation("Supervision")
+  archivoCv                          Archivo?                            @relation("CVDelUsuario", fields: [archivoCvId], references: [id])
+  contactos                          UsuarioContacto[]
+  enlacesProfesionales               UsuarioEnlaceProfesional[]
+  habilidades                        UsuarioHabilidad[]
+  departamentosACargo                Departamento[]                      @relation("JefeDepartamento")
+  proyectosResponsable               Proyecto[]
+  proyectosComoMiembro               ProyectoMiembro[]
+  tareasAsignadas                    Tarea[]                             @relation("TareasAsignadas")
+  tareasCreadas                      Tarea[]                             @relation("TareasCreadas")
+  comentarios                        Comentario[]
+  plantillasProyectoCreadas          PlantillaProyectoIA[]
+  logsQueriesIA                      AiQueryLog[]
+  archivosSubidos                    Archivo[]                           @relation("ArchivosSubidosPorUsuario")
+  canalesCreados                     Canal[]
+  miembroDeCanales                   CanalMiembro[]
+  mensajesEnviados                   Mensaje[]
+  estadosLecturaMensajes             MensajeEstadoLectura[]
+  configuraciones                    ConfiguracionUsuario[]
+  dashboardsPropios                  DashboardUsuario[]
+  logros                             UsuarioLogro[]
+  registrosPuntos                    RegistroPuntos[]
+  entradasClasificacion              ClasificacionEntrada[]
+  registrosAuditoria                 RegistroAuditoria[]
+  sesiones                           Sesion[]
+  contextosOrganizacionales          ContextoOrganizacional[]
+  contextosDepartamento              ContextoDepartamento[]
+  documentosProyecto                 DocumentoProyecto[]
+  documentosDepartamento             DocumentoDepartamento[]
+  presupuestosDepartamentoCreados    PresupuestoDepartamento[]           @relation("PresupuestosDepartamentoCreados")
+  presupuestosProyectoCreados        PresupuestoProyecto[]               @relation("PresupuestosProyectoCreados")
   movimientosPresupuestoDepartamento MovimientoPresupuestoDepartamento[] @relation("MovimientosPresupuestoDepartamento")
-  movimientosPresupuestoProyecto MovimientoPresupuestoProyecto[] @relation("MovimientosPresupuestoProyecto")
-  ideasCreadas                  Idea[]                    @relation("IdeasCreadas")
-  votosIdeas                    VotoIdea[]                @relation("VotosIdeas")
-  comentariosIdeas              ComentarioIdea[]          @relation("ComentariosIdeas")
-  eventosCreados                Evento[]                  @relation("EventosCreados")
-  eventosParticipando           EventoParticipante[]      @relation("EventosParticipando")
-  notificacionesRecibidas       Notificacion[]            @relation("NotificacionesRecibidas")
-  solicitudesRevisadas          SolicitudAcceso[]         @relation("SolicitudesRevisadas")
-  recursosCreados               Recurso[]                 @relation("RecursosCreados")
-  asignacionesRecursos          AsignacionRecurso[]       @relation("AsignacionesRecursos")
-  movimientosRecursos           MovimientoRecurso[]       @relation("MovimientosRecursos")
-  ingresosRegistrados           IngresoProyecto[]         @relation("IngresosRegistrados")
-  gastosRegistrados             GastoProyecto[]           @relation("GastosRegistrados")
+  movimientosPresupuestoProyecto     MovimientoPresupuestoProyecto[]     @relation("MovimientosPresupuestoProyecto")
+  ideasCreadas                       Idea[]                              @relation("IdeasCreadas")
+  votosIdeas                         VotoIdea[]                          @relation("VotosIdeas")
+  comentariosIdeas                   ComentarioIdea[]                    @relation("ComentariosIdeas")
+  eventosCreados                     Evento[]                            @relation("EventosCreados")
+  eventosParticipando                EventoParticipante[]                @relation("EventosParticipando")
+  notificacionesRecibidas            Notificacion[]                      @relation("NotificacionesRecibidas")
+  solicitudesRevisadas               SolicitudAcceso[]                   @relation("SolicitudesRevisadas")
+  recursosCreados                    Recurso[]                           @relation("RecursosCreados")
+  asignacionesRecursos               AsignacionRecurso[]                 @relation("AsignacionesRecursos")
+  movimientosRecursos                MovimientoRecurso[]                 @relation("MovimientosRecursos")
+  ingresosRegistrados                IngresoProyecto[]                   @relation("IngresosRegistrados")
+  gastosRegistrados                  GastoProyecto[]                     @relation("GastosRegistrados")
+  actividadesRegistradas             TareaActividad[]                    @relation("ActividadCreadaPor")
 }
 
 /// Invitaciones para nuevos usuarios.
 model Invitacion {
-  id                 String    @id @default(uuid()) @db.Uuid
-  nombre_completo    String    @db.VarChar(100) @default("Desconocido")
-  email              String    @db.VarChar(100)
-  rol_id             String    @map("rol_id") @db.Uuid
-  departamento_id    String?   @map("departamento_id") @db.Uuid // Opcional si un invitado no tiene depto al inicio
-  token              String    @unique @db.VarChar(255)
-  fecha_expiracion   DateTime
-  fue_utilizada      Boolean   @default(false)
-  fecha_utilizacion  DateTime? // Fecha en que se aceptó la invitación
+  id                String    @id @default(uuid()) @db.Uuid
+  nombre_completo   String    @default("Desconocido") @db.VarChar(100)
+  email             String    @db.VarChar(100)
+  rol_id            String    @map("rol_id") @db.Uuid
+  departamento_id   String?   @map("departamento_id") @db.Uuid // Opcional si un invitado no tiene depto al inicio
+  token             String    @unique @db.VarChar(255)
+  fecha_expiracion  DateTime
+  fue_utilizada     Boolean   @default(false)
+  fecha_utilizacion DateTime? // Fecha en que se aceptó la invitación
 
   invitado_por_id String  @map("invitado_por_id") @db.Uuid
   invitado_por    Usuario @relation("InvitadoPor", fields: [invitado_por_id], references: [id])
 
   fecha_creacion DateTime @default(now())
 
-  rol          Rol           @relation(fields: [rol_id], references: [id])
-  departamento Departamento? @relation(fields: [departamento_id], references: [id])
+  rol             Rol              @relation(fields: [rol_id], references: [id])
+  departamento    Departamento?    @relation(fields: [departamento_id], references: [id])
   solicitudAcceso SolicitudAcceso? @relation("SolicitudInvitacion")
 
   @@map("invitaciones")
@@ -370,7 +369,7 @@ model Proyecto {
   id                 String         @id @default(uuid()) @db.Uuid
   nombre             String         @db.VarChar(255)
   descripcion        String?
-  objetivos          String?        // Objetivos del proyecto
+  objetivos          String? // Objetivos del proyecto
   estado             EstadoProyecto @default(Activo)
   usaEtapas          Boolean        @default(true)
   responsableId      String         @db.Uuid
@@ -381,19 +380,19 @@ model Proyecto {
   fechaActualizacion DateTime       @updatedAt
   fechaEliminacion   DateTime?
 
-  responsable  Usuario              @relation(fields: [responsableId], references: [id])
-  departamento Departamento?        @relation(fields: [departamentoId], references: [id])
-  tareas       Tarea[]
-  miembros     ProyectoMiembro[]
-  etapas       Etapa[]
-  documentos   DocumentoProyecto[]
-  presupuesto  PresupuestoProyecto?
-  eventos      Evento[]
-  notificaciones Notificacion[]
+  responsable          Usuario              @relation(fields: [responsableId], references: [id])
+  departamento         Departamento?        @relation(fields: [departamentoId], references: [id])
+  tareas               Tarea[]
+  miembros             ProyectoMiembro[]
+  etapas               Etapa[]
+  documentos           DocumentoProyecto[]
+  presupuesto          PresupuestoProyecto?
+  eventos              Evento[]
+  notificaciones       Notificacion[]
   asignacionesRecursos AsignacionRecurso[]
   movimientosRecursos  MovimientoRecurso[]
-  ingresos             IngresoProyecto[]  @relation("IngresosProyecto")
-  gastos               GastoProyecto[]    @relation("GastosProyecto")
+  ingresos             IngresoProyecto[]    @relation("IngresosProyecto")
+  gastos               GastoProyecto[]      @relation("GastosProyecto")
 }
 
 /// Registro de todas las tareas.
@@ -414,13 +413,14 @@ model Tarea {
   fechaCompletado    DateTime?
   fechaEliminacion   DateTime?
 
-  proyecto    Proyecto     @relation(fields: [proyectoId], references: [id])
-  etapa       Etapa?       @relation(fields: [etapaId], references: [id])
-  asignado    Usuario?     @relation("TareasAsignadas", fields: [asignadoId], references: [id])
-  creador     Usuario      @relation("TareasCreadas", fields: [creadorId], references: [id])
-  comentarios Comentario[]
-  eventos     Evento[]
+  proyecto       Proyecto         @relation(fields: [proyectoId], references: [id])
+  etapa          Etapa?           @relation(fields: [etapaId], references: [id])
+  asignado       Usuario?         @relation("TareasAsignadas", fields: [asignadoId], references: [id])
+  creador        Usuario          @relation("TareasCreadas", fields: [creadorId], references: [id])
+  comentarios    Comentario[]
+  eventos        Evento[]
   notificaciones Notificacion[]
+  actividad      TareaActividad[]
 
   @@index([proyectoId])
   @@index([etapaId])
@@ -437,8 +437,9 @@ model Comentario {
   tareaId       String   @db.Uuid
   fechaCreacion DateTime @default(now())
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-  tarea   Tarea   @relation(fields: [tareaId], references: [id])
+  usuario   Usuario          @relation(fields: [usuarioId], references: [id])
+  tarea     Tarea            @relation(fields: [tareaId], references: [id])
+  actividad TareaActividad[] @relation("ActividadComentario")
 }
 
 /// Etapas de un proyecto (fases o hitos).
@@ -508,16 +509,16 @@ model AiQueryLog {
 }
 
 model AiEmbedding {
-  id          String       @id @default(uuid()) @db.Uuid
-  entityType  AiEntityType
-  entityId    String       @db.Uuid
-  chunkIndex  Int          @default(0)
-  chunkText   String
-  embedding   Float[]
-  source      String       @db.VarChar(50)
-  metadata    Json?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id         String       @id @default(uuid()) @db.Uuid
+  entityType AiEntityType
+  entityId   String       @db.Uuid
+  chunkIndex Int          @default(0)
+  chunkText  String
+  embedding  Float[]
+  source     String       @db.VarChar(50)
+  metadata   Json?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
   @@unique([entityType, entityId, chunkIndex])
   @@index([entityType, source])
@@ -536,12 +537,13 @@ model Archivo {
   fechaCreacion    DateTime  @default(now())
   fechaEliminacion DateTime?
 
-  subidoPor          Usuario                             @relation("ArchivosSubidosPorUsuario", fields: [subidoPorId], references: [id])
-  cvDeUsuario        Usuario?                            @relation("CVDelUsuario")
-  adjuntos           ArchivoAdjunto[]
-  documentosProyecto DocumentoProyecto[]
+  subidoPor                          Usuario                             @relation("ArchivosSubidosPorUsuario", fields: [subidoPorId], references: [id])
+  cvDeUsuario                        Usuario?                            @relation("CVDelUsuario")
+  adjuntos                           ArchivoAdjunto[]
+  documentosProyecto                 DocumentoProyecto[]
   comprobantesMovimientoDepartamento MovimientoPresupuestoDepartamento[] @relation("ComprobanteMovimientoDepartamento")
   comprobantesMovimientoProyecto     MovimientoPresupuestoProyecto[]     @relation("ComprobanteMovimientoProyecto")
+  tareaActividads                    TareaActividad[] @relation("ActividadArchivo")
 }
 
 /// Tabla pivote polimórfica para adjuntar archivos a diferentes entidades (p. ej., Tareas, Proyectos).
@@ -551,11 +553,46 @@ model ArchivoAdjunto {
   archivoId        String @db.Uuid
   entidadPadreTipo String @db.VarChar(50)
   entidadPadreId   String @db.Uuid
+  descripcion      String? @db.VarChar(255)
 
   archivo Archivo @relation(fields: [archivoId], references: [id])
 
   @@id([archivoId, entidadPadreTipo, entidadPadreId])
   @@index([entidadPadreTipo, entidadPadreId])
+}
+
+model TareaActividad {
+  id               String             @id @default(uuid()) @db.Uuid
+  tareaId          String             @db.Uuid
+  tipoEvento       TipoActividadTarea
+  descripcion      String?
+  payload          Json?
+  comentarioId     String?            @db.Uuid
+  archivoId        String?            @db.Uuid
+  actividadPadreId String?            @db.Uuid
+  creadoPorId      String             @db.Uuid
+  fechaCreacion    DateTime           @default(now())
+
+  tarea      Tarea            @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  comentario Comentario?      @relation("ActividadComentario", fields: [comentarioId], references: [id])
+  archivo    Archivo?         @relation("ActividadArchivo", fields: [archivoId], references: [id])
+  creadoPor  Usuario          @relation("ActividadCreadaPor", fields: [creadoPorId], references: [id])
+  padre      TareaActividad?  @relation("ActividadRespuestas", fields: [actividadPadreId], references: [id])
+  respuestas TareaActividad[] @relation("ActividadRespuestas")
+
+  @@index([tareaId])
+  @@index([creadoPorId])
+}
+
+enum TipoActividadTarea {
+  CREACION
+  ACTUALIZACION
+  COMENTARIO
+  RESPUESTA_COMENTARIO
+  ADJUNTO_AGREGADO
+  ADJUNTO_ELIMINADO
+  CAMBIO_ESTADO
+  CAMBIO_ETAPA
 }
 
 // --- MODULO: MENSAJERIA INTERNA ---
@@ -635,11 +672,11 @@ model CatalogoConfiguracion {
 
 /// Almacena el valor personalizado para una configuración por usuario.
 model ConfiguracionUsuario {
-  id              String   @id @default(uuid()) @db.Uuid
-  usuarioId       String   @db.Uuid
-  preferencias    Json?    // Preferencias de UI (tema, idioma, etc.)
-  notificaciones  Json?    // Configuración de notificaciones
-  fechaCreacion   DateTime @default(now())
+  id                 String   @id @default(uuid()) @db.Uuid
+  usuarioId          String   @db.Uuid
+  preferencias       Json? // Preferencias de UI (tema, idioma, etc.)
+  notificaciones     Json? // Configuración de notificaciones
+  fechaCreacion      DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
@@ -821,14 +858,14 @@ model DocumentoProyecto {
 
 /// Documentos asociados a departamentos (resúmenes, objetivos, etc.).
 model DocumentoDepartamento {
-  id                 String                      @id @default(uuid()) @db.Uuid
-  departamentoId     String                      @db.Uuid
+  id                 String                    @id @default(uuid()) @db.Uuid
+  departamentoId     String                    @db.Uuid
   tipo               TipoDocumentoDepartamento
-  titulo             String                      @db.VarChar(255)
+  titulo             String                    @db.VarChar(255)
   contenido          String
-  fechaCreacion      DateTime                    @default(now())
-  fechaActualizacion DateTime                    @updatedAt
-  creadoPorId        String                      @db.Uuid
+  fechaCreacion      DateTime                  @default(now())
+  fechaActualizacion DateTime                  @updatedAt
+  creadoPorId        String                    @db.Uuid
 
   departamento Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
   creadoPor    Usuario      @relation(fields: [creadoPorId], references: [id])
@@ -889,24 +926,24 @@ enum EstadoPresupuesto {
 
 /// Presupuesto asignado a un departamento.
 model PresupuestoDepartamento {
-  id                   String             @id @default(uuid()) @db.Uuid
-  departamentoId       String             @unique @db.Uuid
-  montoTotal           Decimal            @db.Decimal(15, 2)
-  montoGastado         Decimal            @default(0) @db.Decimal(15, 2)
-  montoDisponible      Decimal            @db.Decimal(15, 2)
-  periodo              String             @db.VarChar(50) // Ej: "2025-Q1", "2025", "Enero 2025"
-  fechaInicio          DateTime
-  fechaFin             DateTime
-  estado               EstadoPresupuesto  @default(Activo)
-  descripcion          String?
-  fechaCreacion        DateTime           @default(now())
-  fechaActualizacion   DateTime           @updatedAt
-  creadoPorId          String             @db.Uuid
-  
-  departamento         Departamento       @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
-  creadoPor            Usuario            @relation("PresupuestosDepartamentoCreados", fields: [creadoPorId], references: [id])
-  movimientos          MovimientoPresupuestoDepartamento[]
-  
+  id                 String            @id @default(uuid()) @db.Uuid
+  departamentoId     String            @unique @db.Uuid
+  montoTotal         Decimal           @db.Decimal(15, 2)
+  montoGastado       Decimal           @default(0) @db.Decimal(15, 2)
+  montoDisponible    Decimal           @db.Decimal(15, 2)
+  periodo            String            @db.VarChar(50) // Ej: "2025-Q1", "2025", "Enero 2025"
+  fechaInicio        DateTime
+  fechaFin           DateTime
+  estado             EstadoPresupuesto @default(Activo)
+  descripcion        String?
+  fechaCreacion      DateTime          @default(now())
+  fechaActualizacion DateTime          @updatedAt
+  creadoPorId        String            @db.Uuid
+
+  departamento Departamento                        @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  creadoPor    Usuario                             @relation("PresupuestosDepartamentoCreados", fields: [creadoPorId], references: [id])
+  movimientos  MovimientoPresupuestoDepartamento[]
+
   @@index([departamentoId, periodo])
   @@index([estado])
 }
@@ -919,15 +956,15 @@ model MovimientoPresupuestoDepartamento {
   monto                     Decimal                   @db.Decimal(15, 2)
   descripcion               String
   categoria                 String?                   @db.VarChar(100) // Ej: "Salarios", "Equipamiento", "Marketing"
-  comprobante               String?                   // URL o referencia al comprobante
+  comprobante               String? // URL o referencia al comprobante
   archivoId                 String?                   @db.Uuid
   fechaMovimiento           DateTime                  @default(now())
   registradoPorId           String                    @db.Uuid
-  
-  presupuestoDepartamento   PresupuestoDepartamento   @relation(fields: [presupuestoDepartamentoId], references: [id], onDelete: Cascade)
-  archivo                   Archivo?                  @relation("ComprobanteMovimientoDepartamento", fields: [archivoId], references: [id])
-  registradoPor             Usuario                   @relation("MovimientosPresupuestoDepartamento", fields: [registradoPorId], references: [id])
-  
+
+  presupuestoDepartamento PresupuestoDepartamento @relation(fields: [presupuestoDepartamentoId], references: [id], onDelete: Cascade)
+  archivo                 Archivo?                @relation("ComprobanteMovimientoDepartamento", fields: [archivoId], references: [id])
+  registradoPor           Usuario                 @relation("MovimientosPresupuestoDepartamento", fields: [registradoPorId], references: [id])
+
   @@index([presupuestoDepartamentoId])
   @@index([tipo])
   @@index([fechaMovimiento])
@@ -935,42 +972,42 @@ model MovimientoPresupuestoDepartamento {
 
 /// Presupuesto asignado a un proyecto.
 model PresupuestoProyecto {
-  id                   String             @id @default(uuid()) @db.Uuid
-  proyectoId           String             @unique @db.Uuid
-  montoTotal           Decimal            @db.Decimal(15, 2)
-  montoGastado         Decimal            @default(0) @db.Decimal(15, 2)
-  montoDisponible      Decimal            @db.Decimal(15, 2)
-  estado               EstadoPresupuesto  @default(Activo)
-  descripcion          String?
-  fechaCreacion        DateTime           @default(now())
-  fechaActualizacion   DateTime           @updatedAt
-  creadoPorId          String             @db.Uuid
-  
-  proyecto             Proyecto           @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-  creadoPor            Usuario            @relation("PresupuestosProyectoCreados", fields: [creadoPorId], references: [id])
-  movimientos          MovimientoPresupuestoProyecto[]
-  
+  id                 String            @id @default(uuid()) @db.Uuid
+  proyectoId         String            @unique @db.Uuid
+  montoTotal         Decimal           @db.Decimal(15, 2)
+  montoGastado       Decimal           @default(0) @db.Decimal(15, 2)
+  montoDisponible    Decimal           @db.Decimal(15, 2)
+  estado             EstadoPresupuesto @default(Activo)
+  descripcion        String?
+  fechaCreacion      DateTime          @default(now())
+  fechaActualizacion DateTime          @updatedAt
+  creadoPorId        String            @db.Uuid
+
+  proyecto    Proyecto                        @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  creadoPor   Usuario                         @relation("PresupuestosProyectoCreados", fields: [creadoPorId], references: [id])
+  movimientos MovimientoPresupuestoProyecto[]
+
   @@index([proyectoId])
   @@index([estado])
 }
 
 /// Movimientos del presupuesto de un proyecto.
 model MovimientoPresupuestoProyecto {
-  id                     String                    @id @default(uuid()) @db.Uuid
-  presupuestoProyectoId  String                    @db.Uuid
-  tipo                   TipoMovimientoPresupuesto
-  monto                  Decimal                   @db.Decimal(15, 2)
-  descripcion            String
-  categoria              String?                   @db.VarChar(100) // Ej: "Desarrollo", "Infraestructura", "Licencias"
-  comprobante            String?                   // URL o referencia al comprobante
-  archivoId              String?                   @db.Uuid
-  fechaMovimiento        DateTime                  @default(now())
-  registradoPorId        String                    @db.Uuid
-  
-  presupuestoProyecto    PresupuestoProyecto       @relation(fields: [presupuestoProyectoId], references: [id], onDelete: Cascade)
-  archivo                Archivo?                  @relation("ComprobanteMovimientoProyecto", fields: [archivoId], references: [id])
-  registradoPor          Usuario                   @relation("MovimientosPresupuestoProyecto", fields: [registradoPorId], references: [id])
-  
+  id                    String                    @id @default(uuid()) @db.Uuid
+  presupuestoProyectoId String                    @db.Uuid
+  tipo                  TipoMovimientoPresupuesto
+  monto                 Decimal                   @db.Decimal(15, 2)
+  descripcion           String
+  categoria             String?                   @db.VarChar(100) // Ej: "Desarrollo", "Infraestructura", "Licencias"
+  comprobante           String? // URL o referencia al comprobante
+  archivoId             String?                   @db.Uuid
+  fechaMovimiento       DateTime                  @default(now())
+  registradoPorId       String                    @db.Uuid
+
+  presupuestoProyecto PresupuestoProyecto @relation(fields: [presupuestoProyectoId], references: [id], onDelete: Cascade)
+  archivo             Archivo?            @relation("ComprobanteMovimientoProyecto", fields: [archivoId], references: [id])
+  registradoPor       Usuario             @relation("MovimientosPresupuestoProyecto", fields: [registradoPorId], references: [id])
+
   @@index([presupuestoProyectoId])
   @@index([tipo])
   @@index([fechaMovimiento])
@@ -979,38 +1016,38 @@ model MovimientoPresupuestoProyecto {
 // --- SISTEMA DE IDEAS ---
 
 enum CategoriaIdea {
-  Feature        // Nueva funcionalidad
-  Improvement    // Mejora
-  Innovation     // Innovación
+  Feature // Nueva funcionalidad
+  Improvement // Mejora
+  Innovation // Innovación
   Recommendation // Recomendación
 }
 
 enum EstadoIdea {
-  Evaluating     // En evaluación
-  Approved       // Aprobada
-  InDevelopment  // En desarrollo
-  Implemented    // Implementada
-  Rejected       // Rechazada
+  Evaluating // En evaluación
+  Approved // Aprobada
+  InDevelopment // En desarrollo
+  Implemented // Implementada
+  Rejected // Rechazada
 }
 
 /// Ideas del buzón de sugerencias con análisis de IA
 model Idea {
-  id            String        @id @default(uuid()) @db.Uuid
-  titulo        String        @db.VarChar(200)
-  descripcion   String
-  categoria     CategoriaIdea
-  estado        EstadoIdea    @default(Evaluating)
-  autorId       String        @db.Uuid
-  aiScore       Int?          // Score de IA (0-100)
-  aiInsight     String?       // Insight generado por IA
-  tags          String[]      // Array de tags
-  fechaCreacion DateTime      @default(now())
-  fechaActualizacion DateTime  @updatedAt
-  
-  autor         Usuario       @relation("IdeasCreadas", fields: [autorId], references: [id], onDelete: Cascade)
-  votos         VotoIdea[]
-  comentarios   ComentarioIdea[]
-  
+  id                 String        @id @default(uuid()) @db.Uuid
+  titulo             String        @db.VarChar(200)
+  descripcion        String
+  categoria          CategoriaIdea
+  estado             EstadoIdea    @default(Evaluating)
+  autorId            String        @db.Uuid
+  aiScore            Int? // Score de IA (0-100)
+  aiInsight          String? // Insight generado por IA
+  tags               String[] // Array de tags
+  fechaCreacion      DateTime      @default(now())
+  fechaActualizacion DateTime      @updatedAt
+
+  autor       Usuario          @relation("IdeasCreadas", fields: [autorId], references: [id], onDelete: Cascade)
+  votos       VotoIdea[]
+  comentarios ComentarioIdea[]
+
   @@index([autorId])
   @@index([categoria])
   @@index([estado])
@@ -1019,14 +1056,14 @@ model Idea {
 
 /// Votos de usuarios en ideas
 model VotoIdea {
-  id            String   @id @default(uuid()) @db.Uuid
-  ideaId        String   @db.Uuid
-  usuarioId     String   @db.Uuid
-  fechaVoto     DateTime @default(now())
-  
-  idea          Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  usuario       Usuario  @relation("VotosIdeas", fields: [usuarioId], references: [id], onDelete: Cascade)
-  
+  id        String   @id @default(uuid()) @db.Uuid
+  ideaId    String   @db.Uuid
+  usuarioId String   @db.Uuid
+  fechaVoto DateTime @default(now())
+
+  idea    Idea    @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation("VotosIdeas", fields: [usuarioId], references: [id], onDelete: Cascade)
+
   @@unique([ideaId, usuarioId]) // Un usuario solo puede votar una vez por idea
   @@index([ideaId])
   @@index([usuarioId])
@@ -1034,16 +1071,16 @@ model VotoIdea {
 
 /// Comentarios en ideas
 model ComentarioIdea {
-  id            String   @id @default(uuid()) @db.Uuid
-  ideaId        String   @db.Uuid
-  usuarioId     String   @db.Uuid
-  contenido     String
-  fechaCreacion DateTime @default(now())
+  id                 String   @id @default(uuid()) @db.Uuid
+  ideaId             String   @db.Uuid
+  usuarioId          String   @db.Uuid
+  contenido          String
+  fechaCreacion      DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
-  
-  idea          Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  usuario       Usuario  @relation("ComentariosIdeas", fields: [usuarioId], references: [id], onDelete: Cascade)
-  
+
+  idea    Idea    @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation("ComentariosIdeas", fields: [usuarioId], references: [id], onDelete: Cascade)
+
   @@index([ideaId])
   @@index([usuarioId])
   @@index([fechaCreacion])
@@ -1068,36 +1105,36 @@ enum EstadoEvento {
 
 /// Eventos del calendario (reuniones, tareas con fecha, eventos personales)
 model Evento {
-  id                String        @id @default(uuid()) @db.Uuid
-  titulo            String        @db.VarChar(200)
-  descripcion       String?
-  tipo              TipoEvento
-  estado            EstadoEvento  @default(Pendiente)
-  fechaInicio       DateTime
-  fechaFin          DateTime
-  todoElDia         Boolean       @default(false)
-  ubicacion         String?       @db.VarChar(300)
-  color             String?       @db.VarChar(20) // Código de color hex
-  
+  id          String       @id @default(uuid()) @db.Uuid
+  titulo      String       @db.VarChar(200)
+  descripcion String?
+  tipo        TipoEvento
+  estado      EstadoEvento @default(Pendiente)
+  fechaInicio DateTime
+  fechaFin    DateTime
+  todoElDia   Boolean      @default(false)
+  ubicacion   String?      @db.VarChar(300)
+  color       String?      @db.VarChar(20) // Código de color hex
+
   // Relaciones opcionales
-  proyectoId        String?       @db.Uuid
-  tareaId           String?       @db.Uuid
-  
+  proyectoId String? @db.Uuid
+  tareaId    String? @db.Uuid
+
   // Creador del evento
-  creadorId         String        @db.Uuid
-  
+  creadorId String @db.Uuid
+
   // Auditoría
-  fechaCreacion     DateTime      @default(now())
-  fechaActualizacion DateTime     @updatedAt
-  eliminado         Boolean       @default(false)
-  
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+  eliminado          Boolean  @default(false)
+
   // Relaciones
-  creador           Usuario       @relation("EventosCreados", fields: [creadorId], references: [id], onDelete: Cascade)
-  proyecto          Proyecto?     @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-  tarea             Tarea?        @relation(fields: [tareaId], references: [id], onDelete: Cascade)
-  participantes     EventoParticipante[]
-  notificaciones    Notificacion[]
-  
+  creador        Usuario              @relation("EventosCreados", fields: [creadorId], references: [id], onDelete: Cascade)
+  proyecto       Proyecto?            @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  tarea          Tarea?               @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  participantes  EventoParticipante[]
+  notificaciones Notificacion[]
+
   @@index([creadorId])
   @@index([proyectoId])
   @@index([tareaId])
@@ -1110,15 +1147,15 @@ model Evento {
 
 /// Participantes de eventos
 model EventoParticipante {
-  id            String   @id @default(uuid()) @db.Uuid
-  eventoId      String   @db.Uuid
-  usuarioId     String   @db.Uuid
-  confirmado    Boolean  @default(false)
+  id             String    @id @default(uuid()) @db.Uuid
+  eventoId       String    @db.Uuid
+  usuarioId      String    @db.Uuid
+  confirmado     Boolean   @default(false)
   fechaRespuesta DateTime?
-  
-  evento        Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuario       Usuario  @relation("EventosParticipando", fields: [usuarioId], references: [id], onDelete: Cascade)
-  
+
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation("EventosParticipando", fields: [usuarioId], references: [id], onDelete: Cascade)
+
   @@unique([eventoId, usuarioId])
   @@index([eventoId])
   @@index([usuarioId])
@@ -1146,35 +1183,35 @@ enum EstadoNotificacion {
 
 /// Notificaciones del sistema
 model Notificacion {
-  id                String              @id @default(uuid()) @db.Uuid
-  titulo            String              @db.VarChar(200)
-  mensaje           String
-  tipo              TipoNotificacion
-  estado            EstadoNotificacion  @default(NoLeida)
-  
+  id      String             @id @default(uuid()) @db.Uuid
+  titulo  String             @db.VarChar(200)
+  mensaje String
+  tipo    TipoNotificacion
+  estado  EstadoNotificacion @default(NoLeida)
+
   // Destinatario
-  usuarioId         String              @db.Uuid
-  
+  usuarioId String @db.Uuid
+
   // Relaciones opcionales (origen de la notificación)
-  proyectoId        String?             @db.Uuid
-  tareaId           String?             @db.Uuid
-  eventoId          String?             @db.Uuid
-  
+  proyectoId String? @db.Uuid
+  tareaId    String? @db.Uuid
+  eventoId   String? @db.Uuid
+
   // Metadata
-  metadata          Json?               // Datos adicionales en formato JSON
-  url               String?             @db.VarChar(500) // URL de acción
-  
+  metadata Json? // Datos adicionales en formato JSON
+  url      String? @db.VarChar(500) // URL de acción
+
   // Auditoría
-  fechaCreacion     DateTime            @default(now())
-  fechaLeida        DateTime?
-  fechaArchivada    DateTime?
-  
+  fechaCreacion  DateTime  @default(now())
+  fechaLeida     DateTime?
+  fechaArchivada DateTime?
+
   // Relaciones
-  usuario           Usuario             @relation("NotificacionesRecibidas", fields: [usuarioId], references: [id], onDelete: Cascade)
-  proyecto          Proyecto?           @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-  tarea             Tarea?              @relation(fields: [tareaId], references: [id], onDelete: Cascade)
-  evento            Evento?             @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  
+  usuario  Usuario   @relation("NotificacionesRecibidas", fields: [usuarioId], references: [id], onDelete: Cascade)
+  proyecto Proyecto? @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  tarea    Tarea?    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  evento   Evento?   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
   @@index([usuarioId])
   @@index([proyectoId])
   @@index([tareaId])
@@ -1196,30 +1233,30 @@ enum EstadoSolicitud {
 
 /// Solicitudes de acceso al sistema de usuarios externos
 model SolicitudAcceso {
-  id                String            @id @default(uuid()) @db.Uuid
-  nombreCompleto    String            @db.VarChar(200)
-  email             String            @db.VarChar(255)
-  telefono          String?           @db.VarChar(20)
-  empresa           String?           @db.VarChar(200)
-  cargo             String?           @db.VarChar(100)
-  mensaje           String?           // Mensaje opcional del solicitante
-  estado            EstadoSolicitud   @default(Pendiente)
-  
+  id             String          @id @default(uuid()) @db.Uuid
+  nombreCompleto String          @db.VarChar(200)
+  email          String          @db.VarChar(255)
+  telefono       String?         @db.VarChar(20)
+  empresa        String?         @db.VarChar(200)
+  cargo          String?         @db.VarChar(100)
+  mensaje        String? // Mensaje opcional del solicitante
+  estado         EstadoSolicitud @default(Pendiente)
+
   // Información de procesamiento
-  revisadoPorId     String?           @db.Uuid
-  fechaRevision     DateTime?
-  comentarioRevision String?          // Comentario del revisor
-  invitacionId      String?           @unique @db.Uuid // Si se aprueba, se crea una invitación
-  
+  revisadoPorId      String?   @db.Uuid
+  fechaRevision      DateTime?
+  comentarioRevision String? // Comentario del revisor
+  invitacionId       String?   @unique @db.Uuid // Si se aprueba, se crea una invitación
+
   // Auditoría
-  fechaCreacion     DateTime          @default(now())
-  fechaExpiracion   DateTime          // Las solicitudes expiran después de 30 días
-  ipSolicitud       String?           @db.VarChar(45) // IPv4 o IPv6
-  
+  fechaCreacion   DateTime @default(now())
+  fechaExpiracion DateTime // Las solicitudes expiran después de 30 días
+  ipSolicitud     String?  @db.VarChar(45) // IPv4 o IPv6
+
   // Relaciones
-  revisadoPor       Usuario?          @relation("SolicitudesRevisadas", fields: [revisadoPorId], references: [id])
-  invitacion        Invitacion?       @relation("SolicitudInvitacion", fields: [invitacionId], references: [id])
-  
+  revisadoPor Usuario?    @relation("SolicitudesRevisadas", fields: [revisadoPorId], references: [id])
+  invitacion  Invitacion? @relation("SolicitudInvitacion", fields: [invitacionId], references: [id])
+
   @@index([email])
   @@index([estado])
   @@index([fechaCreacion])
@@ -1268,31 +1305,31 @@ enum TipoMovimiento {
 
 /// Catálogo de recursos de la empresa
 model Recurso {
-  id                 String            @id @default(uuid()) @db.Uuid
-  nombre             String            @db.VarChar(200)
+  id                 String        @id @default(uuid()) @db.Uuid
+  nombre             String        @db.VarChar(200)
   descripcion        String?
   tipo               TipoRecurso
-  categoria          String?           @db.VarChar(100)
+  categoria          String?       @db.VarChar(100)
   unidadMedida       UnidadMedida
-  costoUnitario      Decimal?          @db.Decimal(10, 2)
-  stockActual        Int               @default(0)
+  costoUnitario      Decimal?      @db.Decimal(10, 2)
+  stockActual        Int           @default(0)
   stockMinimo        Int?
-  estado             EstadoRecurso     @default(Disponible)
-  proveedor          String?           @db.VarChar(200)
-  numeroSerie        String?           @db.VarChar(100)
-  fechaAdquisicion   DateTime?         @db.Date
+  estado             EstadoRecurso @default(Disponible)
+  proveedor          String?       @db.VarChar(200)
+  numeroSerie        String?       @db.VarChar(100)
+  fechaAdquisicion   DateTime?     @db.Date
   vidaUtilMeses      Int?
-  ubicacionFisica    String?           @db.VarChar(200)
-  creadoPorId        String            @db.Uuid
-  fechaCreacion      DateTime          @default(now())
-  fechaActualizacion DateTime          @updatedAt
-  eliminado          Boolean           @default(false)
-  
-  creador            Usuario           @relation("RecursosCreados", fields: [creadoPorId], references: [id])
-  asignaciones       AsignacionRecurso[]
-  movimientos        MovimientoRecurso[]
-  gastos             GastoProyecto[]
-  
+  ubicacionFisica    String?       @db.VarChar(200)
+  creadoPorId        String        @db.Uuid
+  fechaCreacion      DateTime      @default(now())
+  fechaActualizacion DateTime      @updatedAt
+  eliminado          Boolean       @default(false)
+
+  creador      Usuario             @relation("RecursosCreados", fields: [creadoPorId], references: [id])
+  asignaciones AsignacionRecurso[]
+  movimientos  MovimientoRecurso[]
+  gastos       GastoProyecto[]
+
   @@index([tipo])
   @@index([estado])
   @@index([categoria])
@@ -1301,24 +1338,24 @@ model Recurso {
 
 /// Asignación de recursos a departamentos o proyectos
 model AsignacionRecurso {
-  id                 String      @id @default(uuid()) @db.Uuid
-  recursoId          String      @db.Uuid
-  cantidad           Int
-  departamentoId     String?     @db.Uuid
-  proyectoId         String?     @db.Uuid
-  fechaInicio        DateTime    @db.Date
-  fechaFin           DateTime?   @db.Date
-  activa             Boolean     @default(true)
-  proposito          String?
-  observaciones      String?
-  asignadoPorId      String      @db.Uuid
-  fechaAsignacion    DateTime    @default(now())
-  
-  recurso            Recurso     @relation(fields: [recursoId], references: [id], onDelete: Cascade)
-  departamento       Departamento? @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
-  proyecto           Proyecto?   @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-  asignadoPor        Usuario     @relation("AsignacionesRecursos", fields: [asignadoPorId], references: [id])
-  
+  id              String    @id @default(uuid()) @db.Uuid
+  recursoId       String    @db.Uuid
+  cantidad        Int
+  departamentoId  String?   @db.Uuid
+  proyectoId      String?   @db.Uuid
+  fechaInicio     DateTime  @db.Date
+  fechaFin        DateTime? @db.Date
+  activa          Boolean   @default(true)
+  proposito       String?
+  observaciones   String?
+  asignadoPorId   String    @db.Uuid
+  fechaAsignacion DateTime  @default(now())
+
+  recurso      Recurso       @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+  departamento Departamento? @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  proyecto     Proyecto?     @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  asignadoPor  Usuario       @relation("AsignacionesRecursos", fields: [asignadoPorId], references: [id])
+
   @@index([recursoId])
   @@index([departamentoId])
   @@index([proyectoId])
@@ -1328,25 +1365,25 @@ model AsignacionRecurso {
 
 /// Historial de movimientos de inventario
 model MovimientoRecurso {
-  id                 String            @id @default(uuid()) @db.Uuid
-  recursoId          String            @db.Uuid
-  tipo               TipoMovimiento
-  cantidad           Int
-  stockAnterior      Int
-  stockNuevo         Int
-  departamentoId     String?           @db.Uuid
-  proyectoId         String?           @db.Uuid
-  motivo             String?
-  costoTotal         Decimal?          @db.Decimal(10, 2)
-  documentoReferencia String?          @db.VarChar(100)
-  registradoPorId    String            @db.Uuid
-  fechaMovimiento    DateTime          @default(now())
-  
-  recurso            Recurso           @relation(fields: [recursoId], references: [id], onDelete: Cascade)
-  departamento       Departamento?     @relation(fields: [departamentoId], references: [id])
-  proyecto           Proyecto?         @relation(fields: [proyectoId], references: [id])
-  registradoPor      Usuario           @relation("MovimientosRecursos", fields: [registradoPorId], references: [id])
-  
+  id                  String         @id @default(uuid()) @db.Uuid
+  recursoId           String         @db.Uuid
+  tipo                TipoMovimiento
+  cantidad            Int
+  stockAnterior       Int
+  stockNuevo          Int
+  departamentoId      String?        @db.Uuid
+  proyectoId          String?        @db.Uuid
+  motivo              String?
+  costoTotal          Decimal?       @db.Decimal(10, 2)
+  documentoReferencia String?        @db.VarChar(100)
+  registradoPorId     String         @db.Uuid
+  fechaMovimiento     DateTime       @default(now())
+
+  recurso       Recurso       @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+  departamento  Departamento? @relation(fields: [departamentoId], references: [id])
+  proyecto      Proyecto?     @relation(fields: [proyectoId], references: [id])
+  registradoPor Usuario       @relation("MovimientosRecursos", fields: [registradoPorId], references: [id])
+
   @@index([recursoId])
   @@index([tipo])
   @@index([fechaMovimiento])
@@ -1379,19 +1416,19 @@ enum CategoriaGasto {
 
 /// Ingresos de proyectos
 model IngresoProyecto {
-  id              String         @id @default(uuid()) @db.Uuid
-  proyectoId      String         @db.Uuid
+  id              String        @id @default(uuid()) @db.Uuid
+  proyectoId      String        @db.Uuid
   fuente          FuenteIngreso
-  monto           Decimal        @db.Decimal(10, 2)
+  monto           Decimal       @db.Decimal(10, 2)
   descripcion     String?
-  fechaIngreso    DateTime       @db.Date
-  comprobante     String?        @db.VarChar(100)
-  registradoPorId String         @db.Uuid
-  fechaRegistro   DateTime       @default(now())
-  
-  proyecto        Proyecto       @relation("IngresosProyecto", fields: [proyectoId], references: [id], onDelete: Cascade)
-  registradoPor   Usuario        @relation("IngresosRegistrados", fields: [registradoPorId], references: [id])
-  
+  fechaIngreso    DateTime      @db.Date
+  comprobante     String?       @db.VarChar(100)
+  registradoPorId String        @db.Uuid
+  fechaRegistro   DateTime      @default(now())
+
+  proyecto      Proyecto @relation("IngresosProyecto", fields: [proyectoId], references: [id], onDelete: Cascade)
+  registradoPor Usuario  @relation("IngresosRegistrados", fields: [registradoPorId], references: [id])
+
   @@index([proyectoId])
   @@index([fechaIngreso])
   @@map("ingresos_proyectos")
@@ -1409,11 +1446,11 @@ model GastoProyecto {
   recursoId       String?        @db.Uuid
   registradoPorId String         @db.Uuid
   fechaRegistro   DateTime       @default(now())
-  
-  proyecto        Proyecto       @relation("GastosProyecto", fields: [proyectoId], references: [id], onDelete: Cascade)
-  recurso         Recurso?       @relation(fields: [recursoId], references: [id])
-  registradoPor   Usuario        @relation("GastosRegistrados", fields: [registradoPorId], references: [id])
-  
+
+  proyecto      Proyecto @relation("GastosProyecto", fields: [proyectoId], references: [id], onDelete: Cascade)
+  recurso       Recurso? @relation(fields: [recursoId], references: [id])
+  registradoPor Usuario  @relation("GastosRegistrados", fields: [registradoPorId], references: [id])
+
   @@index([proyectoId])
   @@index([categoria])
   @@index([fechaGasto])
