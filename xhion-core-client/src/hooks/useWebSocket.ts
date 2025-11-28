@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificacionesStore } from '@/store/notificacionesStore';
 import { useEventosStore } from '@/store/eventosStore';
+import { useTaskStore } from '@/store/taskStore';
 import { toast } from 'sonner';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -52,7 +53,7 @@ export function useWebSocket() {
       console.log('✅ WebSocket conectado');
       setIsConnected(true);
       setIsConnecting(false);
-      
+
       // Suscribirse a eventos
       socket.emit('subscribe:events');
     });
@@ -68,7 +69,7 @@ export function useWebSocket() {
     socket.on('connect_error', (error: Error) => {
       console.error('❌ Error de conexión WebSocket:', error.message);
       setIsConnecting(false);
-      
+
       // Si el error es de autenticación, no reintentar
       if (error.message.includes('token') || error.message.includes('auth')) {
         socket.disconnect();
@@ -87,7 +88,7 @@ export function useWebSocket() {
       setIsConnected(true);
       setIsConnecting(false);
       toast.success('Conexión restablecida');
-      
+
       // Recargar datos
       fetchContadorNoLeidas();
       fetchEventos();
@@ -96,16 +97,16 @@ export function useWebSocket() {
     // Event: Nueva notificación
     socket.on('notification', (notification: any) => {
       console.log('🔔 Nueva notificación:', notification);
-      
+
       // Agregar al store
       addNotificacion(notification);
-      
+
       // Mostrar toast
       toast.info(notification.titulo, {
         description: notification.mensaje,
         duration: 5000,
       });
-      
+
       // Actualizar contador
       fetchContadorNoLeidas();
     });
@@ -113,10 +114,10 @@ export function useWebSocket() {
     // Event: Evento creado
     socket.on('event:created', (event: any) => {
       console.log('📅 Nuevo evento:', event);
-      
+
       // Recargar eventos
       fetchEventos();
-      
+
       toast.info('Nuevo evento creado', {
         description: event.titulo,
       });
@@ -125,10 +126,10 @@ export function useWebSocket() {
     // Event: Evento actualizado
     socket.on('event:updated', (event: any) => {
       console.log('📝 Evento actualizado:', event);
-      
+
       // Recargar eventos
       fetchEventos();
-      
+
       toast.info('Evento actualizado', {
         description: event.titulo,
       });
@@ -137,11 +138,32 @@ export function useWebSocket() {
     // Event: Evento eliminado
     socket.on('event:deleted', ({ eventId }: { eventId: string }) => {
       console.log('🗑️ Evento eliminado:', eventId);
-      
+
       // Recargar eventos
       fetchEventos();
-      
+
       toast.info('Evento eliminado');
+    });
+
+    // ==================== TAREAS ====================
+    const { onTaskCreated, onTaskUpdated, onTaskDeleted } = useTaskStore.getState();
+
+    socket.on('task:created', (task: any) => {
+      console.log('✅ Tarea creada:', task);
+      onTaskCreated(task);
+      toast.success('Nueva tarea creada', { description: task.titulo });
+    });
+
+    socket.on('task:updated', (task: any) => {
+      console.log('📝 Tarea actualizada:', task);
+      onTaskUpdated(task);
+      // Optional: toast.info('Tarea actualizada', { description: task.titulo });
+    });
+
+    socket.on('task:deleted', ({ taskId }: { taskId: string }) => {
+      console.log('🗑️ Tarea eliminada:', taskId);
+      onTaskDeleted(taskId);
+      toast.info('Tarea eliminada');
     });
 
     // Cleanup al desmontar

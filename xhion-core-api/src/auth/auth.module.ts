@@ -9,6 +9,7 @@ import { AuthController } from './auth.controller';
 import { AuthSesionesController } from './auth-sesiones.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { RefreshTokenStrategy } from './refresh-token.strategy';
+import { AuditoriaModule } from '../auditoria/auditoria.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RefreshTokenStrategy } from './refresh-token.strategy';
     PrismaModule,
     SesionesModule,
     PassportModule,
+    AuditoriaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -32,4 +34,4 @@ import { RefreshTokenStrategy } from './refresh-token.strategy';
   ],
   providers: [AuthService, JwtStrategy, RefreshTokenStrategy],
 })
-export class AuthModule {}
+export class AuthModule { }

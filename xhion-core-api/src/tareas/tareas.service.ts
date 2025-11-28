@@ -16,13 +16,15 @@ import {
 } from './dto';
 import { AiEmbeddingSyncService } from '../ai/ai-embedding-sync.service';
 import { Express } from 'express';
+import { NotificationsGateway } from '../websocket/websocket.gateway';
 
 @Injectable()
 export class TareasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiEmbeddingSync: AiEmbeddingSyncService,
-  ) {}
+    private readonly notificationsGateway: NotificationsGateway,
+  ) { }
 
   private readonly ENTIDAD_TAREA = 'Tarea';
 
@@ -62,6 +64,28 @@ export class TareasService {
         respuestas: true,
       },
     });
+  }
+
+  /**
+   * Helper para obtener IDs de usuarios a notificar (miembros del proyecto)
+   */
+  private async getProjectMemberIds(proyectoId: string): Promise<string[]> {
+    const proyecto = await this.prisma.proyecto.findUnique({
+      where: { id: proyectoId },
+      include: {
+        miembros: {
+          select: { usuarioId: true },
+        },
+      },
+    });
+
+    if (!proyecto) return [];
+
+    const ids = proyecto.miembros.map((m) => m.usuarioId);
+    if (proyecto.responsableId && !ids.includes(proyecto.responsableId)) {
+      ids.push(proyecto.responsableId);
+    }
+    return ids;
   }
 
   /**
@@ -174,6 +198,10 @@ export class TareasService {
         estado: tarea.estado,
       },
     });
+
+    // Notificar creación
+    const memberIds = await this.getProjectMemberIds(tarea.proyectoId);
+    this.notificationsGateway.sendTaskCreated(memberIds, tarea);
 
     return tarea;
   }
@@ -403,7 +431,7 @@ export class TareasService {
       prioridad: updateTareaDto.prioridad,
       fechaVencimiento: updateTareaDto.fechaVencimiento ? new Date(updateTareaDto.fechaVencimiento) : undefined,
     };
-    
+
     if (updateTareaDto.estado === 'Hecho' && tarea.estado !== 'Hecho') {
       dataToUpdate.fechaCompletado = new Date();
     } else if (updateTareaDto.estado && updateTareaDto.estado !== 'Hecho') {
@@ -460,6 +488,10 @@ export class TareasService {
       descripcion: 'La tarea fue actualizada',
       payload: updateTareaDto as Prisma.InputJsonValue,
     });
+
+    // Notificar actualización
+    const memberIds = await this.getProjectMemberIds(updated.proyectoId);
+    this.notificationsGateway.sendTaskUpdated(memberIds, updated);
 
     return updated;
   }
@@ -530,8 +562,17 @@ export class TareasService {
             avatarUrl: true,
           },
         },
+        _count: {
+          select: {
+            comentarios: true,
+          },
+        },
       },
     });
+
+    // Notificar movimiento (actualización)
+    const memberIds = await this.getProjectMemberIds(updated.proyectoId);
+    this.notificationsGateway.sendTaskUpdated(memberIds, updated);
 
     return updated;
   }
@@ -561,6 +602,10 @@ export class TareasService {
     });
 
     await this.aiEmbeddingSync.deleteTarea(id);
+
+    // Notificar eliminación
+    const memberIds = await this.getProjectMemberIds(tarea.proyectoId);
+    this.notificationsGateway.sendTaskDeleted(memberIds, id);
 
     return { message: 'Tarea eliminada exitosamente' };
   }
@@ -807,21 +852,17 @@ export class TareasService {
           },
         },
       }),
-      this.prisma.archivo.update({
+      this.prisma.archivo.delete({
         where: { id: archivoId },
-        data: { fechaEliminacion: new Date() },
       }),
     ]);
 
     await this.registrarActividad({
       tareaId,
       usuarioId,
-      tipo: TipoActividadTarea.ADJUNTO_ELIMINADO,
-      descripcion: 'Se eliminó un adjunto',
+      tipo: TipoActividadTarea.ACTUALIZACION,
+      descripcion: 'Adjunto eliminado',
       archivoId,
-      payload: {
-        nombreArchivo: adjunto.archivo.nombreArchivo,
-      },
     });
 
     return { message: 'Adjunto eliminado exitosamente' };
@@ -829,12 +870,9 @@ export class TareasService {
 
   // ==================== ACTIVIDAD ====================
 
-  async getActividad(tareaId: string, usuarioId: string) {
-    await this.findOne(tareaId, usuarioId);
-
+  async getActividad(tareaId: string) {
     return this.prisma.tareaActividad.findMany({
       where: { tareaId },
-      orderBy: { fechaCreacion: 'desc' },
       include: {
         creadoPor: {
           select: {
@@ -857,6 +895,9 @@ export class TareasService {
           },
         },
       },
+      orderBy: {
+        fechaCreacion: 'desc',
+      },
     });
   }
 
@@ -868,21 +909,23 @@ export class TareasService {
   ) {
     await this.findOne(tareaId, usuarioId);
 
-    const actividadPadre = await this.prisma.tareaActividad.findUnique({
+    const actividad = await this.prisma.tareaActividad.findUnique({
       where: { id: actividadId },
     });
 
-    if (!actividadPadre || actividadPadre.tareaId !== tareaId) {
+    if (!actividad || actividad.tareaId !== tareaId) {
       throw new NotFoundException('Actividad no encontrada');
     }
 
-    return this.registrarActividad({
+    const respuesta = await this.registrarActividad({
       tareaId,
       usuarioId,
-      tipo: TipoActividadTarea.RESPUESTA_COMENTARIO,
+      tipo: TipoActividadTarea.COMENTARIO,
       descripcion: responderActividadDto.descripcion,
-      payload: responderActividadDto.metadata as Prisma.InputJsonValue,
       actividadPadreId: actividadId,
+      payload: { contenido: responderActividadDto.descripcion },
     });
+
+    return respuesta;
   }
 }

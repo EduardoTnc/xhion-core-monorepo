@@ -38,7 +38,7 @@ import type { Express } from 'express';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('tareas')
 export class TareasController {
-  constructor(private readonly tareasService: TareasService) {}
+  constructor(private readonly tareasService: TareasService) { }
 
   // ==================== CRUD DE TAREAS ====================
 
@@ -243,7 +243,7 @@ export class TareasController {
   @RequiresPermission('tareas.ver')
   @ApiOperation({ summary: 'Obtener la actividad cronológica de una tarea' })
   getActividad(@Param('id') id: string, @Request() req) {
-    return this.tareasService.getActividad(id, req.user.id);
+    return this.tareasService.getActividad(id);
   }
 
   @Post(':id/actividad/:actividadId/responder')

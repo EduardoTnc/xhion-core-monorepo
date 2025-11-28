@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageSquare, Calendar, Flag, Circle, CheckCircle2, Clock, XCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { MessageSquare, Calendar, Flag, Circle, CheckCircle2, Clock, XCircle, MoreVertical, Edit, Trash2, FolderKanban } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ interface TaskListViewProps {
   etapas: Etapa[];
   stageColorMap?: Record<string, string>;
   stagesEnabled?: boolean;
+  groupBy?: "none" | "project" | "stage";
 }
 
 const prioridadConfig = {
@@ -76,6 +77,7 @@ export function TaskListView({
   etapas,
   stageColorMap,
   stagesEnabled = true,
+  groupBy = "none",
 }: TaskListViewProps) {
   const getInitials = (name: string) => {
     return name
@@ -105,78 +107,90 @@ export function TaskListView({
     }, {});
   }, [etapas]);
 
-  const shouldGroupByStage = stagesEnabled;
-
-  // Group by etapa
-  const groupedTareas = useMemo(() => {
-    return tareas.reduce((acc, tarea) => {
-      const etapaNombre = tarea.etapa?.nombre || "Sin etapa";
-      if (!acc[etapaNombre]) {
-        acc[etapaNombre] = [];
-      }
-      acc[etapaNombre].push(tarea);
-      return acc;
-    }, {} as Record<string, Tarea[]>);
-  }, [tareas]);
-
+  // Grouping logic
   const groupedEntries = useMemo(() => {
-    if (!shouldGroupByStage) {
-      return [["Listado general", tareas]] as [string, Tarea[]][];
+    if (groupBy === "project") {
+      const groups: Record<string, { id: string; nombre: string; tareas: Tarea[] }> = {};
+      tareas.forEach(t => {
+        const projectId = t.proyectoId;
+        if (!groups[projectId]) {
+          groups[projectId] = {
+            id: projectId,
+            nombre: t.proyecto.nombre,
+            tareas: []
+          };
+        }
+        groups[projectId].tareas.push(t);
+      });
+      return Object.values(groups).map(g => ({
+        group: { id: g.id, nombre: g.nombre, type: "project" },
+        tareas: g.tareas
+      }));
+    } else if (stagesEnabled || groupBy === "stage") {
+      // Existing stage grouping logic
+      const grouped = etapas.reduce((acc, etapa) => {
+        const etapaTareas = tareas.filter(t => t.etapaId === etapa.id);
+        if (etapaTareas.length > 0) {
+          acc.push({
+            group: { id: etapa.id, nombre: etapa.nombre, type: "stage", color: etapa.color, orden: etapa.orden },
+            tareas: etapaTareas
+          });
+        }
+        return acc;
+      }, [] as { group: any, tareas: Tarea[] }[]);
+
+      const tareasWithoutEtapa = tareas.filter(t => !t.etapaId);
+      if (tareasWithoutEtapa.length > 0) {
+        grouped.push({
+          group: { id: "none", nombre: "Sin etapa", type: "stage" },
+          tareas: tareasWithoutEtapa
+        });
+      }
+      return grouped;
+    } else {
+      return [{
+        group: { id: "general", nombre: "Listado general", type: "general" },
+        tareas
+      }];
     }
-
-    const stageOrderMap = etapas.reduce<Record<string, number>>((acc, etapa) => {
-      acc[etapa.nombre] = etapa.orden ?? Number.MAX_SAFE_INTEGER;
-      return acc;
-    }, {});
-
-    return Object.entries(groupedTareas).sort((a, b) => {
-      const orderA = stageOrderMap[a[0]] ?? Number.MAX_SAFE_INTEGER;
-      const orderB = stageOrderMap[b[0]] ?? Number.MAX_SAFE_INTEGER;
-      return orderA - orderB;
-    });
-  }, [groupedTareas, etapas, shouldGroupByStage, tareas]);
+  }, [tareas, etapas, stagesEnabled, groupBy]);
 
   return (
     <div className="w-full bg-background space-y-4">
       <div className="space-y-5">
-        {groupedEntries.map(([etapaName, etapaTareas]) => {
-          const etapaRef = shouldGroupByStage ? etapas.find((etapa) => etapa.nombre === etapaName) : undefined;
-          const accentHex = etapaRef?.id ? stageColorMap?.[etapaRef.id] : undefined;
-          const fallbackHex = etapaRef?.color && isHexColor(etapaRef.color) ? etapaRef.color : undefined;
+        {groupedEntries.map(({ group, tareas: groupTareas }) => {
+          const isStageGroup = group.type === "stage";
+          const isProjectGroup = group.type === "project";
+
+          const accentHex = isStageGroup ? stageColorMap?.[group.id] : undefined;
+          const fallbackHex = isStageGroup && group.color && isHexColor(group.color) ? group.color : undefined;
           const chipColor = accentHex || fallbackHex;
 
           return (
-            <div key={etapaName} className="rounded-xl border border-border/50 bg-card/70 p-4 shadow-sm">
+            <div key={group.id} className="rounded-xl border border-border/50 bg-card/70 p-4 shadow-sm">
               {/* Group Header */}
-              {shouldGroupByStage ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold tracking-tight text-foreground">{etapaName}</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {isProjectGroup && <FolderKanban className="h-4 w-4 text-muted-foreground" />}
+                  {isStageGroup && chipColor && (
                     <div
-                      className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                      style={chipColor ? { backgroundColor: chipColor } : undefined}
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: chipColor }}
                     />
-                    <span>{etapaTareas.length} tareas</span>
-                  </div>
-                  <Badge variant="outline" className="text-[10px]">
-                    {etapaTareas.length > 4 ? "Alta actividad" : "Monitoreo"}
-                  </Badge>
+                  )}
+                  <p className="text-sm font-semibold text-foreground">{group.nombre}</p>
+                  {isStageGroup && (
+                    <span className="text-xs text-muted-foreground">{groupTareas.length} tareas</span>
+                  )}
                 </div>
-              ) : (
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Tareas del proyecto</p>
-                    <p className="text-xs text-muted-foreground">Vista sin etapas</p>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] uppercase tracking-[0.16em]">
-                    {etapaTareas.length} tareas
-                  </Badge>
-                </div>
-              )}
+                <Badge variant="outline" className="text-[10px] uppercase tracking-[0.16em]">
+                  {groupTareas.length} tareas
+                </Badge>
+              </div>
 
               {/* Tasks List */}
               <div className="space-y-3">
-                {etapaTareas.map((tarea) => {
+                {groupTareas.map((tarea) => {
                   const EstadoIcon = estadoConfig[tarea.estado].icon;
                   const PrioridadIcon = prioridadConfig[tarea.prioridad].icon;
                   const dueDate = formatDate(tarea.fechaVencimiento);
@@ -229,21 +243,28 @@ export function TaskListView({
                               {tarea._count.comentarios}
                             </span>
                           )}
-                          {shouldGroupByStage && tarea.etapa && (
+                          {/* Show stage badge if not grouped by stage */}
+                          {(!isStageGroup && tarea.etapa) && (
                             <Badge
                               variant="secondary"
                               className="ml-auto text-[10px]"
                               style={
                                 badgeColor
                                   ? {
-                                      borderColor: hexToRgba(badgeColor, 0.4),
-                                      backgroundColor: hexToRgba(badgeColor, 0.12),
-                                      color: badgeColor,
-                                    }
+                                    borderColor: hexToRgba(badgeColor, 0.4),
+                                    backgroundColor: hexToRgba(badgeColor, 0.12),
+                                    color: badgeColor,
+                                  }
                                   : undefined
                               }
                             >
                               #{formatStageOrder(tarea.etapa.orden)} · {tarea.etapa.nombre}
+                            </Badge>
+                          )}
+                          {/* Show project badge if not grouped by project */}
+                          {(!isProjectGroup && tarea.proyecto) && (
+                            <Badge variant="outline" className="ml-auto text-[10px]">
+                              {tarea.proyecto.nombre}
                             </Badge>
                           )}
                         </div>

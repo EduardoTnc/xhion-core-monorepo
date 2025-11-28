@@ -39,6 +39,7 @@ import { CreateProjectModal } from "./CreateProjectModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CreateDepartmentModal } from "@/components/departments/CreateDepartmentModal";
 import { DepartmentContextModal } from "@/components/departments/DepartmentContextModal";
+import { Restricted } from "../auth/Restricted";
 
 interface ProjectSidebarShadcnProps {
   proyectos: Proyecto[];
@@ -505,9 +506,11 @@ export function ProjectSidebarShadcn({
             />
           </div>
           <div className="mt-2 flex flex-col gap-2">
-            <Button onClick={onCreateProject} size="sm" className="w-full rounded-md bg-foreground text-background hover:bg-foreground/90">
-              <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
-            </Button>
+            <Restricted to="proyectos.crear">
+              <Button onClick={onCreateProject} size="sm" className="w-full rounded-md bg-foreground text-background hover:bg-foreground/90">
+                <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
+              </Button>
+            </Restricted>
             <Button
               onClick={() => setShowArchived(!showArchived)}
               variant="outline"
@@ -557,7 +560,6 @@ export function ProjectSidebarShadcn({
               const { icon: DepartmentIcon } = getDepartmentIcon(department.icono ?? departmentSource?.icono ?? undefined);
               const isDeptSelected = department.id === selectedDeptId;
               const hasProjects = department.proyectos.length > 0;
-              const disabledCreate = department.id === "sin-departamento" ? false : false;
 
               return (
                 <section
@@ -566,8 +568,8 @@ export function ProjectSidebarShadcn({
                   style={
                     hasHexColor && accentHex
                       ? {
-                          borderColor: hexToRgba(accentHex, 0.35),
-                        }
+                        borderColor: hexToRgba(accentHex, 0.35),
+                      }
                       : undefined
                   }
                 >
@@ -586,9 +588,9 @@ export function ProjectSidebarShadcn({
                             style={
                               hasHexColor && accentHex
                                 ? {
-                                    borderColor: hexToRgba(accentHex, 0.8),
-                                    backgroundColor: isDeptSelected ? hexToRgba(accentHex, 0.14) : undefined,
-                                  }
+                                  borderColor: hexToRgba(accentHex, 0.8),
+                                  backgroundColor: isDeptSelected ? hexToRgba(accentHex, 0.14) : undefined,
+                                }
                                 : { borderColor: "var(--border)" }
                             }
                           >
@@ -607,9 +609,9 @@ export function ProjectSidebarShadcn({
                               style={
                                 hasHexColor && accentHex
                                   ? {
-                                      backgroundColor: hexToRgba(accentHex, 0.15),
-                                      borderColor: hexToRgba(accentHex, 0.4),
-                                    }
+                                    backgroundColor: hexToRgba(accentHex, 0.15),
+                                    borderColor: hexToRgba(accentHex, 0.4),
+                                  }
                                   : undefined
                               }
                             >
@@ -746,11 +748,11 @@ export function ProjectSidebarShadcn({
                       style={
                         hasHexColor && accentHex
                           ? {
-                              background:
-                                "linear-gradient(90deg, " +
-                                hexToRgba(accentHex, 0.12) +
-                                " 0%, rgba(0,0,0,0) 60%)",
-                            }
+                            background:
+                              "linear-gradient(90deg, " +
+                              hexToRgba(accentHex, 0.12) +
+                              " 0%, rgba(0,0,0,0) 60%)",
+                          }
                           : undefined
                       }
                     >
@@ -764,18 +766,20 @@ export function ProjectSidebarShadcn({
                               index
                             )
                           )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleOpenCreateProjectForDepartment(
-                                department.id === "sin-departamento" ? null : department.id
-                              )
-                            }
-                            className="mt-1 flex items-center gap-1.5 rounded-full border border-dashed border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground transition hover:border-border hover:text-foreground"
-                          >
-                            <Plus className="h-3 w-3" />
-                            Nuevo proyecto
-                          </button>
+                          <Restricted to="proyectos.crear">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleOpenCreateProjectForDepartment(
+                                  department.id === "sin-departamento" ? null : department.id
+                                )
+                              }
+                              className="mt-1 flex items-center gap-1.5 rounded-full border border-dashed border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground transition hover:border-border hover:text-foreground"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Nuevo proyecto
+                            </button>
+                          </Restricted>
                         </div>
                       ) : (
                         <div className="ml-1 rounded-md border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
@@ -783,14 +787,16 @@ export function ProjectSidebarShadcn({
                           <p className="text-[10px] leading-tight text-muted-foreground">
                             Empieza creando el primero para {department.nombre}.
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCreateProjectForDepartment(department.id)}
-                            className="mt-2 inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground"
-                          >
-                            <Plus className="h-3 w-3" />
-                            Nuevo proyecto
-                          </button>
+                          <Restricted to="proyectos.crear">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCreateProjectForDepartment(department.id)}
+                              className="mt-2 inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Nuevo proyecto
+                            </button>
+                          </Restricted>
                         </div>
                       )}
                     </div>

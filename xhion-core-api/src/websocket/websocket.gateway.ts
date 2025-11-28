@@ -25,13 +25,13 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   private logger = new Logger('WebSocketGateway');
   private userSockets = new Map<string, Set<string>>(); // userId -> Set of socketIds
 
-  constructor(private jwtService: JwtService) {}
+  constructor(private jwtService: JwtService) { }
 
   async handleConnection(client: Socket) {
     try {
       // Extraer token del handshake
       const token = client.handshake.auth.token || client.handshake.headers.authorization?.split(' ')[1];
-      
+
       if (!token) {
         this.logger.warn(`Client ${client.id} disconnected: No token provided`);
         client.disconnect();
@@ -64,14 +64,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   handleDisconnect(client: Socket) {
     const userId = client.data.userId;
-    
+
     if (userId && this.userSockets.has(userId)) {
       this.userSockets.get(userId)!.delete(client.id);
-      
+
       if (this.userSockets.get(userId)!.size === 0) {
         this.userSockets.delete(userId);
       }
-      
+
       this.logger.log(`Client ${client.id} disconnected (user ${userId})`);
     } else {
       this.logger.log(`Client ${client.id} disconnected`);
@@ -117,6 +117,32 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       this.server.to(`user:${userId}`).emit('event:deleted', { eventId });
     });
     this.logger.log(`Event deleted notification sent to ${userIds.length} users`);
+  }
+
+  // ==================== TAREAS ====================
+
+  // Enviar tarea creada
+  sendTaskCreated(userIds: string[], task: any) {
+    userIds.forEach((userId) => {
+      this.server.to(`user:${userId}`).emit('task:created', task);
+    });
+    this.logger.log(`Task created notification sent to ${userIds.length} users`);
+  }
+
+  // Enviar tarea actualizada
+  sendTaskUpdated(userIds: string[], task: any) {
+    userIds.forEach((userId) => {
+      this.server.to(`user:${userId}`).emit('task:updated', task);
+    });
+    this.logger.log(`Task updated notification sent to ${userIds.length} users`);
+  }
+
+  // Enviar tarea eliminada
+  sendTaskDeleted(userIds: string[], taskId: string) {
+    userIds.forEach((userId) => {
+      this.server.to(`user:${userId}`).emit('task:deleted', { taskId });
+    });
+    this.logger.log(`Task deleted notification sent to ${userIds.length} users`);
   }
 
   // Obtener usuarios conectados

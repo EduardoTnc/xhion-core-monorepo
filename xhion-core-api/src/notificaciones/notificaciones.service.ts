@@ -3,16 +3,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificacionDto } from './dto/create-notificacion.dto';
 import { UpdateNotificacionDto } from './dto/update-notificacion.dto';
 import { TipoNotificacion, EstadoNotificacion } from '@prisma/client';
+import { NotificationsGateway } from '../websocket/websocket.gateway';
 
 @Injectable()
 export class NotificacionesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsGateway: NotificationsGateway,
+  ) { }
 
   /**
    * Crear una nueva notificación
    */
   async create(createNotificacionDto: CreateNotificacionDto) {
-    return this.prisma.notificacion.create({
+    const notificacion = await this.prisma.notificacion.create({
       data: createNotificacionDto,
       include: {
         usuario: {
@@ -37,6 +41,14 @@ export class NotificacionesService {
         },
       },
     });
+
+    // Enviar notificación en tiempo real
+    this.notificationsGateway.sendNotificationToUser(
+      createNotificacionDto.usuarioId,
+      notificacion,
+    );
+
+    return notificacion;
   }
 
   /**

@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { SesionesService } from '../sesiones/sesiones.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
 
@@ -14,16 +15,20 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly sesionesService: SesionesService,
-  ) {}
+    private readonly auditoriaService: AuditoriaService,
+  ) { }
 
   // MARK: - validateUser
   async validateUser(email: string, pass: string) {
     const user = await this.prisma.usuario.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
+      // Log failed login attempt (optional, might be noisy)
+      // await this.auditoriaService.registrarAccion(null, 'Login Failed', { email }, null);
       throw new UnauthorizedException('Credenciales inválidas');
     }
     const isMatch = await bcrypt.compare(pass, user.passwordHash);
     if (!isMatch) {
+      // await this.auditoriaService.registrarAccion(user.id, 'Login Failed', { email }, null);
       throw new UnauthorizedException('Credenciales inválidas');
     }
     return user;
@@ -50,6 +55,8 @@ export class AuthService {
       direccionIp: ip,
     });
 
+    await this.auditoriaService.registrarAccion(user.id, 'Login', { sessionId, userAgent }, ip);
+
     return { ...tokens, sessionId };
   }
 
@@ -64,6 +71,7 @@ export class AuthService {
     if (!isValidRefresh) {
       // Invalida la sesión comprometida
       await this.sesionesService.revokeSession(sessionId, userId);
+      await this.auditoriaService.registrarAccion(userId, 'Security Alert', { detail: 'Invalid Refresh Token', sessionId }, null);
       throw new UnauthorizedException('Refresh token inválido');
     }
 
@@ -84,13 +92,14 @@ export class AuthService {
   // MARK: - logout
   async logout(sessionId: string, userId: string) {
     await this.sesionesService.revokeSession(sessionId, userId);
+    await this.auditoriaService.registrarAccion(userId, 'Logout', { sessionId }, null);
     return { success: true };
   }
 
   // MARK: - acceptInvitation
   async acceptInvitation(
-    token: string, 
-    password: string, 
+    token: string,
+    password: string,
     profileData: { avatarUrl?: string; telefono?: string; fechaNacimiento?: string; biografia?: string },
     request: Request
   ) {

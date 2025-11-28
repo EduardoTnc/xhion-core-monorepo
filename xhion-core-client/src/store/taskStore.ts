@@ -30,6 +30,11 @@ interface TaskState {
   deleteTarea: (id: string) => Promise<void>;
   setTareaActual: (tarea: Tarea | null) => void;
 
+  // Acciones - Real-time
+  onTaskCreated: (tarea: Tarea) => void;
+  onTaskUpdated: (tarea: Tarea) => void;
+  onTaskDeleted: (tareaId: string) => void;
+
   // Acciones - Comentarios
   fetchComentarios: (tareaId: string) => Promise<void>;
   addComentario: (tareaId: string, contenido: string) => Promise<void>;
@@ -63,6 +68,31 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   misTareas: [],
   isLoading: false,
   error: null,
+
+  // ==================== REAL-TIME ACTIONS ====================
+
+  onTaskCreated: (tarea: Tarea) => {
+    set((state) => ({
+      tareas: [tarea, ...state.tareas],
+      misTareas: [tarea, ...state.misTareas], // Logic could be more complex based on assignment
+    }));
+  },
+
+  onTaskUpdated: (tarea: Tarea) => {
+    set((state) => ({
+      tareas: state.tareas.map((t) => (t.id === tarea.id ? tarea : t)),
+      misTareas: state.misTareas.map((t) => (t.id === tarea.id ? tarea : t)),
+      tareaActual: state.tareaActual?.id === tarea.id ? tarea : state.tareaActual,
+    }));
+  },
+
+  onTaskDeleted: (tareaId: string) => {
+    set((state) => ({
+      tareas: state.tareas.filter((t) => t.id !== tareaId),
+      misTareas: state.misTareas.filter((t) => t.id !== tareaId),
+      tareaActual: state.tareaActual?.id === tareaId ? null : state.tareaActual,
+    }));
+  },
 
   // ==================== TAREAS ====================
 
@@ -174,12 +204,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   fetchTareaById: async (id) => {
-    set({ isLoading: true, error: null });
+    // Don't set global isLoading to true to avoid list flickering
+    // set({ isLoading: true, error: null });
+    set({ error: null });
     try {
       const tarea = await taskService.getById(id);
-      set({ tareaActual: tarea, comentarios: tarea.comentarios || [], isLoading: false });
+      set({ tareaActual: tarea, comentarios: tarea.comentarios || [] });
     } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error.message });
       throw error;
     }
   },
@@ -271,13 +303,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         comentarios: [...state.comentarios, comentario],
         tareaActual: state.tareaActual
           ? {
-              ...state.tareaActual,
-              comentarios: [...(state.tareaActual.comentarios || []), comentario],
-              _count: {
-                ...state.tareaActual._count,
-                comentarios: (state.tareaActual._count?.comentarios || 0) + 1,
-              },
-            }
+            ...state.tareaActual,
+            comentarios: [...(state.tareaActual.comentarios || []), comentario],
+            _count: {
+              ...state.tareaActual._count,
+              comentarios: (state.tareaActual._count?.comentarios || 0) + 1,
+            },
+          }
           : null,
         isLoading: false,
       }));
@@ -295,13 +327,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         comentarios: state.comentarios.filter((c) => c.id !== comentarioId),
         tareaActual: state.tareaActual
           ? {
-              ...state.tareaActual,
-              comentarios: state.tareaActual.comentarios?.filter((c) => c.id !== comentarioId),
-              _count: {
-                ...state.tareaActual._count,
-                comentarios: Math.max((state.tareaActual._count?.comentarios || 1) - 1, 0),
-              },
-            }
+            ...state.tareaActual,
+            comentarios: state.tareaActual.comentarios?.filter((c) => c.id !== comentarioId),
+            _count: {
+              ...state.tareaActual._count,
+              comentarios: Math.max((state.tareaActual._count?.comentarios || 1) - 1, 0),
+            },
+          }
           : null,
         isLoading: false,
       }));

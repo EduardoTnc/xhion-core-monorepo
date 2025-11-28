@@ -10,12 +10,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical, Edit, Trash2 } from "lucide-react";
+import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical, Edit, Trash2, FolderKanban, ChevronDown, ChevronRight } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
 import { useTaskStore } from "@/store/taskStore";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Restricted } from "../auth/Restricted";
 
 interface TaskKanbanViewDnDProps {
   tareas: Tarea[];
@@ -26,6 +28,8 @@ interface TaskKanbanViewDnDProps {
   etapas: Etapa[];
   stageColorMap?: Record<string, string>;
   stagesEnabled?: boolean;
+  onRefresh?: () => Promise<void>;
+  groupBy?: "none" | "project" | "stage";
 }
 
 const prioridadConfig = {
@@ -100,28 +104,12 @@ const buildColumnsFromTasks = (taskList: Tarea[]): Record<EstadoColumnKey, Tarea
   };
 
   taskList.forEach((task) => {
-    base[task.estado as EstadoColumnKey].push(task);
+    if (base[task.estado as EstadoColumnKey]) {
+      base[task.estado as EstadoColumnKey].push(task);
+    }
   });
 
   return base;
-};
-
-const areColumnsEqual = (
-  a: Record<EstadoColumnKey, Tarea[]>,
-  b: Record<EstadoColumnKey, Tarea[]>
-): boolean => {
-  const states: EstadoColumnKey[] = ["Por_Hacer", "En_Progreso", "Hecho", "Bloqueado"];
-  return states.every((state) => {
-    const columnA = a[state];
-    const columnB = b[state];
-    if (columnA.length !== columnB.length) return false;
-    for (let i = 0; i < columnA.length; i += 1) {
-      if (columnA[i].id !== columnB[i].id || columnA[i].estado !== columnB[i].estado) {
-        return false;
-      }
-    }
-    return true;
-  });
 };
 
 export function TaskKanbanViewDnD({
@@ -133,18 +121,29 @@ export function TaskKanbanViewDnD({
   etapas,
   stageColorMap,
   stagesEnabled = true,
+  onRefresh,
+  groupBy = "none",
 }: TaskKanbanViewDnDProps) {
   const { updateTarea, fetchTareas } = useTaskStore();
-  const [columnsState, setColumnsState] = useState<Record<EstadoColumnKey, Tarea[]>>(() => buildColumnsFromTasks(tareas));
-  const [allowExternalSync, setAllowExternalSync] = useState(true);
+
+  // We need to maintain local state for optimistic updates.
+  // When grouped by project, we need a structure like { [projectId]: { [status]: Tarea[] } }
+  // When not grouped, just { [status]: Tarea[] }
+  // However, to simplify, we can just use the `tareas` prop and re-calculate columns on render,
+  // BUT DnD requires stable state during the drag.
+  // So we will use a single state object that holds ALL tasks, and we derive the views from it.
+  const [localTareas, setLocalTareas] = useState<Tarea[]>(tareas);
 
   useEffect(() => {
-    if (!allowExternalSync) return;
-    setColumnsState((prev) => {
-      const next = buildColumnsFromTasks(tareas);
-      return areColumnsEqual(prev, next) ? prev : next;
-    });
-  }, [tareas, allowExternalSync]);
+    setLocalTareas(tareas);
+  }, [tareas]);
+
+  const stageMetaMap = useMemo(() => {
+    return etapas.reduce<Record<string, Etapa>>((acc, etapa) => {
+      acc[etapa.id] = etapa;
+      return acc;
+    }, {});
+  }, [etapas]);
 
   const getInitials = (name: string) => {
     return name
@@ -167,83 +166,106 @@ export function TaskKanbanViewDnD({
     };
   };
 
-  const columns = Object.entries(estadoConfig).map(([estado, config]) => ({
-    estado: estado as EstadoColumnKey,
-    config,
-    tareas: columnsState[estado as EstadoColumnKey] || [],
-  }));
-
-  const stageMetaMap = useMemo(() => {
-    return etapas.reduce<Record<string, Etapa>>((acc, etapa) => {
-      acc[etapa.id] = etapa;
-      return acc;
-    }, {});
-  }, [etapas]);
-
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
-    // No destination or same position
-    if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
-      return;
-    }
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
-    const taskId = draggableId;
-    const sourceColumnKey = source.droppableId as EstadoColumnKey;
-    const destinationColumnKey = destination.droppableId as EstadoColumnKey;
-
-    const taskBeingMoved = columnsState[sourceColumnKey]?.[source.index];
-    if (!taskBeingMoved) return;
-
-    const previousState = columnsState;
-
-    const nextState: Record<EstadoColumnKey, Tarea[]> = {
-      Por_Hacer: [...columnsState.Por_Hacer],
-      En_Progreso: [...columnsState.En_Progreso],
-      Hecho: [...columnsState.Hecho],
-      Bloqueado: [...columnsState.Bloqueado],
+    // Parse droppableIds
+    // Format: "${projectId}::${status}" or just "${status}" if not grouped (or global project)
+    const getParts = (id: string) => {
+      if (id.includes("::")) {
+        const [pid, status] = id.split("::");
+        return { pid, status: status as EstadoColumnKey };
+      }
+      return { pid: "global", status: id as EstadoColumnKey };
     };
 
-    const [removedTask] = nextState[sourceColumnKey].splice(source.index, 1);
-    const updatedTask = {
-      ...removedTask,
-      estado: destinationColumnKey,
-    } as Tarea;
+    const sourceParts = getParts(source.droppableId);
+    const destParts = getParts(destination.droppableId);
 
-    nextState[destinationColumnKey].splice(destination.index, 0, updatedTask);
+    // Optimistic update
+    const newTareas = [...localTareas];
+    const taskIndex = newTareas.findIndex(t => t.id === draggableId);
+    if (taskIndex === -1) return;
 
-    setAllowExternalSync(false);
-    setColumnsState(nextState);
+    const task = newTareas[taskIndex];
+
+    // Update task status
+    const updatedTask = { ...task, estado: destParts.status };
+
+    // If moving between projects (if we allowed it), we'd update project ID too.
+    // For now, let's assume we only drag within the same project or "global" lists.
+    // If we support cross-project drag, we need to handle it here.
+    if (sourceParts.pid !== destParts.pid && destParts.pid !== "global") {
+      // updatedTask.proyectoId = destParts.pid; // If we wanted to support moving projects
+      // For now, let's restrict or just update status. 
+      // If the user drags to another project's column, it implies changing project.
+      // Let's support it if the backend supports it.
+      // updatedTask.proyectoId = destParts.pid;
+    }
+
+    newTareas[taskIndex] = updatedTask;
+    setLocalTareas(newTareas);
 
     try {
-      await updateTarea(taskId, {
-        estado: destinationColumnKey,
+      await updateTarea(draggableId, {
+        estado: destParts.status,
+        // proyectoId: destParts.pid !== "global" ? destParts.pid : undefined 
       });
-
-      toast.success("Tarea movida exitosamente");
-
-      // Refresh tasks
-      await fetchTareas({ proyectoId });
-      setAllowExternalSync(true);
-    } catch (error: any) {
-      setColumnsState(previousState);
-      setAllowExternalSync(true);
-      toast.error(error.message || "Error al mover la tarea");
+      toast.success("Tarea actualizada");
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      setLocalTareas(tareas); // Revert
+      toast.error("Error al mover la tarea");
     }
   };
 
-  return (
-    <div className="flex w-full flex-col gap-4">
-      <DragDropContext onDragEnd={handleDragEnd}>
-        {/* Kanban board - sin contenedor separado */}
+  // Grouping Logic
+  const groupedData = useMemo(() => {
+    if (groupBy === "project") {
+      const groups: Record<string, { id: string; nombre: string; tareas: Tarea[] }> = {};
+      localTareas.forEach(t => {
+        const pid = t.proyectoId || "sin-proyecto";
+        if (!groups[pid]) {
+          groups[pid] = {
+            id: pid,
+            nombre: t.proyecto?.nombre || "Sin Proyecto",
+            tareas: []
+          };
+        }
+        groups[pid].tareas.push(t);
+      });
+      return Object.values(groups);
+    }
+    return [{ id: "global", nombre: "Todas las tareas", tareas: localTareas }];
+  }, [localTareas, groupBy]);
+
+  const renderBoard = (groupTareas: Tarea[], groupId: string, groupName: string) => {
+    const columns = buildColumnsFromTasks(groupTareas);
+
+    return (
+      <div key={groupId} className="mb-8">
+        {groupBy === "project" && (
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <FolderKanban className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-lg font-semibold text-foreground">{groupName}</h3>
+            <Badge variant="secondary" className="ml-2">{groupTareas.length}</Badge>
+          </div>
+        )}
+
         <div className="-mx-1 overflow-x-auto pb-2 md:mx-0 md:overflow-visible">
-          <div className="flex gap-3 px-1 snap-x snap-mandatory md:grid md:grid-cols-2 xl:grid-cols-4 md:snap-none">
-            {columns.map(({ estado, config, tareas: columnTareas }) => {
-              const percentage = tareas.length === 0 ? 0 : Math.round((columnTareas.length / tareas.length) * 100);
+          <div className="flex gap-3 px-1 snap-x snap-mandatory md:grid md:grid-cols-4 md:snap-none">
+            {Object.entries(estadoConfig).map(([estado, config]) => {
+              const columnTareas = columns[estado as EstadoColumnKey] || [];
+              const droppableId = groupBy === "project" ? `${groupId}::${estado}` : estado;
+              const percentage = groupTareas.length === 0 ? 0 : Math.round((columnTareas.length / groupTareas.length) * 100);
+
               return (
                 <div
-                  key={estado}
-                  className="flex min-h-[420px] min-w-[270px] flex-col rounded-xl border border-border/60 bg-card p-3 shadow-sm snap-start"
+                  key={droppableId}
+                  className="flex min-h-[200px] min-w-[270px] flex-col rounded-xl border border-border/60 bg-card p-3 shadow-sm snap-start"
                 >
                   <div className="flex items-start justify-between gap-2 border-b pb-2">
                     <div className="flex flex-col gap-1">
@@ -252,192 +274,134 @@ export function TaskKanbanViewDnD({
                         {config.label}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {columnTareas.length === 0
-                          ? "Sin tareas"
-                          : `${columnTareas.length} ${columnTareas.length === 1 ? "tarea" : "tareas"} · ${percentage}% del total`}
+                        {columnTareas.length} {columnTareas.length === 1 ? "tarea" : "tareas"}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-xs font-semibold">
-                      {columnTareas.length}
-                    </Badge>
                   </div>
 
-                  <Droppable droppableId={estado}>
+                  <Droppable droppableId={droppableId}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                         className={cn(
-                          "mt-3 flex-1 rounded-2xl border border-dashed border-transparent bg-transparent transition",
+                          "mt-3 flex-1 rounded-2xl border border-dashed border-transparent bg-transparent transition-colors min-h-[100px]",
                           snapshot.isDraggingOver && "border-primary/40 bg-primary/5"
                         )}
                       >
                         <div className="flex flex-col gap-2">
-                          {columnTareas.length === 0 ? (
-                            <div className="py-10 text-center text-xs text-muted-foreground">
-                              Arrastra tareas aquí
-                            </div>
-                          ) : (
-                            columnTareas.map((tarea, index) => (
-                              <Draggable key={tarea.id} draggableId={tarea.id} index={index}>
-                                {(provided, snapshot) => (
-                                  <Card
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    onClick={() => !snapshot.isDragging && onTaskClick(tarea.id)}
-                                    className={cn(
-                                      "group flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/90 p-4 text-sm shadow-sm transition-all",
-                                      "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg",
-                                      snapshot.isDragging && "rotate-1 scale-105 shadow-2xl",
-                                      prioridadConfig[tarea.prioridad].accent
-                                    )}
-                                  >
-                                    <div className="flex items-center justify-between gap-2" >
-                                      <div className="flex items-center gap-2" {...provided.dragHandleProps}>
-                                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                                        {stagesEnabled && (() => {
-                                          const stageMeta = tarea.etapa?.id ? stageMetaMap[tarea.etapa.id] : undefined;
-                                          if (!stageMeta) return null;
-                                          const gradientHex = stageColorMap?.[stageMeta.id];
-                                          const fallbackHex = stageMeta.color && isHexColor(stageMeta.color) ? stageMeta.color : undefined;
-                                          const accentHex = gradientHex || fallbackHex;
-                                          const accentClass = stageMeta.color && !isHexColor(stageMeta.color) ? stageMeta.color : undefined;
-                                          return (
-                                            <span
-                                              className={cn(
-                                                "inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[11px] font-semibold",
-                                                accentClass && "text-white"
-                                              )}
-                                              style={
-                                                accentHex
-                                                  ? {
-                                                      borderColor: hexToRgba(accentHex, 0.45),
-                                                      backgroundColor: hexToRgba(accentHex, 0.15),
-                                                      color: accentHex,
-                                                    }
-                                                  : undefined
-                                              }
-                                            >
-                                              <span className="text-[10px] font-semibold opacity-80">
-                                                #{formatStageOrder(stageMeta?.orden)}
-                                              </span>
-                                              <span>{stageMeta?.nombre}</span>
-                                            </span>
-                                          );
-                                        })()}
-                                      </div>
-                                      {(onEditTask || onDeleteTask) && (
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                                              <MoreVertical className="h-3.5 w-3.5" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            {onEditTask && (
-                                              <DropdownMenuItem
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  onEditTask(tarea.id);
-                                                }}
-                                              >
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                Editar
-                                              </DropdownMenuItem>
+                          {columnTareas.map((tarea, index) => (
+                            <Draggable key={tarea.id} draggableId={tarea.id} index={index}>
+                              {(provided, snapshot) => (
+                                <Card
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  onClick={() => !snapshot.isDragging && onTaskClick(tarea.id)}
+                                  className={cn(
+                                    "group flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/90 p-4 text-sm shadow-sm transition-all",
+                                    "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg",
+                                    snapshot.isDragging && "rotate-1 scale-105 shadow-2xl",
+                                    prioridadConfig[tarea.prioridad].accent
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2" {...provided.dragHandleProps}>
+                                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                      {/* Stage Badge */}
+                                      {stagesEnabled && (() => {
+                                        const stageMeta = tarea.etapa?.id ? stageMetaMap[tarea.etapa.id] : undefined;
+                                        if (!stageMeta) return null;
+                                        const accentHex = stageColorMap?.[stageMeta.id] || (stageMeta.color && isHexColor(stageMeta.color) ? stageMeta.color : undefined);
+                                        return (
+                                          <span
+                                            className={cn(
+                                              "inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[11px] font-semibold",
                                             )}
-                                            {onDeleteTask && (
-                                              <DropdownMenuItem
-                                                className="text-destructive"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  onDeleteTask(tarea.id);
-                                                }}
-                                              >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Eliminar
-                                              </DropdownMenuItem>
-                                            )}
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <h4 className="text-base font-semibold leading-snug text-foreground line-clamp-2">
-                                        {tarea.titulo}
-                                      </h4>
-                                      {tarea.descripcion && (
-                                        <p className="text-xs text-muted-foreground line-clamp-3">
-                                          {tarea.descripcion}
-                                        </p>
-                                      )}
-                                    </div>
-
-                                    <div className="space-y-2 text-[11px] text-muted-foreground">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <Badge
-                                          variant="outline"
-                                          className={cn("text-[10px] font-semibold", prioridadConfig[tarea.prioridad].badge)}
-                                        >
-                                          <Flag className={cn("mr-1 h-3 w-3", prioridadConfig[tarea.prioridad].color)} />
-                                          {tarea.prioridad}
-                                        </Badge>
-                                        {(() => {
-                                          const due = formatDate(tarea.fechaVencimiento);
-                                          if (!due) {
-                                            return (
-                                              <span className="inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5">
-                                                <Calendar className="h-3 w-3" />
-                                                Sin fecha
-                                              </span>
-                                            );
-                                          }
-                                          return (
-                                            <span
-                                              className={cn(
-                                                "inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5",
-                                                due.isOverdue && "text-red-500 border-red-500/40"
-                                              )}
-                                            >
-                                              <Calendar className="h-3 w-3" />
-                                              {due.text}
-                                            </span>
-                                          );
-                                        })()}
-                                      </div>
-
-                                      <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="flex items-center gap-1">
-                                          <MessageSquare className="h-3.5 w-3.5" />
-                                          <span className="font-medium text-foreground">
-                                            {tarea._count?.comentarios ?? 0}
+                                            style={accentHex ? {
+                                              borderColor: hexToRgba(accentHex, 0.45),
+                                              backgroundColor: hexToRgba(accentHex, 0.15),
+                                              color: accentHex,
+                                            } : undefined}
+                                          >
+                                            <span className="text-[10px] font-semibold opacity-80">#{formatStageOrder(stageMeta?.orden)}</span>
+                                            <span>{stageMeta?.nombre}</span>
                                           </span>
-                                          <span className="text-muted-foreground/70">comentarios</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {tarea.asignado ? (
-                                            <>
-                                              <Avatar className="h-7 w-7 border border-background/60">
-                                                <AvatarImage src={tarea.asignado.avatarUrl || undefined} />
-                                                <AvatarFallback className="text-[10px]">
-                                                  {getInitials(tarea.asignado.nombreCompleto)}
-                                                </AvatarFallback>
-                                              </Avatar>
-                                              <span className="text-xs text-foreground line-clamp-1">
-                                                {tarea.asignado.nombreCompleto}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <span className="text-xs italic text-muted-foreground">Sin responsable</span>
+                                        );
+                                      })()}
+                                    </div>
+                                    {(onEditTask || onDeleteTask) && (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <MoreVertical className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          {onEditTask && (
+                                            <Restricted to="tareas.editar">
+                                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditTask(tarea.id); }}>
+                                                <Edit className="mr-2 h-4 w-4" /> Editar
+                                              </DropdownMenuItem>
+                                            </Restricted>
                                           )}
-                                        </div>
+                                          {onDeleteTask && (
+                                            <Restricted to="tareas.eliminar">
+                                              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteTask(tarea.id); }}>
+                                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                              </DropdownMenuItem>
+                                            </Restricted>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    )}
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <h4 className="text-base font-semibold leading-snug text-foreground line-clamp-2">{tarea.titulo}</h4>
+                                    {tarea.descripcion && (
+                                      <p className="text-xs text-muted-foreground line-clamp-3">{tarea.descripcion}</p>
+                                    )}
+                                  </div>
+
+                                  <div className="space-y-2 text-[11px] text-muted-foreground">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline" className={cn("text-[10px] font-semibold", prioridadConfig[tarea.prioridad].badge)}>
+                                        <Flag className={cn("mr-1 h-3 w-3", prioridadConfig[tarea.prioridad].color)} />
+                                        {tarea.prioridad}
+                                      </Badge>
+                                      {(() => {
+                                        const due = formatDate(tarea.fechaVencimiento);
+                                        if (!due) return <span className="inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5"><Calendar className="h-3 w-3" /> Sin fecha</span>;
+                                        return (
+                                          <span className={cn("inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5", due.isOverdue && "text-red-500 border-red-500/40")}>
+                                            <Calendar className="h-3 w-3" /> {due.text}
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        <span className="font-medium text-foreground">{tarea._count?.comentarios ?? 0}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {tarea.asignado ? (
+                                          <>
+                                            <Avatar className="h-7 w-7 border border-background/60">
+                                              <AvatarImage src={tarea.asignado.avatarUrl || undefined} />
+                                              <AvatarFallback className="text-[10px]">{getInitials(tarea.asignado.nombreCompleto)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-xs text-foreground line-clamp-1">{tarea.asignado.nombreCompleto}</span>
+                                          </>
+                                        ) : <span className="text-xs italic text-muted-foreground">Sin responsable</span>}
                                       </div>
                                     </div>
-                                  </Card>
-                                )}
-                              </Draggable>
-                            ))
-                          )}
+                                  </div>
+                                </Card>
+                              )}
+                            </Draggable>
+                          ))}
                           {provided.placeholder}
                         </div>
                       </div>
@@ -448,6 +412,14 @@ export function TaskKanbanViewDnD({
             })}
           </div>
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <DragDropContext onDragEnd={handleDragEnd}>
+        {groupedData.map(group => renderBoard(group.tareas, group.id, group.nombre))}
       </DragDropContext>
     </div>
   );

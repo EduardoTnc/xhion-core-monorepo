@@ -37,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Restricted } from "../auth/Restricted"
 
 // Función para formatear fechas
 const formatDate = (dateString: string | null | undefined): string => {
@@ -84,7 +85,7 @@ export function UsersView() {
   // Filtrar usuarios
   const filteredUsers = todosLosUsuarios.filter(user => {
     // Filtro de búsqueda
-    const matchesSearch = 
+    const matchesSearch =
       user.nombreCompleto.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
 
@@ -122,10 +123,10 @@ export function UsersView() {
     try {
       const newStatus = userToToggle.currentStatus === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
       await userService.updateStatus(userToToggle.id, newStatus)
-      
+
       toast.success(`Usuario ${newStatus === 'ACTIVO' ? 'activado' : 'desactivado'} exitosamente`)
       setUserToToggle(null)
-      
+
       // Recargar datos
       await fetchInitialData()
     } catch (error: any) {
@@ -142,10 +143,10 @@ export function UsersView() {
     setIsDeleting(true)
     try {
       await userService.deleteUser(userToDelete)
-      
+
       toast.success('Usuario eliminado exitosamente')
       setUserToDelete(null)
-      
+
       // Recargar datos
       await fetchInitialData()
     } catch (error: any) {
@@ -169,7 +170,7 @@ export function UsersView() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 variant="outline"
                 className="gap-2"
                 onClick={() => setIsStatsModalOpen(true)}
@@ -177,14 +178,16 @@ export function UsersView() {
                 <TrendingUp className="h-4 w-4" />
                 <span className="hidden sm:inline">Estadísticas</span>
               </Button>
-              <Button 
-                className="gap-2 w-full sm:w-auto"
-                onClick={() => setIsInviteModalOpen(true)}
-              >
-                <UserPlus className="h-4 w-4" />
-                <span className="hidden sm:inline">Invitar Usuario</span>
-                <span className="sm:hidden">Invitar</span>
-              </Button>
+              <Restricted to="usuarios.crear">
+                <Button
+                  className="gap-2 w-full sm:w-auto"
+                  onClick={() => setIsInviteModalOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Invitar Usuario</span>
+                  <span className="sm:hidden">Invitar</span>
+                </Button>
+              </Restricted>
             </div>
           </div>
 
@@ -290,13 +293,15 @@ export function UsersView() {
                   : "Comienza invitando usuarios al sistema"}
               </p>
               {!searchQuery && roleFilter === "all" && statusFilter === "all" && (
-                <Button 
-                  className="mt-4 gap-2"
-                  onClick={() => setIsInviteModalOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Invitar Usuario
-                </Button>
+                <Restricted to="usuarios.crear">
+                  <Button
+                    className="mt-4 gap-2"
+                    onClick={() => setIsInviteModalOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Invitar Usuario
+                  </Button>
+                </Restricted>
               )}
             </div>
           </div>
@@ -305,7 +310,7 @@ export function UsersView() {
           <div className="space-y-3">
             {filteredUsers.map((user) => {
               const userRole = rolesCompletos.find(r => r.id === user.rolId)
-              
+
               return (
                 <div
                   key={user.id}
@@ -323,19 +328,19 @@ export function UsersView() {
                       <h4 className="text-sm font-medium text-foreground truncate">
                         {user.nombreCompleto}
                       </h4>
-                      <Badge 
-                        variant={user.estado === "ACTIVO" ? "default" : "secondary"} 
+                      <Badge
+                        variant={user.estado === "ACTIVO" ? "default" : "secondary"}
                         className="text-xs"
                       >
                         {user.estado === "ACTIVO" ? "Activo" : "Inactivo"}
                       </Badge>
                       {userRole && (
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className="text-xs"
-                          style={{ 
+                          style={{
                             borderColor: userRole.color || undefined,
-                            color: userRole.color || undefined 
+                            color: userRole.color || undefined
                           }}
                         >
                           <Shield className="h-3 w-3 mr-1" />
@@ -366,40 +371,46 @@ export function UsersView() {
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      
+
                       <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
                         <Eye className="mr-2 h-4 w-4" />
                         Ver Detalles
                       </DropdownMenuItem>
-                      
-                      <DropdownMenuItem onClick={() => handleChangeRole(user.id)}>
-                        <Shield className="mr-2 h-4 w-4" />
-                        Cambiar Rol
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuItem onClick={() => setUserToToggle({ id: user.id, currentStatus: user.estado })}>
-                        {user.estado === 'ACTIVO' ? (
-                          <>
-                            <Ban className="mr-2 h-4 w-4" />
-                            Desactivar Usuario
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Activar Usuario
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      
+
+                      <Restricted to="usuarios.gestionar_roles">
+                        <DropdownMenuItem onClick={() => handleChangeRole(user.id)}>
+                          <Shield className="mr-2 h-4 w-4" />
+                          Cambiar Rol
+                        </DropdownMenuItem>
+                      </Restricted>
+
+                      <Restricted to="usuarios.editar">
+                        <DropdownMenuItem onClick={() => setUserToToggle({ id: user.id, currentStatus: user.estado })}>
+                          {user.estado === 'ACTIVO' ? (
+                            <>
+                              <Ban className="mr-2 h-4 w-4" />
+                              Desactivar Usuario
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Activar Usuario
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </Restricted>
+
                       <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem 
-                        onClick={() => setUserToDelete(user.id)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar Usuario
-                      </DropdownMenuItem>
+
+                      <Restricted to="usuarios.eliminar">
+                        <DropdownMenuItem
+                          onClick={() => setUserToDelete(user.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar Usuario
+                        </DropdownMenuItem>
+                      </Restricted>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

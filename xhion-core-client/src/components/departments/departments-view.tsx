@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DepartmentContextModal } from "./DepartmentContextModal"
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal"
+import { Restricted } from "../auth/Restricted"
 
 export function DepartmentsView() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -347,10 +348,12 @@ export function DepartmentsView() {
           >
             {departamentos.every((dept) => expandedDepartments[dept.id]) ? "Contraer todos" : "Desplegar todos"}
           </Button>
-          <Button size="sm" className="h-9 gap-2 text-xs" onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-3.5 w-3.5" />
-            Nuevo
-          </Button>
+          <Restricted to="departamentos.crear">
+            <Button size="sm" className="h-9 gap-2 text-xs" onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Nuevo
+            </Button>
+          </Restricted>
         </div>
       </div>
 
@@ -391,9 +394,8 @@ export function DepartmentsView() {
                         <button
                           type="button"
                           aria-expanded={isExpanded}
-                          className={`flex w-full items-center justify-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition hover:border-primary hover:text-primary ${
-                            isExpanded ? "border-primary/70 text-primary" : "border-border/60 text-muted-foreground"
-                          }`}
+                          className={`flex w-full items-center justify-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition hover:border-primary hover:text-primary ${isExpanded ? "border-primary/70 text-primary" : "border-border/60 text-muted-foreground"
+                            }`}
                           onClick={() => toggleDepartmentExpansion(department.id)}
                         >
                           <ChevronRight

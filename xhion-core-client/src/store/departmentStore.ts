@@ -47,6 +47,10 @@ export const useDepartmentStore = create<DepartmentState>((set, get) => ({
       const departamentos = await departmentService.getAll();
       set({ departamentos, isLoading: false });
     } catch (error: any) {
+      if (error?.response?.status === 401) {
+        set({ isLoading: false });
+        return;
+      }
       const errorMessage = error.response?.data?.message || 'Error al cargar departamentos';
       set({ error: errorMessage, isLoading: false });
       toast.error(errorMessage);

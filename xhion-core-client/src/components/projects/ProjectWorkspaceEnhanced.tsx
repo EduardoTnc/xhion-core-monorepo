@@ -26,6 +26,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
 import { type Etapa, type ProyectoMiembro } from "@/services/projectService";
 import { type Tarea } from "@/services/taskService";
+import { Restricted } from "../auth/Restricted";
 
 type ViewMode = "kanban" | "list" | "table" | "timeline";
 
@@ -79,9 +80,9 @@ interface ProjectWorkspaceEnhancedProps {
   hideSidebar?: boolean;
 }
 
-export function ProjectWorkspaceEnhanced({ 
+export function ProjectWorkspaceEnhanced({
   proyectoId: proyectoIdProp,
-  hideSidebar = false 
+  hideSidebar = false
 }: ProjectWorkspaceEnhancedProps = {}) {
   const {
     proyectos,
@@ -393,7 +394,7 @@ export function ProjectWorkspaceEnhanced({
 
   const confirmDeleteTask = async () => {
     if (!tareaToDelete) return;
-    
+
     try {
       await useTaskStore.getState().deleteTarea(tareaToDelete);
       toast.success('Tarea eliminada exitosamente');
@@ -602,13 +603,15 @@ export function ProjectWorkspaceEnhanced({
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
-                        <Button
-                          size="sm"
-                          className="w-full sm:w-auto gap-2"
-                          onClick={() => setShowCreateTaskModal(true)}
-                        >
-                          <Plus className="h-4 w-4" /> Nueva tarea
-                        </Button>
+                        <Restricted to="tareas.crear">
+                          <Button
+                            size="sm"
+                            className="w-full sm:w-auto gap-2"
+                            onClick={() => setShowCreateTaskModal(true)}
+                          >
+                            <Plus className="h-4 w-4" /> Nueva tarea
+                          </Button>
+                        </Restricted>
                         <ExportMenu tareas={filteredTareas} proyecto={proyectoActual} />
                         <Button
                           variant="ghost"
@@ -668,8 +671,8 @@ export function ProjectWorkspaceEnhanced({
                     />
                   )}
                   {viewMode === "table" && (
-                    <TaskTableView 
-                      tareas={filteredTareas} 
+                    <TaskTableView
+                      tareas={filteredTareas}
                       onTaskClick={handleTaskClick}
                       onEditTask={handleEditTaskDirect}
                       onDeleteTask={handleDeleteTask}
@@ -695,9 +698,11 @@ export function ProjectWorkspaceEnhanced({
             <p className="text-muted-foreground text-lg text-center">
               No hay proyectos disponibles
             </p>
-            <Button onClick={() => setShowCreateProjectModal(true)}>
-              Crear tu primer proyecto
-            </Button>
+            <Restricted to="proyectos.crear">
+              <Button onClick={() => setShowCreateProjectModal(true)}>
+                Crear tu primer proyecto
+              </Button>
+            </Restricted>
           </div>
         )}
       </div>
