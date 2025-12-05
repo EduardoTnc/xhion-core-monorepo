@@ -39,7 +39,7 @@ export function SettingsView() {
   // Actualizar tab cuando cambie el parámetro de URL
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab && ['profile', 'notifications', 'security', 'appearance', 'system'].includes(tab)) {
+    if (tab && ['profile', 'notifications', 'security', 'data'].includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
@@ -319,15 +319,15 @@ export function SettingsView() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="border-b border-border bg-card p-6">
-        <h1 className="text-2xl font-semibold text-foreground">Configuración de Perfil</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Gestiona tu cuenta y preferencias personales</p>
+      {/* Header - Compact */}
+      <div className="border-b border-border bg-card px-4 py-3 md:px-6">
+        <h1 className="text-lg font-semibold text-foreground">Configuración de Perfil</h1>
+        <p className="text-xs text-muted-foreground">Gestiona tu cuenta y preferencias personales</p>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
           <TabsList>
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
@@ -341,10 +341,6 @@ export function SettingsView() {
               <Shield className="h-4 w-4" />
               Seguridad
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="gap-2">
-              <Palette className="h-4 w-4" />
-              Apariencia
-            </TabsTrigger>
             <TabsTrigger value="data" className="gap-2">
               <Globe className="h-4 w-4" />
               Datos
@@ -352,20 +348,20 @@ export function SettingsView() {
           </TabsList>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
+          <TabsContent value="profile" className="space-y-3">
             {/* Información Personal */}
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Información Personal</h3>
-              <div className="space-y-6">
-                {/* Avatar */}
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-20 w-20">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Información Personal</h3>
+              <div className="space-y-4">
+                {/* Avatar row */}
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
                     <AvatarImage src={user?.avatarUrl || undefined} alt={user?.nombreCompleto} />
-                    <AvatarFallback className="text-lg">
+                    <AvatarFallback className="text-base">
                       {user?.nombreCompleto?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-2">
+                  <div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -375,51 +371,52 @@ export function SettingsView() {
                     />
                     <Button
                       variant="outline"
-                      className="gap-2 bg-transparent"
+                      size="sm"
+                      className="gap-2"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <Upload className="h-4 w-4" />
                       Cambiar foto
                     </Button>
-                    <p className="text-xs text-muted-foreground">JPG, PNG o GIF. Máximo 2MB.</p>
+                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG o GIF. Máx 2MB.</p>
                   </div>
                 </div>
 
-                {/* Nombre Completo */}
-                <div className="space-y-2">
-                  <Label htmlFor="nombreCompleto">Nombre Completo</Label>
-                  <Input
-                    id="nombreCompleto"
-                    value={profileData.nombreCompleto}
-                    onChange={(e) => setProfileData({ ...profileData, nombreCompleto: e.target.value })}
-                    placeholder="Ej: Juan Pérez García"
-                  />
+                {/* Name + Email row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="nombreCompleto" className="text-sm">Nombre Completo</Label>
+                    <Input
+                      id="nombreCompleto"
+                      value={profileData.nombreCompleto}
+                      onChange={(e) => setProfileData({ ...profileData, nombreCompleto: e.target.value })}
+                      placeholder="Ej: Juan Pérez García"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="email" className="text-sm">Correo Electrónico</Label>
+                    <Input id="email" type="email" value={user?.email} disabled />
+                  </div>
                 </div>
 
-                {/* Email (solo lectura) */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
-                  <Input id="email" type="email" value={user?.email} disabled />
-                </div>
-
-                {/* Fechas */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
+                {/* Dates row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="fechaNacimiento" className="text-sm">Fecha de Nacimiento</Label>
                     <DatePickerSingle
                       date={profileData.fechaNacimiento ? new Date(profileData.fechaNacimiento) : undefined}
                       onSelect={(date) => setProfileData({ ...profileData, fechaNacimiento: date?.toISOString() || '' })}
-                      placeholder="Seleccionar fecha de nacimiento"
+                      placeholder="Seleccionar fecha"
                       fromYear={1950}
                       toYear={new Date().getFullYear() - 18}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fechaIngreso">Fecha de Ingreso</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="fechaIngreso" className="text-sm">Fecha de Ingreso</Label>
                     <DatePickerSingle
                       date={profileData.fechaIngreso ? new Date(profileData.fechaIngreso) : undefined}
                       onSelect={(date) => setProfileData({ ...profileData, fechaIngreso: date?.toISOString() || '' })}
-                      placeholder="Seleccionar fecha de ingreso"
+                      placeholder="Seleccionar fecha"
                       fromYear={2000}
                       toYear={new Date().getFullYear()}
                     />
@@ -427,65 +424,68 @@ export function SettingsView() {
                 </div>
 
                 {/* Biografía */}
-                <div className="space-y-2">
-                  <Label htmlFor="biografia">Biografía</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="biografia" className="text-sm">Biografía</Label>
                   <Textarea
                     id="biografia"
                     value={profileData.biografia}
                     onChange={(e) => setProfileData({ ...profileData, biografia: e.target.value })}
                     placeholder="Cuéntanos sobre ti..."
-                    rows={4}
+                    rows={3}
                   />
                 </div>
               </div>
             </div>
 
             {/* Información Profesional */}
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Información Profesional</h3>
-              <div className="space-y-6">
-                {/* CV */}
-                <div className="space-y-2">
-                  <Label htmlFor="cv">Curriculum Vitae (PDF)</Label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      ref={cvInputRef}
-                      type="file"
-                      accept="application/pdf"
-                      className="hidden"
-                      onChange={handleCvChange}
-                    />
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => cvInputRef.current?.click()}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {user?.archivoCvId ? "Cambiar CV" : "Subir CV"}
-                    </Button>
-                    {user?.archivoCvId && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Información Profesional</h3>
+              <div className="space-y-4">
+                {/* CV Row */}
+                <div className="flex items-center gap-3">
+                  <div className="space-y-1 flex-1">
+                    <Label htmlFor="cv" className="text-sm">Curriculum Vitae (PDF)</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={cvInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={handleCvChange}
+                      />
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         className="gap-2"
-                        onClick={() => window.open(user.archivoCvId!, '_blank')}
+                        onClick={() => cvInputRef.current?.click()}
                       >
-                        <FileText className="h-4 w-4" />
-                        Ver CV actual
+                        <Upload className="h-4 w-4" />
+                        {user?.archivoCvId ? "Cambiar CV" : "Subir CV"}
                       </Button>
-                    )}
+                      {user?.archivoCvId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => window.open(user.archivoCvId!, '_blank')}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Ver CV
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">PDF. Máx 5MB.</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">PDF. Máximo 5MB.</p>
                 </div>
 
-                {/* Información de Solo Lectura */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="rol">Rol</Label>
+                {/* Rol + Puesto row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="rol" className="text-sm">Rol</Label>
                     <Input id="rol" value={user?.rol || "Usuario"} disabled />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="puestoTrabajo">Puesto de Trabajo</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="puestoTrabajo" className="text-sm">Puesto de Trabajo</Label>
                     <Input
                       id="puestoTrabajo"
                       value={user?.puestoTrabajo?.nombre || "No asignado"}
@@ -494,35 +494,34 @@ export function SettingsView() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="supervisor">Supervisor Directo</Label>
-                  <Input
-                    id="supervisor"
-                    value={user?.supervisor?.nombreCompleto || "No asignado"}
-                    disabled
-                  />
-                </div>
-
-                {/* Progreso del Perfil */}
-                <div className="space-y-2">
-                  <Label htmlFor="perfilCompleto">Progreso del Perfil</Label>
-                  <div className="flex items-center gap-3">
-                    <Progress value={user?.puntajePerfilCompleto || 0} className="flex-1" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {user?.puntajePerfilCompleto || 0}%
-                    </span>
+                {/* Supervisor + Progreso row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="supervisor" className="text-sm">Supervisor Directo</Label>
+                    <Input
+                      id="supervisor"
+                      value={user?.supervisor?.nombreCompleto || "No asignado"}
+                      disabled
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Completa tu perfil para desbloquear más funcionalidades
-                  </p>
+                  <div className="space-y-1">
+                    <Label htmlFor="perfilCompleto" className="text-sm">Progreso del Perfil</Label>
+                    <div className="flex items-center gap-3">
+                      <Progress value={user?.puntajePerfilCompleto || 0} className="flex-1" />
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {user?.puntajePerfilCompleto || 0}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Botones */}
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setProfileData({
                   nombreCompleto: user?.nombreCompleto || "",
                   biografia: user?.biografia || "",
@@ -533,6 +532,7 @@ export function SettingsView() {
                 Cancelar
               </Button>
               <Button
+                size="sm"
                 className="gap-2"
                 onClick={handleSaveProfile}
                 disabled={isProfileLoading}
@@ -542,20 +542,20 @@ export function SettingsView() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Guardar cambios
+                Guardar
               </Button>
             </div>
           </TabsContent>
 
           {/* Notifications Tab */}
-          <TabsContent value="notifications" className="space-y-6">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Preferencias de Notificaciones</h3>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
+          <TabsContent value="notifications" className="space-y-3">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Preferencias de Notificaciones</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="font-medium text-foreground">Notificaciones por email</p>
-                    <p className="text-sm text-muted-foreground">Recibe actualizaciones por correo electrónico</p>
+                    <p className="text-sm font-medium text-foreground">Notificaciones por email</p>
+                    <p className="text-xs text-muted-foreground">Recibe actualizaciones por correo</p>
                   </div>
                   <Switch
                     checked={notifications.email}
@@ -563,10 +563,10 @@ export function SettingsView() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="font-medium text-foreground">Notificaciones push</p>
-                    <p className="text-sm text-muted-foreground">Recibe notificaciones en el navegador</p>
+                    <p className="text-sm font-medium text-foreground">Notificaciones push</p>
+                    <p className="text-xs text-muted-foreground">Recibe notificaciones en el navegador</p>
                   </div>
                   <Switch
                     checked={notifications.push}
@@ -574,10 +574,10 @@ export function SettingsView() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="font-medium text-foreground">Tareas asignadas</p>
-                    <p className="text-sm text-muted-foreground">Cuando te asignan una nueva tarea</p>
+                    <p className="text-sm font-medium text-foreground">Tareas asignadas</p>
+                    <p className="text-xs text-muted-foreground">Cuando te asignan una nueva tarea</p>
                   </div>
                   <Switch
                     checked={notifications.taskAssigned}
@@ -585,10 +585,10 @@ export function SettingsView() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="font-medium text-foreground">Menciones</p>
-                    <p className="text-sm text-muted-foreground">Cuando alguien te menciona en un comentario</p>
+                    <p className="text-sm font-medium text-foreground">Menciones</p>
+                    <p className="text-xs text-muted-foreground">Cuando alguien te menciona</p>
                   </div>
                   <Switch
                     checked={notifications.mentions}
@@ -596,10 +596,10 @@ export function SettingsView() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="font-medium text-foreground">Actualizaciones de proyectos</p>
-                    <p className="text-sm text-muted-foreground">Cambios importantes en tus proyectos</p>
+                    <p className="text-sm font-medium text-foreground">Actualizaciones de proyectos</p>
+                    <p className="text-xs text-muted-foreground">Cambios importantes en tus proyectos</p>
                   </div>
                   <Switch
                     checked={notifications.projectUpdates}
@@ -607,10 +607,10 @@ export function SettingsView() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="font-medium text-foreground">Resumen diario</p>
-                    <p className="text-sm text-muted-foreground">Recibe un resumen de actividad cada día</p>
+                    <p className="text-sm font-medium text-foreground">Resumen diario</p>
+                    <p className="text-xs text-muted-foreground">Recibe un resumen cada día</p>
                   </div>
                   <Switch
                     checked={notifications.dailySummary}
@@ -620,8 +620,8 @@ export function SettingsView() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => updateNotifications({
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => updateNotifications({
                 email: true,
                 push: true,
                 taskAssigned: true,
@@ -631,19 +631,19 @@ export function SettingsView() {
               })}>
                 Restablecer
               </Button>
-              <Button className="gap-2" onClick={handleSaveNotifications}>
+              <Button size="sm" className="gap-2" onClick={handleSaveNotifications}>
                 <Save className="h-4 w-4" />
-                Guardar cambios
+                Guardar
               </Button>
             </div>
           </TabsContent>
 
           {/* Security Tab */}
-          <TabsContent value="security" className="space-y-6">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Cambiar Contraseña</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
+          <TabsContent value="security" className="space-y-3">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Cambiar Contraseña</h3>
+              <div className="space-y-3">
+                <div className="space-y-1">
                   <Label htmlFor="currentPassword">Contraseña actual</Label>
                   <div className="relative">
                     <Input
@@ -718,97 +718,58 @@ export function SettingsView() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Autenticación de Dos Factores</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Habilitar 2FA</p>
-                    <p className="text-sm text-muted-foreground">Añade una capa extra de seguridad a tu cuenta</p>
-                  </div>
-                  <Switch disabled />
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Autenticación de Dos Factores</h3>
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Habilitar 2FA</p>
+                  <p className="text-xs text-muted-foreground">Próximamente disponible</p>
                 </div>
-                <p className="text-xs text-muted-foreground">La autenticación de dos factores estará disponible próximamente</p>
+                <Switch disabled />
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Sesiones Activas</h3>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Sesiones Activas</h3>
               {isLoadingSessions ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               ) : sessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">No hay sesiones activas</p>
+                <p className="text-xs text-muted-foreground py-2">No hay sesiones activas</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {sessions.map((session) => (
                     <div
                       key={session.id}
-                      className={`flex items-center justify-between rounded-lg border p-4 transition-all ${session.isCurrentSession
-                        ? 'border-primary border-2 bg-primary/10 shadow-md'
-                        : 'border-border bg-muted/30 hover:bg-muted/50'
+                      className={`flex items-center justify-between rounded-lg border p-3 ${session.isCurrentSession
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border bg-muted/30'
                         }`}
                     >
-                      <div className="flex items-center gap-4 flex-1">
-                        {/* Icono */}
-                        <div className={`p-2 rounded-lg ${session.isCurrentSession ? 'bg-primary/20' : 'bg-muted'
-                          }`}>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`p-1.5 rounded ${session.isCurrentSession ? 'bg-primary/20' : 'bg-muted'}`}>
                           {session.userAgent?.includes("Mobile") ? (
-                            <Smartphone className={`h-6 w-6 ${session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
-                              }`} />
+                            <Smartphone className={`h-4 w-4 ${session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'}`} />
                           ) : (
-                            <Monitor className={`h-6 w-6 ${session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
-                              }`} />
+                            <Monitor className={`h-4 w-4 ${session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'}`} />
                           )}
                         </div>
-
-                        {/* Información */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            {session.isCurrentSession && (
-                              <span className="inline-flex items-center rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-sm">
-                                ● SESIÓN ACTUAL - ESTE NAVEGADOR
-                              </span>
-                            )}
-                          </div>
-                          <p className={`text-sm font-medium truncate ${session.isCurrentSession ? 'text-primary font-semibold' : 'text-foreground'
-                            }`}>
-                            {session.userAgent || "Navegador desconocido"}
-                          </p>
-                          <div className="flex flex-col gap-0.5 mt-1">
-                            <p className="text-xs text-muted-foreground">
-                              <span className="font-medium">IP:</span> {session.ip}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              <span className="font-medium">Última actividad:</span> {new Date(session.lastActivity).toLocaleString("es-MX", {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit'
-                              })}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              <span className="font-medium">Creada:</span> {new Date(session.createdAt).toLocaleString("es-MX", {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
+                          {session.isCurrentSession && (
+                            <span className="inline-flex items-center rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground mb-1">
+                              ACTUAL
+                            </span>
+                          )}
+                          <p className="text-xs font-medium truncate">{session.userAgent || "Navegador"}</p>
+                          <p className="text-[10px] text-muted-foreground">IP: {session.ip}</p>
                         </div>
                       </div>
-
-                      {/* Botón Cerrar */}
                       {!session.isCurrentSession && (
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="gap-2 ml-4"
+                          className="gap-1 text-xs h-7"
                           onClick={() => setSessionToTerminate(session.id)}
                         >
                           <LogOut className="h-3 w-3" />
@@ -822,94 +783,15 @@ export function SettingsView() {
             </div>
           </TabsContent>
 
-          {/* Appearance Tab */}
-          <TabsContent value="appearance" className="space-y-6">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Tema</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="theme">Modo de color</Label>
-                  <Select
-                    value={preferences.theme}
-                    onValueChange={(value: any) => updatePreferences({ theme: value })}
-                  >
-                    <SelectTrigger id="theme">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Claro</SelectItem>
-                      <SelectItem value="dark">Oscuro</SelectItem>
-                      <SelectItem value="system">Sistema</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="accentColor">Color de acento</Label>
-                  <Select
-                    value={preferences.accentColor}
-                    onValueChange={(value: any) => updatePreferences({ accentColor: value })}
-                  >
-                    <SelectTrigger id="accentColor">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="blue">Azul</SelectItem>
-                      <SelectItem value="purple">Violeta</SelectItem>
-                      <SelectItem value="green">Verde</SelectItem>
-                      <SelectItem value="orange">Naranja</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Densidad</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="density">Densidad de interfaz</Label>
-                  <Select
-                    value={preferences.density}
-                    onValueChange={(value: any) => updatePreferences({ density: value })}
-                  >
-                    <SelectTrigger id="density">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compact">Compacta</SelectItem>
-                      <SelectItem value="comfortable">Cómoda</SelectItem>
-                      <SelectItem value="spacious">Espaciosa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => updatePreferences({
-                theme: 'system',
-                accentColor: 'blue',
-                density: 'comfortable',
-              })}>
-                Restablecer
-              </Button>
-              <Button className="gap-2" onClick={handleSaveAppearance}>
-                <Save className="h-4 w-4" />
-                Guardar cambios
-              </Button>
-            </div>
-          </TabsContent>
-
           {/* Data Tab */}
-          <TabsContent value="data" className="space-y-6">
-
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Datos y Privacidad</h3>
-              <div className="space-y-4">
+          <TabsContent value="data" className="space-y-3">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Datos y Privacidad</h3>
+              <div className="space-y-2">
                 <Button
                   variant="outline"
-                  className="w-full justify-start gap-2 bg-transparent"
+                  size="sm"
+                  className="w-full justify-start gap-2"
                   onClick={handleDownloadData}
                 >
                   <Download className="h-4 w-4" />
@@ -917,20 +799,14 @@ export function SettingsView() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start gap-2 text-destructive hover:text-destructive bg-transparent"
+                  size="sm"
+                  className="w-full justify-start gap-2 text-destructive hover:text-destructive"
                   onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="h-4 w-4" />
                   Eliminar mi cuenta
                 </Button>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button className="gap-2" onClick={handleSaveSystem}>
-                <Save className="h-4 w-4" />
-                Guardar cambios
-              </Button>
             </div>
           </TabsContent>
         </Tabs>
