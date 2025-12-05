@@ -18,24 +18,35 @@ import {
   AiSearchResultDto,
 } from './dto/ai-search.dto'
 import { GeminiClient } from './gemini.client'
+import { DateUtils } from './utils/date.utils'
+import { SystemSettingsService } from '../system-settings/system-settings.service'
 
 interface SearchContext {
   projects: any[]
   tasks: any[]
   users: any[]
   documents: any[]
+  stats?: Record<string, any>
+  settings?: {
+    nombreEmpresa: string
+    colorPrimario: string
+    colorSecundario: string
+    ubicacion?: string
+    descripcionEmpresa?: string
+  }
 }
 
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name)
-  private readonly textModelName = 'gemini-1.5-flash'
+  private readonly textModelName = 'gemini-2.5-flash'
   private readonly embeddingModelName = 'text-embedding-004'
   private readonly geminiClient: GeminiClient
 
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly settingsService: SystemSettingsService,
   ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY')
     this.geminiClient = new GeminiClient(this.logger, apiKey, {
@@ -188,6 +199,7 @@ export class AiService {
           users: context.users,
           documents: context.documents,
         },
+        stats: context.stats,
         intent,
         actionSuggestions,
         processingTimeMs: Date.now() - startedAt,
@@ -212,14 +224,14 @@ export class AiService {
     const targetTypes = entityType
       ? [entityType]
       : [
-          AiEntityType.PROJECT,
-          AiEntityType.TASK,
-          AiEntityType.DOCUMENT,
-          AiEntityType.USER,
-          AiEntityType.IDEA,
-          AiEntityType.DEPARTMENT,
-          AiEntityType.KNOWLEDGE,
-        ]
+        AiEntityType.PROJECT,
+        AiEntityType.TASK,
+        AiEntityType.DOCUMENT,
+        AiEntityType.USER,
+        AiEntityType.IDEA,
+        AiEntityType.DEPARTMENT,
+        AiEntityType.KNOWLEDGE,
+      ]
 
     let processed = 0
     for (const type of targetTypes) {
@@ -301,15 +313,225 @@ export class AiService {
   }
 
   private async fetchContextData(query: string): Promise<SearchContext> {
-    const [projects, tasks, users, documents] = await Promise.all([
+    const normalized = query.toLowerCase()
+
+    // Obtener configuración del sistema
+    const settings = await this.settingsService.getSettings()
+    const companyContext = {
+      nombreEmpresa: settings.nombreEmpresa,
+      colorPrimario: settings.colorPrimario,
+      colorSecundario: settings.colorSecundario,
+      ubicacion: (settings as any).ubicacion || undefined,
+      descripcionEmpresa: (settings as any).descripcionEmpresa || undefined,
+    }
+
+    // Detectar tipo de consulta
+    const isCountQuery = /(cuántos|cuántas|cantidad|número|total)/i.test(query)
+    const isListQuery = /(listar|mostrar|ver|dame|lista)/i.test(query)
+    // Si es una consulta de conteo o estadística, obtener datos completos
+    if (isCountQuery) {
+      const [allProjects, allTasks, allUsers, allDepartments, allIdeas] = await Promise.all([
+        this.prisma.proyecto.count({ where: { fechaEliminacion: null } }),
+        this.prisma.tarea.count({ where: { fechaEliminacion: null } }),
+        this.prisma.usuario.count(),
+        this.prisma.departamento.count(),
+        this.prisma.idea.count(),
+      ])
+      // Retornar contexto con estadísticas
+      // Retornar contexto con estadísticas y resultados vacíos o relevantes
+      return {
+        projects: [],
+        tasks: [],
+        users: [],
+        documents: [],
+        stats: {
+          totalProjects: allProjects,
+          totalTasks: allTasks,
+          totalUsers: allUsers,
+          totalDepartments: allDepartments,
+          totalIdeas: allIdeas,
+        },
+        settings: companyContext
+      }
+    }
+    // Si menciona usuarios específicamente
+    if (/usuario/i.test(query)) {
+      const users = await this.prisma.usuario.findMany({
+        where: normalized.includes('activo')
+          ? { estado: 'ACTIVO' }
+          : normalized.includes('inactivo')
+            ? { estado: 'INACTIVO' }
+            : {},
+        select: {
+          id: true,
+          nombreCompleto: true,
+          email: true,
+          estado: true,
+          rol: { select: { nombre: true } },
+          puestoTrabajo: {
+            select: {
+              titulo: true,
+              departamento: {
+                select: {
+                  nombre: true,
+                },
+              },
+            },
+          },
+        },
+        take: isListQuery ? 20 : 5,
+      })
+      return {
+        projects: [],
+        tasks: [],
+        users,
+        documents: [],
+        settings: companyContext
+      }
+    }
+    // Si menciona proyectos específicamente
+    if (/proyecto/i.test(query)) {
+      const projectWhere: any = { fechaEliminacion: null }
+
+      if (normalized.includes('activo')) projectWhere.estado = 'Activo'
+      if (normalized.includes('completado')) projectWhere.estado = 'Completado'
+      if (normalized.includes('pausado') || normalized.includes('pausa')) projectWhere.estado = 'En_Pausa'
+      if (normalized.includes('archivado')) projectWhere.estado = 'Archivado'
+      const projects = await this.prisma.proyecto.findMany({
+        where: projectWhere,
+        select: {
+          id: true,
+          nombre: true,
+          descripcion: true,
+          estado: true,
+          fechaInicio: true,
+          fechaFin: true,
+          departamento: { select: { nombre: true } },
+          responsable: { select: { nombreCompleto: true } },
+        },
+        take: isListQuery ? 20 : 5,
+      })
+      return {
+        projects,
+        tasks: [],
+        users: [],
+        documents: [],
+        settings: companyContext
+      }
+    }
+    // Si menciona tareas específicamente
+    if (/tarea/i.test(query)) {
+      const taskWhere: any = { fechaEliminacion: null }
+
+      // Filtrar por estado
+      if (normalized.includes('pendiente') || normalized.includes('hacer')) taskWhere.estado = 'Por_Hacer'
+      if (normalized.includes('progreso')) taskWhere.estado = 'En_Progreso'
+      if (normalized.includes('completada') || normalized.includes('hecho') || normalized.includes('hecha')) taskWhere.estado = 'Hecho'
+      if (normalized.includes('bloqueada') || normalized.includes('bloqueado')) taskWhere.estado = 'Bloqueado'
+      if (normalized.includes('urgente')) taskWhere.prioridad = 'Urgente'
+      if (normalized.includes('alta prioridad')) taskWhere.prioridad = 'Alta'
+
+      // Filtrar por fecha si es consulta temporal
+      const isTodayQuery = /(hoy|today)/i.test(query)
+      const isWeekQuery = /(semana|week)/i.test(query)
+      const isMonthQuery = /(mes|month)/i.test(query)
+
+      if (isTodayQuery) {
+        const { start, end } = DateUtils.getDayRange()
+        taskWhere.fechaVencimiento = { gte: start, lte: end }
+      } else if (isWeekQuery) {
+        const { start, end } = DateUtils.getWeekRange()
+        taskWhere.fechaVencimiento = { gte: start, lte: end }
+      } else if (isMonthQuery) {
+        const { start, end } = DateUtils.getMonthRange()
+        taskWhere.fechaVencimiento = { gte: start, lte: end }
+      }
+
+      const tasks = await this.prisma.tarea.findMany({
+        where: taskWhere,
+        select: {
+          id: true,
+          titulo: true,
+          descripcion: true,
+          estado: true,
+          prioridad: true,
+          fechaVencimiento: true,
+          proyecto: { select: { nombre: true } },
+          asignado: { select: { nombreCompleto: true } },
+        },
+        take: isListQuery ? 20 : 5,
+      })
+      return {
+        projects: [],
+        tasks,
+        users: [],
+        documents: [],
+        settings: companyContext
+      }
+    }
+    // Si menciona departamentos
+    if (/departamento/i.test(query)) {
+      const departments = await this.prisma.departamento.findMany({
+        select: {
+          id: true,
+          nombre: true,
+          descripcion: true,
+          jefe: { select: { nombreCompleto: true } },
+          _count: {
+            select: {
+              proyectos: true,
+            }
+          },
+          puestosTrabajo: {
+            select: {
+              _count: {
+                select: { usuarios: true }
+              }
+            }
+          }
+        },
+      })
+      return {
+        projects: departments.map(d => {
+          const totalUsuarios = d.puestosTrabajo.reduce((acc, curr) => acc + curr._count.usuarios, 0)
+          return {
+            id: d.id,
+            nombre: d.nombre,
+            descripcion: `${d.descripcion || ''} - Jefe: ${d.jefe?.nombreCompleto || 'Sin asignar'}`,
+            estado: `${totalUsuarios} usuarios, ${d._count.proyectos} proyectos`,
+            fechaFin: null,
+            departamento: null,
+          }
+        }) as any,
+        tasks: [],
+        users: [],
+        documents: [],
+        settings: companyContext
+      }
+    }
+
+    // Para consultas generales o estratégicas: obtener estadísticas completas + proyectos activos
+    // Esto permite que Magnus tenga contexto real de la empresa
+    const [
+      allProjects,
+      allTasks,
+      allUsers,
+      allDepartments,
+      allIdeas,
+      recentProjects,
+      pendingTasks,
+      activeUsers
+    ] = await Promise.all([
+      this.prisma.proyecto.count({ where: { fechaEliminacion: null } }),
+      this.prisma.tarea.count({ where: { fechaEliminacion: null } }),
+      this.prisma.usuario.count({ where: { estado: 'ACTIVO' } }),
+      this.prisma.departamento.count(),
+      this.prisma.idea.count(),
+      // Proyectos activos recientes para contexto
       this.prisma.proyecto.findMany({
         where: {
           fechaEliminacion: null,
-          OR: [
-            { nombre: { contains: query, mode: Prisma.QueryMode.insensitive } },
-            { descripcion: { contains: query, mode: Prisma.QueryMode.insensitive } },
-            { objetivos: { contains: query, mode: Prisma.QueryMode.insensitive } },
-          ],
+          estado: 'Activo'
         },
         select: {
           id: true,
@@ -318,64 +540,61 @@ export class AiService {
           estado: true,
           fechaFin: true,
           departamento: { select: { nombre: true } },
+          responsable: { select: { nombreCompleto: true } },
         },
-        take: 5,
+        take: 10,
+        orderBy: { fechaActualizacion: 'desc' }
       }),
+      // Tareas pendientes o en progreso
       this.prisma.tarea.findMany({
         where: {
           fechaEliminacion: null,
-          OR: [
-            { titulo: { contains: query, mode: Prisma.QueryMode.insensitive } },
-            { descripcion: { contains: query, mode: Prisma.QueryMode.insensitive } },
-          ],
+          estado: { in: ['Por_Hacer', 'En_Progreso'] }
         },
         select: {
           id: true,
           titulo: true,
           estado: true,
           prioridad: true,
+          fechaVencimiento: true,
           proyecto: { select: { nombre: true } },
           asignado: { select: { nombreCompleto: true } },
         },
-        take: 5,
+        take: 10,
+        orderBy: { prioridad: 'desc' }
       }),
+      // Usuarios activos
       this.prisma.usuario.findMany({
-        where: {
-          OR: [
-            { nombreCompleto: { contains: query, mode: Prisma.QueryMode.insensitive } },
-            { email: { contains: query, mode: Prisma.QueryMode.insensitive } },
-          ],
-        },
+        where: { estado: 'ACTIVO' },
         select: {
           id: true,
           nombreCompleto: true,
           email: true,
           rol: { select: { nombre: true } },
+          puestoTrabajo: {
+            select: {
+              titulo: true,
+              departamento: { select: { nombre: true } },
+            },
+          },
         },
-        take: 5,
-      }),
-      this.prisma.documentoProyecto.findMany({
-        where: {
-          OR: [
-            { titulo: { contains: query, mode: Prisma.QueryMode.insensitive } },
-            { contenido: { contains: query, mode: Prisma.QueryMode.insensitive } },
-          ],
-        },
-        select: {
-          id: true,
-          titulo: true,
-          tipo: true,
-          proyecto: { select: { nombre: true } },
-        },
-        take: 5,
+        take: 10,
       }),
     ])
 
     return {
-      projects,
-      tasks,
-      users,
-      documents,
+      projects: recentProjects,
+      tasks: pendingTasks,
+      users: activeUsers,
+      documents: [],
+      stats: {
+        totalProjects: allProjects,
+        totalTasks: allTasks,
+        totalUsers: allUsers,
+        totalDepartments: allDepartments,
+        totalIdeas: allIdeas,
+      },
+      settings: companyContext
     }
   }
 
@@ -435,27 +654,203 @@ export class AiService {
     }
 
     try {
-      const prompt = `Actúa como asistente de proyectos.
-Consulta: "${query}".
-Resumen de contexto:
-- Proyectos relevantes: ${JSON.stringify(context.projects)}
-- Tareas relevantes: ${JSON.stringify(context.tasks)}
-- Usuarios relevantes: ${JSON.stringify(context.users)}
-- Documentos relevantes: ${JSON.stringify(context.documents)}
+      const temporal = DateUtils.getTemporalContext()
+      const nombreEmpresa = context.settings?.nombreEmpresa || 'Mi Empresa'
+      const ubicacion = context.settings?.ubicacion || 'No especificada'
+      const descripcionEmpresa = context.settings?.descripcionEmpresa || ''
 
-Responde en español con un párrafo breve, destacando riesgos y siguientes pasos.`
+      // Detectar si es una consulta estratégica que requiere búsqueda web
+      const isStrategicQuery = this.isStrategicQuery(query)
 
-      const text = await this.geminiClient.generateText(prompt)
-      return text?.length ? text : fallback
+      if (isStrategicQuery) {
+        // Usar búsqueda en internet para consultas estratégicas
+        return await this.generateStrategicResponse(query, context, temporal, nombreEmpresa, ubicacion, descripcionEmpresa)
+      } else {
+        // Usar respuesta basada en datos internos
+        return await this.generateInternalResponse(query, context, temporal, nombreEmpresa, ubicacion, descripcionEmpresa)
+      }
     } catch (error) {
       this.logger.warn(`Fallo al llamar a Gemini: ${error instanceof Error ? error.message : error}`)
       return fallback
     }
   }
 
+  /**
+   * Detecta si la consulta requiere análisis estratégico con búsqueda web
+   */
+  private isStrategicQuery(query: string): boolean {
+    const strategicPatterns = [
+      /competencia|competidor|rival|oponente/i,
+      /mercado|industria|sector/i,
+      /ventaja|diferenci|posicion/i,
+      /tendencia|futuro|proyecci[oó]n/i,
+      /oportunidad|amenaza|riesgo.*externo/i,
+      /innovar?|innova(ci[oó]n|dor)/i,
+      /idea.*negocio|negocio.*idea/i,
+      /c[oó]mo mejorar|qu[eé] hacer|sugerencia|recomienda|consejo/i,
+      /benchmark|an[aá]lisis.*externo/i,
+      /similar.*empresa|empresa.*similar/i,
+      /qu[eé].*proyectos.*existen|proyectos.*similares/i,
+      /sacar.*ventaja|ventaja.*competitiva/i,
+    ]
+
+    return strategicPatterns.some(pattern => pattern.test(query))
+  }
+
+  /**
+   * Genera respuesta estratégica usando búsqueda en internet
+   */
+  private async generateStrategicResponse(
+    query: string,
+    context: SearchContext,
+    temporal: ReturnType<typeof DateUtils.getTemporalContext>,
+    nombreEmpresa: string,
+    ubicacion: string,
+    descripcionEmpresa: string,
+  ): Promise<string> {
+    const fallback = this.buildDeterministicSummary(query, context)
+
+    // Construir resumen de proyectos internos para contexto
+    const projectsSummary = context.projects.length > 0
+      ? context.projects.map(p => `- ${p.nombre}: ${p.descripcion || 'Sin descripción'}`).join('\n')
+      : 'No hay proyectos activos registrados.'
+
+    const prompt = `Eres "Magnus", el Arquitecto Estratégico y Asesor de Negocios de **${nombreEmpresa}**.
+
+═══════════════════════════════════════════════════════════════════════════════
+🏢 PERFIL DE LA EMPRESA
+═══════════════════════════════════════════════════════════════════════════════
+
+**Nombre:** ${nombreEmpresa}
+**Ubicación:** ${ubicacion}
+**Descripción:** ${descripcionEmpresa || 'Empresa en desarrollo'}
+**Fecha actual:** ${temporal.currentDateTime}
+
+**Proyectos Internos Activos:**
+${projectsSummary}
+
+**Estadísticas:**
+- Total proyectos: ${context.stats?.totalProjects || context.projects.length}
+- Total tareas: ${context.stats?.totalTasks || context.tasks.length}
+- Total usuarios: ${context.stats?.totalUsers || context.users.length}
+- Total ideas: ${context.stats?.totalIdeas || 0}
+
+═══════════════════════════════════════════════════════════════════════════════
+🎯 TU ROL COMO ASESOR ESTRATÉGICO
+═══════════════════════════════════════════════════════════════════════════════
+
+Eres un asesor estratégico PROACTIVO. Tu misión es ayudar a ${nombreEmpresa} a:
+1. **Identificar oportunidades** de mercado basándote en sus proyectos actuales
+2. **Analizar competencia** relevante a su ubicación e industria
+3. **Proponer ideas innovadoras** basadas en tendencias actuales
+4. **Dar opiniones sinceras** sobre cómo mejorar o diferenciarse
+5. **Identificar riesgos y oportunidades** en el mercado local e internacional
+
+IMPORTANTE:
+- DEBES buscar información actual de internet para responder
+- Relaciona la información externa con los proyectos INTERNOS de ${nombreEmpresa}
+- Sé específico: menciona nombres de empresas, herramientas, tecnologías reales
+- Da sugerencias ACCIONABLES, no genéricas
+- Si hay proyectos internos relacionados, menciona cómo pueden competir o mejorar
+
+═══════════════════════════════════════════════════════════════════════════════
+❓ CONSULTA ESTRATÉGICA
+═══════════════════════════════════════════════════════════════════════════════
+
+"${query}"
+
+═══════════════════════════════════════════════════════════════════════════════
+📝 FORMATO DE RESPUESTA
+═══════════════════════════════════════════════════════════════════════════════
+
+1. **Análisis del Contexto:** Breve resumen de cómo aplica a ${nombreEmpresa}
+2. **Hallazgos Clave:** Información relevante encontrada (competidores, tendencias, etc.)
+3. **Oportunidades Identificadas:** Cómo ${nombreEmpresa} puede beneficiarse
+4. **Recomendaciones Estratégicas:** Acciones concretas a tomar
+5. **Próximos Pasos:** Qué hacer primero
+
+Usa Markdown: **negritas**, listas, y emojis para claridad.
+Sé directo, profesional, pero entusiasta sobre las oportunidades.
+
+RESPONDE AHORA con análisis basado en búsqueda web actual:`
+
+    const text = await this.geminiClient.generateTextWithSearch(prompt)
+    return text?.length ? text : fallback
+  }
+
+  /**
+   * Genera respuesta basada en datos internos
+   */
+  private async generateInternalResponse(
+    query: string,
+    context: SearchContext,
+    temporal: ReturnType<typeof DateUtils.getTemporalContext>,
+    nombreEmpresa: string,
+    ubicacion: string,
+    descripcionEmpresa: string,
+  ): Promise<string> {
+    const fallback = this.buildDeterministicSummary(query, context)
+
+    const prompt = `Eres "Magnus", el Arquitecto Estratégico de **${nombreEmpresa}**.
+
+═══════════════════════════════════════════════════════════════════════════════
+🏢 CONTEXTO DE LA EMPRESA
+═══════════════════════════════════════════════════════════════════════════════
+
+**Empresa:** ${nombreEmpresa}
+**Ubicación:** ${ubicacion}
+**Descripción:** ${descripcionEmpresa || 'Empresa en desarrollo'}
+**Fecha:** ${temporal.currentDateTime} (${temporal.weekday})
+
+═══════════════════════════════════════════════════════════════════════════════
+📊 DATOS INTERNOS ENCONTRADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+Estadísticas: ${JSON.stringify(context.stats || {})}
+
+Proyectos: ${context.projects.length > 0 ? JSON.stringify(context.projects) : 'Ninguno coincide'}
+Tareas: ${context.tasks.length > 0 ? JSON.stringify(context.tasks) : 'Ninguna coincide'}
+Usuarios: ${context.users.length > 0 ? JSON.stringify(context.users) : 'Ninguno coincide'}
+Documentos: ${context.documents.length > 0 ? JSON.stringify(context.documents) : 'Ninguno coincide'}
+
+═══════════════════════════════════════════════════════════════════════════════
+❓ CONSULTA
+═══════════════════════════════════════════════════════════════════════════════
+
+"${query}"
+
+═══════════════════════════════════════════════════════════════════════════════
+📝 INSTRUCCIONES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Responde SOLO con datos internos de ${nombreEmpresa}
+2. Sé directo y conciso
+3. Usa Markdown: **negritas** para datos clave
+4. Si no hay resultados: indica qué buscar o cómo refinar la consulta
+5. Si detectas algo importante (riesgo, oportunidad), MENCIONALO proactivamente
+
+CONTEXTO TEMPORAL:
+- Hoy: ${DateUtils.formatRange(temporal.todayRange.start, temporal.todayRange.end)}
+- Esta semana: ${DateUtils.formatRange(temporal.weekRange.start, temporal.weekRange.end)}
+
+RESPONDE AHORA:`
+
+    const text = await this.geminiClient.generateText(prompt)
+    return text?.length ? text : fallback
+  }
+
   private buildDeterministicSummary(query: string, context: SearchContext): string {
+    const temporal = DateUtils.getTemporalContext()
     const parts: string[] = []
-    parts.push(`Consulta "${query}" procesada.`)
+
+    // Si la consulta menciona "hoy" o períodos temporales, incluir fecha
+    const isTemporal = /(hoy|today|semana|week|mes|month)/i.test(query)
+    if (isTemporal) {
+      parts.push(`Análisis para la fecha actual (**${temporal.currentDateTime}**) completado.`)
+    } else {
+      parts.push(`Consulta "${query}" procesada.`)
+    }
+
     if (context.projects.length) {
       parts.push(`Encontré ${context.projects.length} proyectos relacionados, destacando "${context.projects[0].nombre}".`)
     }
@@ -807,8 +1202,7 @@ Entrega un resumen estratégico de máximo 120 palabras en español y resalta re
             `Estado actual: ${proyecto.estado}.`,
             `Departamento: ${proyecto.departamento?.nombre ?? 'Sin departamento'}.`,
             `Responsable: ${proyecto.responsable?.nombreCompleto ?? 'No asignado'}.`,
-            `Fechas: ${proyecto.fechaInicio?.toISOString() ?? 'sin inicio'} - ${
-              proyecto.fechaFin?.toISOString() ?? 'sin fin'
+            `Fechas: ${proyecto.fechaInicio?.toISOString() ?? 'sin inicio'} - ${proyecto.fechaFin?.toISOString() ?? 'sin fin'
             }`,
           ]
             .filter(Boolean)
@@ -940,8 +1334,8 @@ Entrega un resumen estratégico de máximo 120 palabras en español y resalta re
             usuario.rol?.nombre ? `Rol: ${usuario.rol.nombre}.` : '',
             usuario.departamentosACargo?.length
               ? `Departamentos a cargo: ${usuario.departamentosACargo
-                  .map((d) => d.nombre)
-                  .join(', ')}.`
+                .map((d) => d.nombre)
+                .join(', ')}.`
               : '',
             usuario.biografia ?? '',
           ]

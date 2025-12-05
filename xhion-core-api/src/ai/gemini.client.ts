@@ -73,6 +73,39 @@ export class GeminiClient {
     }
   }
 
+  /**
+   * Genera texto con Google Search grounding habilitado.
+   * Útil para consultas que requieren información de internet en tiempo real
+   * como análisis de competencia, tendencias de mercado, etc.
+   */
+  async generateTextWithSearch(prompt: string): Promise<string | null> {
+    if (!this.genAI || this.isBreakerOpen()) {
+      return null
+    }
+
+    // No cachear búsquedas web ya que los resultados deben ser actuales
+    try {
+      // Crear modelo con herramienta de búsqueda de Google
+      const modelWithSearch = this.genAI.getGenerativeModel({
+        model: this.options.textModelName,
+        tools: [
+          {
+            googleSearch: {},
+          } as any, // Type assertion necesario porque la definición de tipos aún no incluye googleSearch
+        ],
+      })
+
+      const result = await modelWithSearch.generateContent(prompt)
+      const text = result.response.text()?.trim() ?? null
+      this.resetBreaker()
+      return text
+    } catch (error) {
+      this.logger.warn(`GeminiClient.generateTextWithSearch error: ${error instanceof Error ? error.message : error}`)
+      this.recordFailure()
+      return null
+    }
+  }
+
   async generateEmbedding(text: string): Promise<number[] | null> {
     if (!this.embeddingModel || this.isBreakerOpen()) {
       return null

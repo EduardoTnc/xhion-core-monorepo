@@ -1,4 +1,4 @@
-import api from '../api/axios';
+import apiClient from "../api/axios"
 
 export interface CreateSolicitudDto {
   nombreCompleto: string;
@@ -59,7 +59,7 @@ export const solicitudesService = {
    * Crear una nueva solicitud de acceso (público)
    */
   createSolicitud: async (data: CreateSolicitudDto): Promise<SolicitudAcceso> => {
-    const response = await api.post('/solicitudes-acceso', data);
+    const response = await apiClient.post('/solicitudes-acceso', data);
     return response.data;
   },
 
@@ -67,7 +67,7 @@ export const solicitudesService = {
    * Obtener todas las solicitudes (requiere autenticación)
    */
   getSolicitudes: async (estado?: string): Promise<SolicitudAcceso[]> => {
-    const response = await api.get('/solicitudes-acceso', {
+    const response = await apiClient.get('/solicitudes-acceso', {
       params: estado ? { estado } : undefined,
     });
     return response.data;
@@ -77,7 +77,7 @@ export const solicitudesService = {
    * Obtener estadísticas de solicitudes
    */
   getStats: async (): Promise<SolicitudesStats> => {
-    const response = await api.get('/solicitudes-acceso/stats');
+    const response = await apiClient.get('/solicitudes-acceso/stats');
     return response.data;
   },
 
@@ -85,7 +85,7 @@ export const solicitudesService = {
    * Obtener una solicitud por ID
    */
   getSolicitudById: async (id: string): Promise<SolicitudAcceso> => {
-    const response = await api.get(`/solicitudes-acceso/${id}`);
+    const response = await apiClient.get(`/solicitudes-acceso/${id}`);
     return response.data;
   },
 
@@ -93,7 +93,7 @@ export const solicitudesService = {
    * Revisar una solicitud (aprobar o rechazar)
    */
   reviewSolicitud: async (id: string, data: ReviewSolicitudDto): Promise<SolicitudAcceso> => {
-    const response = await api.patch(`/solicitudes-acceso/${id}/review`, data);
+    const response = await apiClient.patch(`/solicitudes-acceso/${id}/review`, data);
     return response.data;
   },
 
@@ -101,7 +101,7 @@ export const solicitudesService = {
    * Marcar solicitudes expiradas
    */
   markExpired: async (): Promise<{ updated: number }> => {
-    const response = await api.post('/solicitudes-acceso/expire');
+    const response = await apiClient.post('/solicitudes-acceso/expire');
     return response.data;
   },
 };

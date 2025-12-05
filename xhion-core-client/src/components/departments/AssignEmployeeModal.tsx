@@ -1,18 +1,15 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { UserPlus, Search, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { UserPlus, Search, Users, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,17 +18,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import apiClient from "@/api/axios";
 
-const assignEmployeeSchema = z.object({
-  usuarioId: z.string().min(1, "Selecciona un empleado"),
-  puestoTrabajoId: z.string().min(1, "Selecciona un puesto"),
-});
-
-type AssignEmployeeFormData = z.infer<typeof assignEmployeeSchema>;
+// Predefined department roles
+const DEPARTMENT_ROLES = [
+  { value: "Miembro", label: "Miembro", description: "Colaborador general del departamento" },
+  { value: "Coordinador", label: "Coordinador", description: "Coordina actividades y proyectos" },
+  { value: "Especialista", label: "Especialista", description: "Experto en área específica" },
+  { value: "Analista", label: "Analista", description: "Análisis y reportes" },
+  { value: "Desarrollador", label: "Desarrollador", description: "Desarrollo e implementación" },
+  { value: "Diseñador", label: "Diseñador", description: "Diseño y creatividad" },
+  { value: "Consultor", label: "Consultor", description: "Asesoría y consultoría" },
+  { value: "Asistente", label: "Asistente", description: "Apoyo administrativo" },
+];
 
 interface Usuario {
   id: string;
@@ -44,18 +46,11 @@ interface Usuario {
   };
 }
 
-interface PuestoTrabajo {
-  id: string;
-  titulo: string;
-  descripcion?: string;
-}
-
 interface AssignEmployeeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departamentoId: string;
   departamentoNombre: string;
-  puestosTrabajo: PuestoTrabajo[];
   onSuccess?: () => void;
 }
 
@@ -64,27 +59,13 @@ export function AssignEmployeeModal({
   onOpenChange,
   departamentoId,
   departamentoNombre,
-  puestosTrabajo,
   onSuccess,
 }: AssignEmployeeModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [availableUsers, setAvailableUsers] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-    reset,
-  } = useForm<AssignEmployeeFormData>({
-    resolver: zodResolver(assignEmployeeSchema),
-  });
-
-  const selectedUserId = watch("usuarioId");
-  const selectedUser = availableUsers.find((u) => u.id === selectedUserId);
+  const [selectedUsers, setSelectedUsers] = useState<Record<string, string>>({});
 
   const getInitials = (name: string) => {
     return name
@@ -95,219 +76,230 @@ export function AssignEmployeeModal({
       .slice(0, 2);
   };
 
-  // Cargar usuarios disponibles (sin puesto asignado)
+  // Cargar todos los usuarios
   useEffect(() => {
     if (open) {
       fetchAvailableUsers();
+      setSelectedUsers({});
+      setSearchTerm("");
     }
   }, [open]);
 
   const fetchAvailableUsers = async () => {
     setIsFetchingUsers(true);
     try {
-      const response = await apiClient.get("/usuarios/sin-puesto/disponibles");
+      const response = await apiClient.get("/usuarios");
       setAvailableUsers(response.data);
     } catch (error) {
-      console.error("Error fetching available users:", error);
-      toast.error("Error al cargar usuarios disponibles");
+      console.error("Error fetching users:", error);
+      toast.error("Error al cargar usuarios");
     } finally {
       setIsFetchingUsers(false);
     }
   };
 
-  const onSubmit = async (data: AssignEmployeeFormData) => {
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      if (prev[userId]) {
+        const { [userId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [userId]: "Miembro" };
+    });
+  };
+
+  const updateUserRole = (userId: string, role: string) => {
+    setSelectedUsers((prev) => ({
+      ...prev,
+      [userId]: role,
+    }));
+  };
+
+  const filteredUsuarios = useMemo(() => {
+    if (!searchTerm.trim()) return availableUsers;
+    const term = searchTerm.toLowerCase();
+    return availableUsers.filter(
+      (usuario) =>
+        usuario.nombreCompleto.toLowerCase().includes(term) ||
+        usuario.email.toLowerCase().includes(term)
+    );
+  }, [availableUsers, searchTerm]);
+
+  const selectedCount = Object.keys(selectedUsers).length;
+
+  const onSubmit = async () => {
+    if (selectedCount === 0) {
+      toast.error("Selecciona al menos un empleado");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await apiClient.post(`/usuarios/${data.usuarioId}/asignar-puesto`, {
-        puestoTrabajoId: data.puestoTrabajoId,
-      });
+      for (const [usuarioId, rolDepartamento] of Object.entries(selectedUsers)) {
+        await apiClient.post(`/departamentos/${departamentoId}/asignar-usuario`, {
+          usuarioId,
+          rolDepartamento,
+        });
+      }
 
-      toast.success("Empleado asignado exitosamente");
-      reset();
+      toast.success(`${selectedCount} empleado(s) asignado(s) exitosamente al departamento`);
+      setSelectedUsers({});
+      setSearchTerm("");
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
-      console.error("Error assigning employee:", error);
-      toast.error("Error al asignar empleado");
+    } catch (error: any) {
+      console.error("Error assigning employees:", error);
+      toast.error(error.response?.data?.message || "Error al asignar empleados");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredUsers = availableUsers.filter(
-    (user) =>
-      user.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) {
+          setSelectedUsers({});
+          setSearchTerm("");
+        }
+        onOpenChange(value);
+      }}
+    >
+      <DialogContent className="w-[95vw] max-w-[780px] max-h-[90vh] flex flex-col sm:w-full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Asignar Empleado a {departamentoNombre}
+            Asignar empleados a {departamentoNombre}
           </DialogTitle>
           <DialogDescription>
-            Selecciona un empleado disponible y asígnale un puesto en este departamento.
+            Selecciona varios usuarios y define sus roles en una sola vista
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
-          {/* Búsqueda de Empleados */}
-          <div className="space-y-3">
-            <Label>Buscar Empleado</Label>
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-4 text-[11px]">
+              <div className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" />
+                <span>Disponibles: {availableUsers.length}</span>
+              </div>
+              <div>Seleccionados: {selectedCount}</div>
+            </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nombre o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nombre o correo"
                 className="pl-10"
               />
             </div>
           </div>
 
-          {/* Lista de Empleados Disponibles */}
-          <div className="space-y-2">
-            <Label>
-              Empleados Disponibles ({filteredUsers.length})
-            </Label>
-            {isFetchingUsers ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Cargando empleados...
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchTerm
-                  ? "No se encontraron empleados con ese criterio"
-                  : "No hay empleados disponibles sin puesto asignado"}
+          <div className="rounded-xl border border-border/50 bg-card/70 flex-1 min-h-0">
+            {isFetchingUsers || availableUsers.length === 0 ? (
+              <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+                {isFetchingUsers ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Cargando usuarios disponibles...
+                  </>
+                ) : (
+                  "No hay usuarios disponibles"
+                )}
               </div>
             ) : (
-              <ScrollArea className="h-[300px] border rounded-lg p-2">
-                <div className="space-y-2">
-                  {filteredUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      onClick={() => setValue("usuarioId", user.id)}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedUserId === user.id
-                          ? "bg-primary/10 border-2 border-primary"
-                          : "hover:bg-muted border-2 border-transparent"
-                      }`}
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatarUrl} alt={user.nombreCompleto} />
-                        <AvatarFallback>{getInitials(user.nombreCompleto)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{user.nombreCompleto}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                      </div>
-                      {user.rol && (
-                        <Badge
-                          variant="outline"
-                          style={{
-                            backgroundColor: user.rol.color
-                              ? `${user.rol.color}20`
-                              : undefined,
-                            borderColor: user.rol.color || undefined,
-                            color: user.rol.color || undefined,
-                          }}
-                        >
-                          {user.rol.nombre}
-                        </Badge>
-                      )}
-                      {selectedUserId === user.id && (
-                        <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                          <svg
-                            className="h-3 w-3 text-primary-foreground"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        </div>
-                      )}
+              <ScrollArea className="m-4 h-full max-h-[55vh] sm:max-h-[60vh] lg:max-h-[520px]">
+                <div className="divide-y divide-border/30">
+                  {filteredUsuarios.length === 0 ? (
+                    <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                      No se encontraron usuarios con ese criterio
                     </div>
-                  ))}
+                  ) : (
+                    filteredUsuarios.map((usuario) => {
+                      const isSelected = Boolean(selectedUsers[usuario.id]);
+                      return (
+                        <div
+                          key={usuario.id}
+                          className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-4"
+                        >
+                          <div className="flex items-start gap-3 sm:flex-1">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleUserSelection(usuario.id)}
+                              className="mt-1"
+                            />
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={usuario.avatarUrl} alt={usuario.nombreCompleto} />
+                              <AvatarFallback className="text-[11px]">
+                                {getInitials(usuario.nombreCompleto)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-foreground">
+                                {usuario.nombreCompleto}
+                              </p>
+                              <p className="text-xs text-muted-foreground break-all sm:truncate">
+                                {usuario.email}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {selectedUsers[usuario.id] === "Coordinador" && "Coordina actividades y proyectos"}
+                                {selectedUsers[usuario.id] === "Miembro" && "Colaborador general del departamento"}
+                                {selectedUsers[usuario.id] === "Especialista" && "Experto en área específica"}
+                                {selectedUsers[usuario.id] === "Analista" && "Análisis y reportes"}
+                                {selectedUsers[usuario.id] === "Desarrollador" && "Desarrollo e implementación"}
+                                {selectedUsers[usuario.id] === "Diseñador" && "Diseño y creatividad"}
+                                {selectedUsers[usuario.id] === "Consultor" && "Asesoría y consultoría"}
+                                {selectedUsers[usuario.id] === "Asistente" && "Apoyo administrativo"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex w-full items-center gap-2 sm:w-40 sm:justify-end">
+                            <Select
+                              value={selectedUsers[usuario.id] || "Miembro"}
+                              onValueChange={(value) => updateUserRole(usuario.id, value)}
+                              disabled={!isSelected}
+                            >
+                              <SelectTrigger className="w-full sm:w-36">
+                                <SelectValue placeholder="Rol" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DEPARTMENT_ROLES.map((role) => (
+                                  <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </ScrollArea>
             )}
-            {errors.usuarioId && (
-              <p className="text-sm text-destructive">{errors.usuarioId.message}</p>
-            )}
           </div>
+        </div>
 
-          {/* Selección de Puesto */}
-          {selectedUser && (
-            <div className="space-y-2 p-4 bg-muted rounded-lg">
-              <Label>Empleado Seleccionado</Label>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={selectedUser.avatarUrl} alt={selectedUser.nombreCompleto} />
-                  <AvatarFallback>{getInitials(selectedUser.nombreCompleto)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{selectedUser.nombreCompleto}</p>
-                  <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="puestoTrabajoId">
-              Puesto de Trabajo <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              onValueChange={(value) => setValue("puestoTrabajoId", value)}
-              disabled={!selectedUserId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un puesto" />
-              </SelectTrigger>
-              <SelectContent>
-                {puestosTrabajo.map((puesto) => (
-                  <SelectItem key={puesto.id} value={puesto.id}>
-                    <div>
-                      <p className="font-medium">{puesto.titulo}</p>
-                      {puesto.descripcion && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[300px]">
-                          {puesto.descripcion}
-                        </p>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.puestoTrabajoId && (
-              <p className="text-sm text-destructive">{errors.puestoTrabajoId.message}</p>
-            )}
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading || !selectedUserId}>
-              {isLoading ? "Asignando..." : "Asignar Empleado"}
-            </Button>
-          </div>
-        </form>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={isLoading || isFetchingUsers || availableUsers.length === 0 || selectedCount === 0}
+          >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Asignar {selectedCount > 0 ? `${selectedCount} empleado(s)` : "empleados"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

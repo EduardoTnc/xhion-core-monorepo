@@ -94,7 +94,8 @@
 ._ganttTaskContent_1sr1d_41::-webkit-scrollbar-track,
 .gantt-scroll::-webkit-scrollbar-track,
 .project-members-scroll::-webkit-scrollbar-track {
-  background: #f4f4f5; /* zinc-100 */
+  background: #f4f4f5;
+  /* zinc-100 */
 }
 
 ._ganttTableWrapper_v4xjz_8::-webkit-scrollbar-thumb,
@@ -111,7 +112,8 @@
 ._ganttTaskContent_1sr1d_41::-webkit-scrollbar-thumb:hover,
 .gantt-scroll::-webkit-scrollbar-thumb:hover,
 .project-members-scroll::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa; /* zinc-400 */
+  background: #a1a1aa;
+  /* zinc-400 */
 }
 
 ._ganttTaskContent_1sr1d_41,
@@ -124,4 +126,48 @@
 
 .gantt-scroll::-webkit-scrollbar-corner {
   background: #f4f4f5;
+}
+
+/* Mobile optimizations for Gantt chart */
+@media (max-width: 767px) {
+
+  /* Force narrower table on mobile */
+  ._ganttTableRoot_v4xjz_1 {
+    max-width: 140px !important;
+    min-width: 140px !important;
+    width: 140px !important;
+  }
+
+  ._ganttTableWrapper_v4xjz_8 {
+    max-width: 140px !important;
+    min-width: 140px !important;
+    width: 140px !important;
+  }
+
+  /* Reduce padding and spacing in table cells */
+  ._ganttTable_Cell_7mmcq_11 {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  /* Smaller font size for table text */
+  ._ganttTable_Cell_7mmcq_11 {
+    font-size: 11px !important;
+  }
+
+  /* Reduce row height */
+  ._ganttTable_Row_7mmcq_6 {
+    height: 28px !important;
+  }
+
+  /* Reduce header height */
+  ._ganttTable_Header_7mmcq_1 {
+    height: 32px !important;
+  }
+
+  /* Make expand/collapse icons smaller */
+  ._ganttTable_ExpandIcon_7mmcq_27 {
+    width: 12px !important;
+    height: 12px !important;
+  }
 }

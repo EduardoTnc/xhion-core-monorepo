@@ -14,7 +14,7 @@ import {
 } from "@wamra/gantt-task-react";
 import type { Task as GTTask, TaskOrEmpty as GTTaskOrEmpty } from "@wamra/gantt-task-react";
 import "@wamra/gantt-task-react/dist/style.css";
-import "@/styles/gantt-task-react-overrides.css";
+import "@/styles/estilos_personalizados.css";
 
 interface ProjectGanttTimelineProps {
   proyecto: Proyecto;
@@ -98,49 +98,49 @@ export function ProjectGanttTimeline({ proyecto, etapas, tareas, onTaskClick }: 
     () =>
       isDarkTheme
         ? {
-            evenTaskBackgroundColor: "#171717",
-            oddTaskBackgroundColor: "#171717",
-            selectedTaskBackgroundColor: "#262626",
-            todayColor: "rgba(56,189,248,0.24)",
-            arrowColor: "#525252",
-            barBackgroundColor: "#262626",
-            barBackgroundSelectedColor: "#404040",
-            barProgressColor: "#22c55e",
-            barProgressSelectedColor: "#16a34a",
-            projectBackgroundColor: "#27272a",
-            projectBackgroundSelectedColor: "#3f3f46",
-            projectProgressColor: "#38bdf8",
-            projectProgressSelectedColor: "#0ea5e9",
-            milestoneBackgroundColor: "#f97316",
-            milestoneBackgroundSelectedColor: "#ea580c",
-            barLabelColor: "#e5e5e5",
-            barLabelWhenOutsideColor: "#e5e5e5",
-            contextMenuBgColor: "#171717",
-            contextMenuTextColor: "#f5f5f5",
-            contextMenuBoxShadow: "0 10px 15px -3px rgba(0,0,0,0.7)",
-          }
+          evenTaskBackgroundColor: "#171717",
+          oddTaskBackgroundColor: "#171717",
+          selectedTaskBackgroundColor: "#262626",
+          todayColor: "rgba(56,189,248,0.24)",
+          arrowColor: "#525252",
+          barBackgroundColor: "#262626",
+          barBackgroundSelectedColor: "#404040",
+          barProgressColor: "#22c55e",
+          barProgressSelectedColor: "#16a34a",
+          projectBackgroundColor: "#27272a",
+          projectBackgroundSelectedColor: "#3f3f46",
+          projectProgressColor: "#38bdf8",
+          projectProgressSelectedColor: "#0ea5e9",
+          milestoneBackgroundColor: "#f97316",
+          milestoneBackgroundSelectedColor: "#ea580c",
+          barLabelColor: "#e5e5e5",
+          barLabelWhenOutsideColor: "#e5e5e5",
+          contextMenuBgColor: "#171717",
+          contextMenuTextColor: "#f5f5f5",
+          contextMenuBoxShadow: "0 10px 15px -3px rgba(0,0,0,0.7)",
+        }
         : {
-            todayColor: "rgba(59,130,246,0.16)",
-            arrowColor: "#94a3b8",
-            evenTaskBackgroundColor: "#f8fafc",
-            oddTaskBackgroundColor: "#ffffff",
-            selectedTaskBackgroundColor: "#e5e7eb",
-            barBackgroundColor: "#e5e7eb",
-            barBackgroundSelectedColor: "#cbd5e1",
-            barProgressColor: "#16a34a",
-            barProgressSelectedColor: "#15803d",
-            projectBackgroundColor: "#cbd5e1",
-            projectBackgroundSelectedColor: "#94a3b8",
-            projectProgressColor: "#3b82f6",
-            projectProgressSelectedColor: "#2563eb",
-            milestoneBackgroundColor: "#f97316",
-            milestoneBackgroundSelectedColor: "#ea580c",
-            barLabelColor: "#0f172a",
-            barLabelWhenOutsideColor: "#0f172a",
-            contextMenuBgColor: "#ffffff",
-            contextMenuTextColor: "#0f172a",
-            contextMenuBoxShadow: "0 10px 15px -3px rgba(15,23,42,0.18)",
-          },
+          todayColor: "rgba(59,130,246,0.16)",
+          arrowColor: "#94a3b8",
+          evenTaskBackgroundColor: "#f8fafc",
+          oddTaskBackgroundColor: "#ffffff",
+          selectedTaskBackgroundColor: "#e5e7eb",
+          barBackgroundColor: "#e5e7eb",
+          barBackgroundSelectedColor: "#cbd5e1",
+          barProgressColor: "#16a34a",
+          barProgressSelectedColor: "#15803d",
+          projectBackgroundColor: "#cbd5e1",
+          projectBackgroundSelectedColor: "#94a3b8",
+          projectProgressColor: "#3b82f6",
+          projectProgressSelectedColor: "#2563eb",
+          milestoneBackgroundColor: "#f97316",
+          milestoneBackgroundSelectedColor: "#ea580c",
+          barLabelColor: "#0f172a",
+          barLabelWhenOutsideColor: "#0f172a",
+          contextMenuBgColor: "#ffffff",
+          contextMenuTextColor: "#0f172a",
+          contextMenuBoxShadow: "0 10px 15px -3px rgba(15,23,42,0.18)",
+        },
     [isDarkTheme]
   );
 
@@ -155,10 +155,10 @@ export function ProjectGanttTimeline({ proyecto, etapas, tareas, onTaskClick }: 
       viewMode === GTViewMode.Year
         ? 160
         : viewMode === GTViewMode.Month
-        ? 80
-        : viewMode === GTViewMode.Week
-        ? 60
-        : 40;
+          ? 80
+          : viewMode === GTViewMode.Week
+            ? 60
+            : 40;
 
     return {
       columnWidth,

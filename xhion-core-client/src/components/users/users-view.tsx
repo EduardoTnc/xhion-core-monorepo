@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, UserPlus, MoreVertical, Shield, Eye, Ban, CheckCircle2, Trash2, Filter, Users, UserCheck, UserX, TrendingUp } from "lucide-react"
+import { Search, UserPlus, MoreVertical, Shield, Eye, Ban, CheckCircle2, Trash2, Filter, Users, UserCheck, UserX, TrendingUp, Mail, Clock } from "lucide-react"
 import { useRoleStore } from "../../store/roleStore"
 import { InviteUserModal } from "../users/InviteUserModal"
 import { UserDetailsModal } from "./user-details-modal"
@@ -57,6 +59,8 @@ const getInitials = (name: string): string => {
 }
 
 export function UsersView() {
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState<string>("active")
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -81,6 +85,13 @@ export function UsersView() {
   useEffect(() => {
     fetchInitialData()
   }, [fetchInitialData])
+
+  // Check if should show invitations tab from navigation state
+  useEffect(() => {
+    if (location.state?.showInvitations) {
+      setActiveTab("invited")
+    }
+  }, [location.state])
 
   // Filtrar usuarios
   const filteredUsers = todosLosUsuarios.filter(user => {
@@ -261,173 +272,234 @@ export function UsersView() {
         </div>
       </div>
 
-      {/* Lista de usuarios */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {isLoading ? (
-          // Skeleton loading
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <Skeleton className="h-3 w-48" />
+      {/* Tabs para Usuarios Activos e Invitados */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <div className="border-b border-border px-4 sm:px-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="active" className="gap-2">
+              <UserCheck className="h-4 w-4" />
+              Usuarios Activos
+            </TabsTrigger>
+            <TabsTrigger value="invited" className="gap-2">
+              <Mail className="h-4 w-4" />
+              Usuarios Invitados
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Tab: Usuarios Activos */}
+        <TabsContent value="active" className="flex-1 overflow-y-auto p-4 sm:p-6 mt-0">
+          {isLoading ? (
+            // Skeleton loading
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
                 </div>
-                <Skeleton className="h-8 w-20" />
+              ))}
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            // Empty state
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold text-foreground">
+                  {searchQuery || roleFilter !== "all" || statusFilter !== "all"
+                    ? "No se encontraron usuarios"
+                    : "No hay usuarios"}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {searchQuery || roleFilter !== "all" || statusFilter !== "all"
+                    ? "Intenta ajustar los filtros de búsqueda"
+                    : "Comienza invitando usuarios al sistema"}
+                </p>
+                {!searchQuery && roleFilter === "all" && statusFilter === "all" && (
+                  <Restricted to="usuarios.crear">
+                    <Button
+                      className="mt-4 gap-2"
+                      onClick={() => setIsInviteModalOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Invitar Usuario
+                    </Button>
+                  </Restricted>
+                )}
               </div>
-            ))}
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          // Empty state
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">
-                {searchQuery || roleFilter !== "all" || statusFilter !== "all"
-                  ? "No se encontraron usuarios"
-                  : "No hay usuarios"}
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {searchQuery || roleFilter !== "all" || statusFilter !== "all"
-                  ? "Intenta ajustar los filtros de búsqueda"
-                  : "Comienza invitando usuarios al sistema"}
+            </div>
+          ) : (
+            // Lista de usuarios
+            <div className="space-y-3">
+              {filteredUsers.map((user) => {
+                const userRole = rolesCompletos.find(r => r.id === user.rolId)
+
+                return (
+                  <div
+                    key={user.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 rounded-lg border border-border bg-card p-3 sm:p-4 transition-all hover:border-primary/50 hover:shadow-sm"
+                  >
+                    {/* Avatar */}
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
+                      <AvatarFallback>{getInitials(user.nombreCompleto)}</AvatarFallback>
+                    </Avatar>
+
+                    {/* Info del usuario */}
+                    <div className="flex-1 min-w-0 w-full">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-medium text-foreground truncate">
+                          {user.nombreCompleto}
+                        </h4>
+                        <Badge
+                          variant={user.estado === "ACTIVO" ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {user.estado === "ACTIVO" ? "Activo" : "Inactivo"}
+                        </Badge>
+                        {userRole && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs"
+                            style={{
+                              borderColor: userRole.color || undefined,
+                              color: userRole.color || undefined
+                            }}
+                          >
+                            <Shield className="h-3 w-3 mr-1" />
+                            {userRole.nombre}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
+                        <span className="truncate">{user.email}</span>
+                        {user.puestoTrabajo && (
+                          <span className="hidden sm:inline">•</span>
+                        )}
+                        {user.puestoTrabajo && (
+                          <span>{user.puestoTrabajo.titulo}</span>
+                        )}
+                        <span className="hidden sm:inline">•</span>
+                        <span>Unido: {formatDate(user.fechaIngreso)}</span>
+                      </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver Detalles
+                        </DropdownMenuItem>
+
+                        <Restricted to="usuarios.gestionar_roles">
+                          <DropdownMenuItem onClick={() => handleChangeRole(user.id)}>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Cambiar Rol
+                          </DropdownMenuItem>
+                        </Restricted>
+
+                        <Restricted to="usuarios.editar">
+                          <DropdownMenuItem onClick={() => setUserToToggle({ id: user.id, currentStatus: user.estado })}>
+                            {user.estado === 'ACTIVO' ? (
+                              <>
+                                <Ban className="mr-2 h-4 w-4" />
+                                Desactivar Usuario
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Activar Usuario
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </Restricted>
+
+                        <DropdownMenuSeparator />
+
+                        <Restricted to="usuarios.eliminar">
+                          <DropdownMenuItem
+                            onClick={() => setUserToDelete(user.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar Usuario
+                          </DropdownMenuItem>
+                        </Restricted>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Contador */}
+          {!isLoading && filteredUsers.length > 0 && (
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Mostrando {filteredUsers.length} de {totalUsers} usuarios
               </p>
-              {!searchQuery && roleFilter === "all" && statusFilter === "all" && (
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Tab: Usuarios Invitados */}
+        <TabsContent value="invited" className="flex-1 overflow-y-auto p-4 sm:p-6 mt-0">
+          <div className="space-y-4">
+            {/* Placeholder para usuarios invitados */}
+            <div className="flex items-center justify-center h-full min-h-[400px]">
+              <div className="text-center max-w-md">
+                <Mail className="mx-auto h-16 w-16 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold text-foreground">
+                  Usuarios Invitados
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Aquí aparecerán los usuarios que han sido invitados pero aún no han aceptado la invitación.
+                </p>
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-medium">Pendientes de aceptación</p>
+                      <p className="text-xs text-muted-foreground">Invitaciones enviadas esperando respuesta</p>
+                    </div>
+                    <Badge variant="secondary">0</Badge>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-medium">Invitaciones enviadas</p>
+                      <p className="text-xs text-muted-foreground">Total de invitaciones en el sistema</p>
+                    </div>
+                    <Badge variant="secondary">0</Badge>
+                  </div>
+                </div>
                 <Restricted to="usuarios.crear">
                   <Button
-                    className="mt-4 gap-2"
+                    className="mt-6 gap-2"
                     onClick={() => setIsInviteModalOpen(true)}
                   >
                     <UserPlus className="h-4 w-4" />
-                    Invitar Usuario
+                    Enviar Nueva Invitación
                   </Button>
                 </Restricted>
-              )}
+              </div>
             </div>
           </div>
-        ) : (
-          // Lista de usuarios
-          <div className="space-y-3">
-            {filteredUsers.map((user) => {
-              const userRole = rolesCompletos.find(r => r.id === user.rolId)
-
-              return (
-                <div
-                  key={user.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 rounded-lg border border-border bg-card p-3 sm:p-4 transition-all hover:border-primary/50 hover:shadow-sm"
-                >
-                  {/* Avatar */}
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
-                    <AvatarFallback>{getInitials(user.nombreCompleto)}</AvatarFallback>
-                  </Avatar>
-
-                  {/* Info del usuario */}
-                  <div className="flex-1 min-w-0 w-full">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-medium text-foreground truncate">
-                        {user.nombreCompleto}
-                      </h4>
-                      <Badge
-                        variant={user.estado === "ACTIVO" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {user.estado === "ACTIVO" ? "Activo" : "Inactivo"}
-                      </Badge>
-                      {userRole && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs"
-                          style={{
-                            borderColor: userRole.color || undefined,
-                            color: userRole.color || undefined
-                          }}
-                        >
-                          <Shield className="h-3 w-3 mr-1" />
-                          {userRole.nombre}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
-                      <span className="truncate">{user.email}</span>
-                      {user.puestoTrabajo && (
-                        <span className="hidden sm:inline">•</span>
-                      )}
-                      {user.puestoTrabajo && (
-                        <span>{user.puestoTrabajo.titulo}</span>
-                      )}
-                      <span className="hidden sm:inline">•</span>
-                      <span>Unido: {formatDate(user.fechaIngreso)}</span>
-                    </div>
-                  </div>
-
-                  {/* Acciones */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver Detalles
-                      </DropdownMenuItem>
-
-                      <Restricted to="usuarios.gestionar_roles">
-                        <DropdownMenuItem onClick={() => handleChangeRole(user.id)}>
-                          <Shield className="mr-2 h-4 w-4" />
-                          Cambiar Rol
-                        </DropdownMenuItem>
-                      </Restricted>
-
-                      <Restricted to="usuarios.editar">
-                        <DropdownMenuItem onClick={() => setUserToToggle({ id: user.id, currentStatus: user.estado })}>
-                          {user.estado === 'ACTIVO' ? (
-                            <>
-                              <Ban className="mr-2 h-4 w-4" />
-                              Desactivar Usuario
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Activar Usuario
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      </Restricted>
-
-                      <DropdownMenuSeparator />
-
-                      <Restricted to="usuarios.eliminar">
-                        <DropdownMenuItem
-                          onClick={() => setUserToDelete(user.id)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar Usuario
-                        </DropdownMenuItem>
-                      </Restricted>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Contador */}
-        {!isLoading && filteredUsers.length > 0 && (
-          <div className="mt-4 border-t border-border pt-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Mostrando {filteredUsers.length} de {totalUsers} usuarios
-            </p>
-          </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Modales */}
       <InviteUserModal

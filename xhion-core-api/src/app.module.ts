@@ -21,6 +21,10 @@ import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { SolicitudesAccesoModule } from './solicitudes-acceso/solicitudes-acceso.module';
 import { RecursosModule } from './recursos/recursos.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
+import { SystemSettingsModule } from './system-settings/system-settings.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -52,6 +56,13 @@ import { FinanzasModule } from './finanzas/finanzas.module';
     SolicitudesAccesoModule,
     RecursosModule,
     FinanzasModule,
+    FinanzasModule,
+    SystemSettingsModule,
+    FilesModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   providers: [
     // Guard que se encarga de limitar el número de peticiones (Aplicación Global)
@@ -66,4 +77,4 @@ import { FinanzasModule } from './finanzas/finanzas.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

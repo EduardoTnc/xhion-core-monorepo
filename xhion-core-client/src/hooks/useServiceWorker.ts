@@ -7,9 +7,17 @@ export function useServiceWorker() {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
-    // Register service worker
-    if ("serviceWorker" in navigator) {
+    // Register service worker ONLY in production
+    if (import.meta.env.PROD && "serviceWorker" in navigator) {
       registerServiceWorker();
+    } else if (import.meta.env.DEV && "serviceWorker" in navigator) {
+      // In development, unregister any existing service workers to avoid caching issues
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister();
+          console.log("Service Worker unregistered in development mode");
+        }
+      });
     }
 
     // Online/Offline listeners

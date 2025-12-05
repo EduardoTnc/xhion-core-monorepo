@@ -17,7 +17,10 @@ async function bootstrap() {
   const config = app.get(ConfigService);
 
   // Seguridad HTTP headers (Aplicación Global)
-  app.use(helmet());
+  // crossOriginResourcePolicy: false permite que el frontend (en otro puerto) cargue imágenes
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
 
   // Prefijo global de la API (Aplicación Global)
   app.setGlobalPrefix('api/v1');
@@ -37,8 +40,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Servir archivos estáticos (uploads de avatar y CV)
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  // Servir archivos estáticos (uploads de avatar, logo, etc.)
+  // Usar process.cwd() para obtener la raíz del proyecto, no __dirname que apunta a dist/
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
 
@@ -112,7 +116,7 @@ async function bootstrap() {
   // Puerto de escucha (Aplicación Global)
   const port = config.get<number>('PORT') ?? 3000;
   await app.listen(port);
-  
+
   console.log(`🚀 Application is running on: http://localhost:${port}`);
   console.log(`📚 Swagger documentation available at: http://localhost:${port}/api/docs`);
 }

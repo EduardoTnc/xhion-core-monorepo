@@ -120,7 +120,6 @@ export function DepartmentTeamView({
         onOpenChange={setShowAssignModal}
         departamentoId={departamentoId}
         departamentoNombre={departamentoNombre}
-        puestosTrabajo={puestosTrabajo || []}
         onSuccess={() => {
           window.location.reload();
         }}

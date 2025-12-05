@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useState } from "react"
-import { ChevronRight, Loader2, Plus, Search } from "lucide-react"
+import { ChevronRight, Loader2, Plus, Search, MoreVertical, Edit, Trash2, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -12,10 +12,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { DepartmentDetailWidgets } from "./department-detail-widgets"
 import { CreateDepartmentModal } from "./CreateDepartmentModal"
 import { useDepartmentStore } from "@/store/departmentStore"
 import { departmentService, type DepartamentoDetalle } from "@/services/departmentService"
+import { projectService, type Proyecto } from "@/services/projectService"
 import { taskService, type Tarea } from "@/services/taskService"
 import { toast } from "sonner"
 import { getDepartmentIcon } from "@/lib/department-icons"
@@ -38,13 +63,33 @@ export function DepartmentsView() {
   const [leaderModalInfo, setLeaderModalInfo] = useState<{ leader: DepartamentoDetalle["jefe"] | null; departmentName: string } | null>(null)
   const [contextModalInfo, setContextModalInfo] = useState<{ departmentId: string; departmentName: string } | null>(null)
   const [taskDetailId, setTaskDetailId] = useState<string | null>(null)
+  const [departmentToDelete, setDepartmentToDelete] = useState<{ id: string; nombre: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [departmentToEdit, setDepartmentToEdit] = useState<string | null>(null)
+  const [unassignedProjects, setUnassignedProjects] = useState<Proyecto[]>([])
+  const [unassignedProjectsLoading, setUnassignedProjectsLoading] = useState(false)
+  const [expandedUnassignedSection, setExpandedUnassignedSection] = useState(true)
   const navigate = useNavigate()
 
   const { departamentos, isLoading, fetchDepartamentos } = useDepartmentStore()
 
   useEffect(() => {
     fetchDepartamentos()
+    fetchUnassignedProjects()
   }, [])
+
+  const fetchUnassignedProjects = async () => {
+    try {
+      setUnassignedProjectsLoading(true)
+      const allProjects = await projectService.getAll()
+      const unassigned = allProjects.filter(project => !project.departamentoId)
+      setUnassignedProjects(unassigned)
+    } catch (error: any) {
+      toast.error(error.message || 'Error al cargar proyectos sin departamento')
+    } finally {
+      setUnassignedProjectsLoading(false)
+    }
+  }
 
   const filteredDepartments = departamentos.filter((dept) => {
     const matchesSearch =
@@ -389,80 +434,127 @@ export function DepartmentsView() {
 
                 return (
                   <Fragment key={department.id}>
-                    <TableRow className="text-sm">
-                      <TableCell className="w-16">
-                        <button
-                          type="button"
-                          aria-expanded={isExpanded}
-                          className={`flex w-full items-center justify-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition hover:border-primary hover:text-primary ${isExpanded ? "border-primary/70 text-primary" : "border-border/60 text-muted-foreground"
-                            }`}
-                          onClick={() => toggleDepartmentExpansion(department.id)}
-                        >
-                          <ChevronRight
-                            className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-90" : "rotate-0"}`}
-                          />
-                          <span>{isExpanded ? "Cerrar" : "Abrir"}</span>
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${color} text-white`}>
-                            <DepartmentIcon className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-foreground font-medium">{department.nombre}</div>
-                            {department.descripcion && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">{department.descripcion}</p>
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <TableRow className="text-sm cursor-context-menu">
+                          <TableCell className="w-16">
+                            <button
+                              type="button"
+                              aria-expanded={isExpanded}
+                              className={`flex w-full items-center justify-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition hover:border-primary hover:text-primary ${isExpanded ? "border-primary/70 text-primary" : "border-border/60 text-muted-foreground"
+                                }`}
+                              onClick={() => toggleDepartmentExpansion(department.id)}
+                            >
+                              <ChevronRight
+                                className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-90" : "rotate-0"}`}
+                              />
+                              <span>{isExpanded ? "Cerrar" : "Abrir"}</span>
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${color} text-white`}>
+                                <DepartmentIcon className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="text-foreground font-medium">{department.nombre}</div>
+                                {department.descripcion && (
+                                  <p className="text-xs text-muted-foreground line-clamp-1">{department.descripcion}</p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {department.jefe ? (
+                              <button
+                                type="button"
+                                className="font-medium text-foreground underline-offset-2 hover:underline"
+                                onClick={() => setLeaderModalInfo({ leader: department.jefe, departmentName: department.nombre })}
+                              >
+                                {department.jefe.nombreCompleto}
+                              </button>
+                            ) : (
+                              "Sin asignar"
                             )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {department.jefe ? (
-                          <button
-                            type="button"
-                            className="font-medium text-foreground underline-offset-2 hover:underline"
-                            onClick={() => setLeaderModalInfo({ leader: department.jefe, departmentName: department.nombre })}
+                          </TableCell>
+                          <TableCell className="text-center text-sm text-foreground">
+                            {department._count?.proyectos ?? 0}
+                          </TableCell>
+                          <TableCell className="text-center text-sm text-foreground">
+                            {department._count?.puestosTrabajo ?? 0}
+                          </TableCell>
+                          <TableCell className="text-center text-xs text-muted-foreground">
+                            {department.contextoDepartamento ? (
+                              "Sí"
+                            ) : (
+                              <button
+                                type="button"
+                                className="font-medium text-primary underline-offset-2 hover:underline"
+                                onClick={() => setContextModalInfo({ departmentId: department.id, departmentName: department.nombre })}
+                              >
+                                Pendiente
+                              </button>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-muted-foreground">
+                            <div className="flex items-center justify-end gap-2">
+                              <span>{new Date(department.fechaCreacion).toLocaleDateString("es-ES")}</span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => navigate(`/departamentos/${department.id}`)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Ver detalle
+                                  </DropdownMenuItem>
+                                  <Restricted to="departamentos.editar">
+                                    <DropdownMenuItem onClick={() => setDepartmentToEdit(department.id)}>
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Editar
+                                    </DropdownMenuItem>
+                                  </Restricted>
+                                  <DropdownMenuSeparator />
+                                  <Restricted to="departamentos.eliminar">
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => setDepartmentToDelete({ id: department.id, nombre: department.nombre })}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Eliminar
+                                    </DropdownMenuItem>
+                                  </Restricted>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem onClick={() => navigate(`/departamentos/${department.id}`)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalle
+                        </ContextMenuItem>
+                        <Restricted to="departamentos.editar">
+                          <ContextMenuItem onClick={() => setDepartmentToEdit(department.id)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </ContextMenuItem>
+                        </Restricted>
+                        <ContextMenuSeparator />
+                        <Restricted to="departamentos.eliminar">
+                          <ContextMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDepartmentToDelete({ id: department.id, nombre: department.nombre })}
                           >
-                            {department.jefe.nombreCompleto}
-                          </button>
-                        ) : (
-                          "Sin asignar"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center text-sm text-foreground">
-                        {department._count?.proyectos ?? 0}
-                      </TableCell>
-                      <TableCell className="text-center text-sm text-foreground">
-                        {department._count?.puestosTrabajo ?? 0}
-                      </TableCell>
-                      <TableCell className="text-center text-xs text-muted-foreground">
-                        {department.contextoDepartamento ? (
-                          "Sí"
-                        ) : (
-                          <button
-                            type="button"
-                            className="font-medium text-primary underline-offset-2 hover:underline"
-                            onClick={() => setContextModalInfo({ departmentId: department.id, departmentName: department.nombre })}
-                          >
-                            Pendiente
-                          </button>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground">
-                        <div className="flex flex-col items-end gap-1">
-                          <span>{new Date(department.fechaCreacion).toLocaleDateString("es-ES")}</span>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-7 px-3 text-[11px]"
-                            onClick={() => navigate(`/departamentos/${department.id}`)}
-                          >
-                            Ver detalle
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </ContextMenuItem>
+                        </Restricted>
+                      </ContextMenuContent>
+                    </ContextMenu>
                     {isExpanded && (
                       <TableRow className="bg-muted/15 text-sm">
                         <TableCell colSpan={7} className="p-0">
@@ -478,6 +570,144 @@ export function DepartmentsView() {
         </div>
         {filteredDepartments.length === 0 && (
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">No hay departamentos para mostrar.</p>
+        )}
+      </div>
+
+      {/* Unassigned Projects Section */}
+      <div className="mt-6 rounded-lg border border-border/60">
+        <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-left"
+            onClick={() => setExpandedUnassignedSection(!expandedUnassignedSection)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-600 text-white">
+                <ChevronRight className={`h-4 w-4 transition-transform ${expandedUnassignedSection ? "rotate-90" : "rotate-0"}`} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Proyectos Sin Departamento</h3>
+                <p className="text-xs text-muted-foreground">
+                  {unassignedProjectsLoading ? "Cargando..." : `${unassignedProjects.length} proyecto${unassignedProjects.length !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {expandedUnassignedSection && (
+          <div className="p-4">
+            {unassignedProjectsLoading ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando proyectos...
+              </div>
+            ) : unassignedProjects.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No hay proyectos sin departamento asignado
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {unassignedProjects.map((project) => {
+                  const isExpanded = !!expandedProjects[project.id];
+                  const tasks = projectTasks[project.id];
+                  const isLoadingTasks = projectTasksLoading[project.id];
+
+                  return (
+                    <div key={project.id} className="border border-border/40 rounded-lg bg-background/70 p-3 shadow-sm">
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 text-left text-sm"
+                        onClick={() => {
+                          toggleProjectExpansion(project.id);
+                          if (!isExpanded && !tasks && !isLoadingTasks) {
+                            setProjectTasksLoading((prev) => ({ ...prev, [project.id]: true }));
+                            taskService
+                              .getAll({ proyectoId: project.id })
+                              .then((tasks) => {
+                                setProjectTasks((prev) => ({ ...prev, [project.id]: tasks }));
+                              })
+                              .catch(() => {
+                                toast.error(`No se pudieron cargar las tareas de ${project.nombre}`);
+                              })
+                              .finally(() => {
+                                setProjectTasksLoading((prev) => ({ ...prev, [project.id]: false }));
+                              });
+                          }
+                        }}
+                      >
+                        <ChevronRight
+                          className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-90" : "rotate-0"}`}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{project.nombre}</p>
+                          <div className="text-xs text-muted-foreground">
+                            <span>{project.estado}</span>
+                            {project.responsable?.nombreCompleto && (
+                              <span className="ml-3">Responsable: {project.responsable.nombreCompleto}</span>
+                            )}
+                            <span className="ml-3">Tareas: {project._count?.tareas ?? 0}</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {project.fechaInicio && project.fechaFin
+                            ? `${new Date(project.fechaInicio).toLocaleDateString("es-ES")} → ${new Date(project.fechaFin).toLocaleDateString("es-ES")}`
+                            : new Date(project.fechaCreacion).toLocaleDateString("es-ES")}
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <div className="mt-3 space-y-3 rounded-lg border border-dashed border-border/60 bg-muted/30 p-3">
+                          {isLoadingTasks ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Cargando tareas
+                            </div>
+                          ) : tasks && tasks.length > 0 ? (
+                            <div className="space-y-2 text-xs">
+                              {tasks.map((task) => (
+                                <button
+                                  key={task.id}
+                                  type="button"
+                                  className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/80 px-3 py-2 text-left hover:border-primary/60"
+                                  onClick={() => setTaskDetailId(task.id)}
+                                >
+                                  <div>
+                                    <p className="font-medium text-foreground">{task.titulo}</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {task.asignado?.nombreCompleto || "Sin asignar"} · {task.estado}
+                                    </p>
+                                  </div>
+                                  <div className="text-right text-[11px] text-muted-foreground">
+                                    {task.fechaVencimiento
+                                      ? new Date(task.fechaVencimiento).toLocaleDateString("es-ES")
+                                      : "Sin fecha"}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">No hay tareas registradas en este proyecto.</p>
+                          )}
+                          <div className="flex justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[11px]"
+                              onClick={() =>
+                                navigate("/proyectos", {
+                                  state: { proyectoId: project.id },
+                                })
+                              }
+                            >
+                              Ir al proyecto
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -514,6 +744,64 @@ export function DepartmentsView() {
           contextoExistente={departmentDetails[contextModalInfo.departmentId]?.contextoDepartamento as any}
         />
       )}
+
+      {/* Edit Department Modal */}
+      {departmentToEdit && (
+        <CreateDepartmentModal
+          open={!!departmentToEdit}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDepartmentToEdit(null);
+              fetchDepartamentos();
+            }
+          }}
+          departamento={departamentos.find(d => d.id === departmentToEdit) || null}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!departmentToDelete} onOpenChange={(open) => !open && setDepartmentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar departamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas eliminar el departamento "{departmentToDelete?.nombre}"?
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                if (!departmentToDelete) return;
+                setIsDeleting(true);
+                try {
+                  const { deleteDepartamento } = useDepartmentStore.getState();
+                  await deleteDepartamento(departmentToDelete.id);
+                  toast.success(`Departamento "${departmentToDelete.nombre}" eliminado exitosamente`);
+                  setDepartmentToDelete(null);
+                  await fetchDepartamentos();
+                } catch (error: any) {
+                  toast.error(error.message || "Error al eliminar departamento");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                "Eliminar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

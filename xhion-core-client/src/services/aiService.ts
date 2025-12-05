@@ -19,9 +19,10 @@ export interface AiSearchResult {
   queryId: string;
   summary: string;
   resultsByEntity: Record<string, any[]>;
-  intent: string;
+  intent?: string;
   actionSuggestions?: AiActionSuggestion[];
   processingTimeMs: number;
+  stats?: Record<string, any>;
 }
 
 export interface AiSearchPayload {

@@ -615,6 +615,54 @@ export const MODULOS_PERMISOS: ModuloPermisos[] = [
       },
     ],
   },
+
+  // ========================================
+  // MÓDULO: INTELIGENCIA ARTIFICIAL
+  // ========================================
+  {
+    id: 'ia',
+    nombre: 'Inteligencia Artificial',
+    descripcion: 'Funcionalidades de IA y búsqueda contextual',
+    icon: 'Sparkles',
+    permisos: [
+      {
+        nombreAccion: 'ai.search',
+        descripcion: 'Realizar búsquedas contextuales con IA en lenguaje natural',
+        modulo: 'IA',
+        categoria: 'Lectura',
+      },
+      {
+        nombreAccion: 'ai.projects.assist',
+        descripcion: 'Usar el asistente de IA para generar propuestas de proyectos',
+        modulo: 'IA',
+        categoria: 'Escritura',
+      },
+      {
+        nombreAccion: 'ai.ideas.analyze',
+        descripcion: 'Analizar ideas con IA y obtener insights estratégicos',
+        modulo: 'IA',
+        categoria: 'Análisis',
+      },
+      {
+        nombreAccion: 'ai.reindex',
+        descripcion: 'Reindexar embeddings de la base de conocimiento',
+        modulo: 'IA',
+        categoria: 'Gestión',
+      },
+      {
+        nombreAccion: 'ai.logs',
+        descripcion: 'Ver historial de consultas de IA',
+        modulo: 'IA',
+        categoria: 'Lectura',
+      },
+      {
+        nombreAccion: 'ai.status',
+        descripcion: 'Ver estado y métricas del módulo de IA',
+        modulo: 'IA',
+        categoria: 'Lectura',
+      },
+    ],
+  },
 ];
 
 /**

@@ -53,7 +53,7 @@ import { toast } from "sonner"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 import "@wamra/gantt-task-react/dist/style.css"
-import "@/styles/gantt-task-react-overrides.css"
+import "@/styles/estilos_personalizados.css"
 import { getDepartmentIcon } from "@/lib/department-icons"
 
 type ContentFilter = "all" | "projects" | "tasks"
@@ -222,57 +222,57 @@ export function GanttChartProfessional() {
   const ganttColors = useMemo(() => (
     isDarkTheme
       ? {
-          // Fondo general alineado con la plataforma
-          evenTaskBackgroundColor: "#171717",
-          oddTaskBackgroundColor: "#171717",
-          selectedTaskBackgroundColor: "#262626",
-          // Línea de "hoy" sutil pero visible
-          todayColor: "rgba(56,189,248,0.24)",
-          // Flechas y grid
-          arrowColor: "#525252",
-          // Barras de tareas (etapas/tareas)
-          barBackgroundColor: "#262626",
-          barBackgroundSelectedColor: "#404040",
-          barProgressColor: "#22c55e",
-          barProgressSelectedColor: "#16a34a",
-          // Barras de proyectos/departamentos
-          projectBackgroundColor: "#27272a",
-          projectBackgroundSelectedColor: "#3f3f46",
-          projectProgressColor: "#38bdf8",
-          projectProgressSelectedColor: "#0ea5e9",
-          // Hitos
-          milestoneBackgroundColor: "#f97316",
-          milestoneBackgroundSelectedColor: "#ea580c",
-          // Etiquetas
-          barLabelColor: "#e5e5e5",
-          barLabelWhenOutsideColor: "#e5e5e5",
-          // Menú contextual
-          contextMenuBgColor: "#171717",
-          contextMenuTextColor: "#f5f5f5",
-          contextMenuBoxShadow: "0 10px 15px -3px rgba(0,0,0,0.7)",
-        }
+        // Fondo general alineado con la plataforma
+        evenTaskBackgroundColor: "#171717",
+        oddTaskBackgroundColor: "#171717",
+        selectedTaskBackgroundColor: "#262626",
+        // Línea de "hoy" sutil pero visible
+        todayColor: "rgba(56,189,248,0.24)",
+        // Flechas y grid
+        arrowColor: "#525252",
+        // Barras de tareas (etapas/tareas)
+        barBackgroundColor: "#262626",
+        barBackgroundSelectedColor: "#404040",
+        barProgressColor: "#22c55e",
+        barProgressSelectedColor: "#16a34a",
+        // Barras de proyectos/departamentos
+        projectBackgroundColor: "#27272a",
+        projectBackgroundSelectedColor: "#3f3f46",
+        projectProgressColor: "#38bdf8",
+        projectProgressSelectedColor: "#0ea5e9",
+        // Hitos
+        milestoneBackgroundColor: "#f97316",
+        milestoneBackgroundSelectedColor: "#ea580c",
+        // Etiquetas
+        barLabelColor: "#e5e5e5",
+        barLabelWhenOutsideColor: "#e5e5e5",
+        // Menú contextual
+        contextMenuBgColor: "#171717",
+        contextMenuTextColor: "#f5f5f5",
+        contextMenuBoxShadow: "0 10px 15px -3px rgba(0,0,0,0.7)",
+      }
       : {
-          todayColor: "rgba(59,130,246,0.16)", // blue-500
-          arrowColor: "#94a3b8",
-          evenTaskBackgroundColor: "#f8fafc", // slate-50
-          oddTaskBackgroundColor: "#ffffff",
-          selectedTaskBackgroundColor: "#e5e7eb",
-          barBackgroundColor: "#e5e7eb",
-          barBackgroundSelectedColor: "#cbd5e1",
-          barProgressColor: "#16a34a",
-          barProgressSelectedColor: "#15803d",
-          projectBackgroundColor: "#cbd5e1",
-          projectBackgroundSelectedColor: "#94a3b8",
-          projectProgressColor: "#3b82f6",
-          projectProgressSelectedColor: "#2563eb",
-          milestoneBackgroundColor: "#f97316",
-          milestoneBackgroundSelectedColor: "#ea580c",
-          barLabelColor: "#0f172a",
-          barLabelWhenOutsideColor: "#0f172a",
-          contextMenuBgColor: "#ffffff",
-          contextMenuTextColor: "#0f172a",
-          contextMenuBoxShadow: "0 10px 15px -3px rgba(15,23,42,0.18)",
-        }
+        todayColor: "rgba(59,130,246,0.16)", // blue-500
+        arrowColor: "#94a3b8",
+        evenTaskBackgroundColor: "#f8fafc", // slate-50
+        oddTaskBackgroundColor: "#ffffff",
+        selectedTaskBackgroundColor: "#e5e7eb",
+        barBackgroundColor: "#e5e7eb",
+        barBackgroundSelectedColor: "#cbd5e1",
+        barProgressColor: "#16a34a",
+        barProgressSelectedColor: "#15803d",
+        projectBackgroundColor: "#cbd5e1",
+        projectBackgroundSelectedColor: "#94a3b8",
+        projectProgressColor: "#3b82f6",
+        projectProgressSelectedColor: "#2563eb",
+        milestoneBackgroundColor: "#f97316",
+        milestoneBackgroundSelectedColor: "#ea580c",
+        barLabelColor: "#0f172a",
+        barLabelWhenOutsideColor: "#0f172a",
+        contextMenuBgColor: "#ffffff",
+        contextMenuTextColor: "#0f172a",
+        contextMenuBoxShadow: "0 10px 15px -3px rgba(15,23,42,0.18)",
+      }
   ), [isDarkTheme])
 
   const mapTailwindBgToHex = (value?: string) => {
@@ -353,18 +353,24 @@ export function GanttChartProfessional() {
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
   const computedDistances = useMemo(() => {
     const w = containerWidth || 1024
-    const tableWidth = clamp(Math.round(w * 0.36), 260, 420)
-    const actionColumnWidth = 56
-    const expandIconWidth = 18
-    const titleCellWidth = clamp(tableWidth - actionColumnWidth - expandIconWidth, 200, tableWidth)
+    // En móvil (< 768px), usar 25% del ancho con mínimo de 180px
+    // En desktop, usar 36% del ancho con mínimo de 260px
+    const isMobile = w < 768
+    const tableWidthPercentage = isMobile ? 0.25 : 0.36
+    const minTableWidth = isMobile ? 180 : 260
+    const maxTableWidth = isMobile ? 240 : 420
+    const tableWidth = clamp(Math.round(w * tableWidthPercentage), minTableWidth, maxTableWidth)
+    const actionColumnWidth = isMobile ? 40 : 56
+    const expandIconWidth = isMobile ? 14 : 18
+    const titleCellWidth = clamp(tableWidth - actionColumnWidth - expandIconWidth, 150, tableWidth)
     const columnWidth =
       viewMode === GTViewMode.Year
         ? 160
         : viewMode === GTViewMode.Month
-        ? 80
-        : viewMode === GTViewMode.Week
-        ? 60
-        : 40
+          ? 80
+          : viewMode === GTViewMode.Week
+            ? 60
+            : 40
 
     return {
       columnWidth,
@@ -375,11 +381,11 @@ export function GanttChartProfessional() {
       titleCellWidth,
       actionColumnWidth,
       expandIconWidth,
-      headerHeight: 42,
-      rowHeight: 34,
+      headerHeight: isMobile ? 36 : 42,
+      rowHeight: isMobile ? 28 : 34,
       relationCircleRadius: 3,
       relationCircleOffset: 6,
-      nestedTaskNameOffset: 18,
+      nestedTaskNameOffset: isMobile ? 14 : 18,
       minimumRowDisplayed: 6,
       tableWidth,
       contextMenuIconWidth: 16,
@@ -399,11 +405,13 @@ export function GanttChartProfessional() {
     const { icon: DeptIcon } = getDepartmentIcon(meta?.iconName || undefined)
     const accent = meta?.deptColor || meta?.projectColor
     const halo = hexToRgba(accent, task.id.startsWith("dept-") ? 0.35 : 0.12)
+    const isMobile = containerWidth < 768
     return (
-      <div className="flex items-center gap-2 pr-2">
+      <div className={cn("flex items-center pr-1 md:pr-2", isMobile ? "gap-1" : "gap-2")}>
         <div
           className={cn(
-            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border text-[11px] font-semibold",
+            "flex flex-shrink-0 items-center justify-center rounded-lg border text-[11px] font-semibold",
+            isMobile ? "h-6 w-6" : "h-8 w-8",
             !accent && "bg-muted/50 text-muted-foreground"
           )}
           style={{
@@ -412,14 +420,14 @@ export function GanttChartProfessional() {
             color: accent || undefined,
           }}
         >
-          {DeptIcon ? <DeptIcon className="h-4 w-4" /> : <Layers className="h-4 w-4 opacity-60" />}
+          {DeptIcon ? <DeptIcon className={isMobile ? "h-3 w-3" : "h-4 w-4"} /> : <Layers className={cn("opacity-60", isMobile ? "h-3 w-3" : "h-4 w-4")} />}
         </div>
         <div className="min-w-0 flex-1">
           <TitleColumn {...props} />
         </div>
       </div>
     )
-  }, [])
+  }, [containerWidth])
 
   const columns = useMemo(() => {
     return [
@@ -875,7 +883,7 @@ export function GanttChartProfessional() {
         document.body.appendChild(tempDiv)
         const rgbColor = getComputedStyle(tempDiv).color
         document.body.removeChild(tempDiv)
-        ;(element.style as any)[prop] = rgbColor
+          ; (element.style as any)[prop] = rgbColor
       }
     })
 
@@ -895,7 +903,7 @@ export function GanttChartProfessional() {
 
       const ganttElement = ganttContainerRef.current.cloneNode(true) as HTMLElement
       convertOklchToRgb(ganttElement)
-      
+
       const bg = getComputedStyle(document.body).backgroundColor
       const canvas = await html2canvas(ganttElement, {
         backgroundColor: bg,
@@ -930,7 +938,7 @@ export function GanttChartProfessional() {
 
       const ganttElement = ganttContainerRef.current.cloneNode(true) as HTMLElement
       convertOklchToRgb(ganttElement)
-      
+
       const bg = getComputedStyle(document.body).backgroundColor
       const canvas = await html2canvas(ganttElement, {
         backgroundColor: bg,
@@ -948,7 +956,7 @@ export function GanttChartProfessional() {
 
       pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
       pdf.save(`gantt-chart-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
-      
+
       toast.success('PDF exportado exitosamente')
     } catch (error) {
       console.error('Error al exportar PDF:', error)
@@ -1012,31 +1020,31 @@ export function GanttChartProfessional() {
     <>
       <Card className={cn("flex flex-col border-none shadow-none bg-background/40", isFullscreen ? "fixed inset-0 z-50" : "h-full")}>
         {/* Header */}
-        <CardHeader className="pb-3 px-4 flex-shrink-0 border-b space-y-3">
+        <CardHeader className="pb-2 md:pb-3 px-2 md:px-4 flex-shrink-0 border-b space-y-2 md:space-y-3">
           {/* Fila 1: Título y Acciones */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Calendar className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="p-1.5 md:p-2 rounded-lg bg-primary/10 shrink-0">
+                <Calendar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-foreground">Diagrama de Gantt Profesional</h3>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <h3 className="text-sm md:text-lg font-semibold text-foreground truncate">Diagrama de Gantt Profesional</h3>
                   {isSaving && (
-                    <Badge variant="secondary" className="gap-1.5 text-xs">
+                    <Badge variant="secondary" className="gap-1.5 text-xs hidden md:flex">
                       <Save className="h-3 w-3 animate-pulse" />
                       Guardando...
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] md:text-xs text-muted-foreground truncate">
                   {proyectosFiltrados.length} proyectos • {estadisticas?.totalTareas} tareas
                   {showMilestones && ` • ${proyectosFiltrados.reduce((sum, p) => sum + (p.hitos?.length || 0), 0)} hitos`}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 shrink-0">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1044,9 +1052,9 @@ export function GanttChartProfessional() {
                       variant="outline"
                       size="sm"
                       onClick={() => fetchTimelineData()}
-                      className="h-8 w-8 p-0"
+                      className="h-7 w-7 md:h-8 md:w-8 p-0"
                     >
-                      <RefreshCw className="h-4 w-4" />
+                      <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Actualizar datos</TooltipContent>
@@ -1060,10 +1068,10 @@ export function GanttChartProfessional() {
                       variant="outline"
                       size="sm"
                       onClick={handleExportPNG}
-                      className="h-8 gap-1.5 px-2"
+                      className="h-7 md:h-8 gap-1 md:gap-1.5 px-1.5 md:px-2 hidden sm:flex"
                     >
-                      <Download className="h-4 w-4" />
-                      <span className="text-xs">PNG</span>
+                      <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <span className="text-[10px] md:text-xs">PNG</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Exportar como PNG</TooltipContent>
@@ -1077,10 +1085,10 @@ export function GanttChartProfessional() {
                       variant="outline"
                       size="sm"
                       onClick={handleExportPDF}
-                      className="h-8 gap-1.5 px-2"
+                      className="h-7 md:h-8 gap-1 md:gap-1.5 px-1.5 md:px-2 hidden sm:flex"
                     >
-                      <FileText className="h-4 w-4" />
-                      <span className="text-xs">PDF</span>
+                      <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <span className="text-[10px] md:text-xs">PDF</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Exportar como PDF</TooltipContent>
@@ -1091,69 +1099,83 @@ export function GanttChartProfessional() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 md:h-8 md:w-8 p-0"
               >
-                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <Maximize2 className="h-3.5 w-3.5 md:h-4 md:w-4" />}
               </Button>
             </div>
           </div>
 
-          {/* Fila 2: Estadísticas */}
+          {/* Fila 2: Estadísticas - Collapsible on mobile */}
           {estadisticas && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <Target className="h-4 w-4 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Proyectos</p>
-                  <p className="text-sm font-semibold">{estadisticas.totalProyectos}</p>
+            <div className="block">
+              <button
+                onClick={() => {
+                  const stats = document.getElementById('gantt-stats')
+                  if (stats) {
+                    stats.classList.toggle('hidden')
+                  }
+                }}
+                className="flex md:hidden items-center gap-1.5 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+                <span>Ver estadísticas</span>
+              </button>
+              <div id="gantt-stats" className="hidden md:grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 md:gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">Proyectos</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.totalProyectos}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Progreso</p>
-                  <p className="text-sm font-semibold">{estadisticas.progresoPromedio}%</p>
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">Progreso</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.progresoPromedio}%</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Saludables</p>
-                  <p className="text-sm font-semibold">{estadisticas.proyectosSaludables}</p>
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">Saludables</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.proyectosSaludables}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <AlertTriangle className="h-4 w-4 text-orange-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">En Riesgo</p>
-                  <p className="text-sm font-semibold">{estadisticas.proyectosEnRiesgo}</p>
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4 text-orange-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">En Riesgo</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.proyectosEnRiesgo}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <Clock className="h-4 w-4 text-purple-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Tareas</p>
-                  <p className="text-sm font-semibold">{estadisticas.totalTareas}</p>
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">Tareas</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.totalTareas}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Completadas</p>
-                  <p className="text-sm font-semibold">{estadisticas.tareasCompletadas}</p>
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">Completadas</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.tareasCompletadas}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                <Users className="h-4 w-4 text-indigo-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Miembros</p>
-                  <p className="text-sm font-semibold">{estadisticas.totalMiembros}</p>
+                <div className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-lg bg-muted/50">
+                  <Users className="h-3.5 w-3.5 md:h-4 md:w-4 text-indigo-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">Miembros</p>
+                    <p className="text-xs md:text-sm font-semibold">{estadisticas.totalMiembros}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1161,13 +1183,13 @@ export function GanttChartProfessional() {
 
           {/* Fila 3: Filtros y Vista (una sola línea con scroll horizontal si es necesario) */}
           <div className="w-full overflow-x-auto gantt-scroll">
-            <div className="flex items-center gap-3 min-w-max">
+            <div className="flex items-center gap-2 md:gap-3 min-w-max">
               {/* Filtros */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
 
                 <Select value={selectedDepartamento} onValueChange={setSelectedDepartamento}>
-                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                  <SelectTrigger className="h-7 md:h-8 w-[100px] md:w-[140px] text-[10px] md:text-xs">
                     <SelectValue placeholder="Departamento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1181,7 +1203,7 @@ export function GanttChartProfessional() {
                 </Select>
 
                 <Select value={selectedEstado} onValueChange={setSelectedEstado}>
-                  <SelectTrigger className="h-8 w-[120px] text-xs">
+                  <SelectTrigger className="h-7 md:h-8 w-[90px] md:w-[120px] text-[10px] md:text-xs">
                     <SelectValue placeholder="Estado" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1197,19 +1219,19 @@ export function GanttChartProfessional() {
                   variant={showCompleted ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowCompleted(!showCompleted)}
-                  className="h-8 gap-1.5 text-xs"
+                  className="h-7 md:h-8 gap-1 md:gap-1.5 text-[10px] md:text-xs px-2 md:px-3"
                 >
-                  {showCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                  Completados
+                  {showCompleted ? <Eye className="h-3 w-3 md:h-3.5 md:w-3.5" /> : <EyeOff className="h-3 w-3 md:h-3.5 md:w-3.5" />}
+                  <span className="hidden sm:inline">Completados</span>
                 </Button>
 
                 <Button
                   variant={hideOutdated ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setHideOutdated(!hideOutdated)}
-                  className="h-8 gap-1.5 text-xs"
+                  className="h-7 md:h-8 gap-1 md:gap-1.5 text-[10px] md:text-xs px-2 md:px-3 hidden sm:flex"
                 >
-                  <Clock className="h-3.5 w-3.5" />
+                  <Clock className="h-3 w-3 md:h-3.5 md:w-3.5" />
                   {hideOutdated ? 'Ocultando antiguos' : 'Mostrar antiguos'}
                 </Button>
 
@@ -1217,52 +1239,58 @@ export function GanttChartProfessional() {
                   variant={showMilestones ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowMilestones(!showMilestones)}
-                  className="h-8 gap-1.5 text-xs"
+                  className="h-7 md:h-8 gap-1 md:gap-1.5 text-[10px] md:text-xs px-2 md:px-3 hidden sm:flex"
                 >
-                  <Milestone className="h-3.5 w-3.5" />
-                  Hitos
+                  <Milestone className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                  <span className="hidden md:inline">Hitos</span>
                 </Button>
 
-                <div className="flex items-center gap-1 rounded-lg border p-0.5">
+                <div className="flex items-center gap-0.5 md:gap-1 rounded-lg border p-0.5">
                   <Button
                     variant={contentFilter === 'all' ? 'secondary' : 'ghost'}
                     size="sm"
-                    className="h-8 px-2 text-[11px]"
+                    className="h-6 md:h-8 px-1.5 md:px-2 text-[10px] md:text-[11px]"
                     onClick={() => setContentFilter('all')}
                   >
-                    <SquareStack className="h-3.5 w-3.5" /> Todo
+                    <SquareStack className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="hidden md:inline ml-1">Todo</span>
                   </Button>
                   <Button
                     variant={contentFilter === 'projects' ? 'secondary' : 'ghost'}
                     size="sm"
-                    className="h-8 px-2 text-[11px]"
+                    className="h-6 md:h-8 px-1.5 md:px-2 text-[10px] md:text-[11px]"
                     onClick={() => setContentFilter('projects')}
                   >
-                    <Layers className="h-3.5 w-3.5" /> Proyectos
+                    <Layers className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="hidden md:inline ml-1">Proyectos</span>
                   </Button>
                   <Button
                     variant={contentFilter === 'tasks' ? 'secondary' : 'ghost'}
                     size="sm"
-                    className="h-8 px-2 text-[11px]"
+                    className="h-6 md:h-8 px-1.5 md:px-2 text-[10px] md:text-[11px]"
                     onClick={() => setContentFilter('tasks')}
                   >
-                    <ListChecks className="h-3.5 w-3.5" /> Tareas
+                    <ListChecks className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="hidden md:inline ml-1">Tareas</span>
                   </Button>
                 </div>
               </div>
 
               {/* Vista */}
-              <div className="ml-auto flex items-center gap-2">
-                <div className="flex items-center gap-1 border rounded-lg p-0.5">
+              <div className="ml-auto flex items-center gap-1.5 md:gap-2">
+                <div className="flex items-center gap-0.5 md:gap-1 border rounded-lg p-0.5">
                   {[GTViewMode.Day, GTViewMode.Week, GTViewMode.Month].map((mode) => (
                     <Button
                       key={mode}
                       variant={viewMode === mode ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => handleViewModeChange(mode)}
-                      className="h-7 px-3 text-xs"
+                      className="h-6 md:h-7 px-2 md:px-3 text-[10px] md:text-xs"
                     >
-                      {mode === GTViewMode.Day ? 'Día' : mode === GTViewMode.Week ? 'Semana' : 'Mes'}
+                      {mode === GTViewMode.Day ? 'D' : mode === GTViewMode.Week ? 'S' : 'M'}
+                      <span className="hidden sm:inline ml-1">
+                        {mode === GTViewMode.Day ? 'ía' : mode === GTViewMode.Week ? 'emana' : 'es'}
+                      </span>
                     </Button>
                   ))}
                 </div>
@@ -1270,19 +1298,19 @@ export function GanttChartProfessional() {
                   variant="outline"
                   size="sm"
                   onClick={handleTodayClick}
-                  className="h-7 px-3 text-xs flex items-center gap-1"
+                  className="h-6 md:h-7 px-2 md:px-3 text-[10px] md:text-xs flex items-center gap-1"
                 >
-                  <Calendar className="h-3.5 w-3.5" />
-                  Hoy
+                  <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                  <span className="hidden sm:inline">Hoy</span>
                 </Button>
-                <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                <div className="flex items-center gap-0.5 md:gap-1 border rounded-lg p-0.5 hidden lg:flex">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-[11px]"
+                    className="h-6 md:h-7 px-1.5 md:px-2 text-[10px] md:text-[11px]"
                     onClick={handleExpandAll}
                   >
-                    <ChevronDown className="h-3.5 w-3.5" /> Expandir todo
+                    <ChevronDown className="h-3 w-3 md:h-3.5 md:w-3.5" /> <span className="hidden xl:inline ml-1">Expandir todo</span>
                   </Button>
                   <Button
                     variant="ghost"

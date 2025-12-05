@@ -7,12 +7,11 @@ import {
   Sparkles,
   Lightbulb,
   Settings,
-  Plus,
   Building2,
   Zap,
   Wallet,
-  Command,
   Users,
+  User,
   Shield,
   Lock,
 } from "lucide-react"
@@ -30,8 +29,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { CreateProjectModal } from "@/components/modals/create-project-modal"
+import { useSystemSettingsStore } from "@/store/systemSettingsStore"
 import { NavMain, type NavItem } from "./nav-main"
-import { AISearchModal } from "@/components/modals/ai-search-modal"
 import { useNavigate } from "react-router-dom"
 import { useDepartmentStore } from "@/store/departmentStore"
 import {
@@ -120,8 +119,13 @@ const navigationAdmin: NavItem[] = [
     icon: Shield,
   },
   {
-    title: "Configuración",
-    url: "/configuraciones",
+    title: "Config. Perfil",
+    url: "/perfil/configuracion",
+    icon: User,
+  },
+  {
+    title: "Config. Sistema",
+    url: "/sistema/configuracion",
     icon: Settings,
   },
   {
@@ -134,10 +138,21 @@ const navigationAdmin: NavItem[] = [
 
 export function Sidebar() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false)
-  const [isAISearchOpen, setIsAISearchOpen] = useState(false)
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
   const { departamentos, fetchDepartamentos } = useDepartmentStore()
+  const { settings } = useSystemSettingsStore()
+
+  const nombreEmpresa = settings?.nombreEmpresa || "Negocios Bigander"
+  const logoUrl = settings?.logoUrl
+
+  // Helper para construir URL completa de imagen
+  const getFullUrl = (url: string | null | undefined): string => {
+    if (!url) return ""
+    if (url.startsWith('http') || url.startsWith('data:')) return url
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    return `${baseUrl}${url}`
+  }
 
   // Cargar departamentos al montar el componente
   useEffect(() => {
@@ -156,15 +171,19 @@ export function Sidebar() {
         <SidebarHeader className="group-data-[collapsible=icon]:p-2">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                size="lg" 
+              <SidebarMenuButton
+                size="lg"
                 className="data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
               >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground group-data-[collapsible=icon]:size-10">
-                  <Zap className="size-4 group-data-[collapsible=icon]:size-5" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-primary-foreground group-data-[collapsible=icon]:size-10">
+                  {logoUrl ? (
+                    <img src={getFullUrl(logoUrl)} alt="Logo" className="h-full w-full object-contain rounded-lg" />
+                  ) : (
+                    <Zap className="size-4 group-data-[collapsible=icon]:size-5" />
+                  )}
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-semibold">Xhion Core</span>
+                  <span className="truncate font-semibold">{nombreEmpresa}</span>
                   <span className="truncate text-xs text-muted-foreground">Enterprise</span>
                 </div>
               </SidebarMenuButton>
@@ -248,9 +267,9 @@ export function Sidebar() {
                             style={
                               hasHexColor && accentHex
                                 ? {
-                                    backgroundColor: hexToRgba(accentHex, 0.18),
-                                    borderColor: hexToRgba(accentHex, 0.45),
-                                  }
+                                  backgroundColor: hexToRgba(accentHex, 0.18),
+                                  borderColor: hexToRgba(accentHex, 0.45),
+                                }
                                 : undefined
                             }
                           >
@@ -274,36 +293,7 @@ export function Sidebar() {
             </TooltipProvider>
           </div>
 
-          {/* Acciones Rápidas */}
-          <div className="px-3 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 justify-start group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
-                    size="sm"
-                    onClick={() => {
-                      setIsAISearchOpen(true)
-                      setOpenMobile(false)
-                    }}
-                  >
-                    <Command className="h-4 w-4" />
-                    <span className="group-data-[collapsible=icon]:hidden">Acciones Rápidas</span>
-                    <kbd className="ml-auto hidden h-5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:inline-block group-data-[collapsible=icon]:hidden">
-                      ⌘K
-                    </kbd>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  <div className="flex flex-col gap-1">
-                    <p>Acciones Rápidas</p>
-                    <kbd className="text-[10px] text-muted-foreground">⌘K</kbd>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+
 
         </SidebarFooter>
 
@@ -312,9 +302,6 @@ export function Sidebar() {
 
       {/* Create Project Modal */}
       <CreateProjectModal open={isCreateProjectOpen} onOpenChange={setIsCreateProjectOpen} />
-
-      {/* AI Search Modal */}
-      <AISearchModal open={isAISearchOpen} onOpenChange={setIsAISearchOpen} />
     </>
   )
 }

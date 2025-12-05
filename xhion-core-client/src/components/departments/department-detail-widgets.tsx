@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { ArrowLeft, Loader2, Plus } from "lucide-react"
+import { ArrowLeft, Loader2, Plus, Users, Briefcase, TrendingUp, AlertCircle } from "lucide-react"
 import { getDepartmentIcon } from "@/lib/department-icons"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { useDepartmentStore } from "@/store/departmentStore"
 import { useConocimientoStore } from "@/store/conocimientoStore"
 import { CreateDepartmentModal } from "./CreateDepartmentModal"
@@ -14,6 +15,7 @@ import { DepartmentOrgChart } from "./DepartmentOrgChart"
 import { BudgetView } from "@/components/budgets/BudgetView"
 import { DepartmentDocumentsManager } from "./DepartmentDocumentsManager"
 import { useNavigate } from "react-router-dom"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface DepartmentDetailWidgetsProps {
   departamentoId: string
@@ -86,241 +88,220 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
   const departmentColorClass = departamentoActual.color || "bg-blue-500"
 
   return (
-    <div className="bg-background px-4 py-6 lg:px-10">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <section className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="h-10 w-10 rounded-full border border-border/70 shadow-sm"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  <span>Departamento estratégico</span>
-                  <div className={`h-8 w-8 rounded-xl ${departmentColorClass} flex items-center justify-center shadow-inner`}>
-                    <DepartmentIcon className="h-4 w-4 text-white" />
+    <div className="bg-background px-4 py-4 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+        {/* Compact Header with Integrated Metrics */}
+        <section className="rounded-xl border border-border/70 bg-card/70 p-4 shadow-sm">
+          <div className="flex flex-col gap-3">
+            {/* Top Row: Back Button + Title + Actions */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onBack}
+                  className="h-9 w-9 rounded-full border border-border/70 shadow-sm flex-shrink-0"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`h-7 w-7 rounded-lg ${departmentColorClass} flex items-center justify-center shadow-sm flex-shrink-0`}>
+                      <DepartmentIcon className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <h1 className="text-xl font-semibold text-foreground truncate">
+                      {departamentoActual.nombre}
+                    </h1>
                   </div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-semibold text-foreground lg:text-3xl">
-                    {departamentoActual.nombre}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground line-clamp-1">
                     {departamentoActual.descripcion || "Sin descripción"}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
-                  <div>
-                    <p className="uppercase tracking-[0.18em]">Líder</p>
-                    <p className="text-foreground font-medium">
-                      {departamentoActual.jefe?.nombreCompleto || "Sin asignar"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="uppercase tracking-[0.18em]">Creado</p>
-                    <p className="text-foreground font-medium">
-                      {new Date(departamentoActual.fechaCreacion).toLocaleDateString("es-ES")}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="uppercase tracking-[0.18em]">Contexto</p>
-                    <p className="text-foreground font-medium">{contexto ? "Documentado" : "Pendiente"}</p>
-                  </div>
+              </div>
+
+              {/* Action Buttons - Compact */}
+              <div className="flex flex-wrap gap-2 text-xs flex-shrink-0">
+                <Button size="sm" className="h-8 px-3 text-xs" onClick={() => setShowCreateProjectModal(true)}>
+                  <Plus className="mr-1.5 h-3 w-3" /> Proyecto
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs"
+                  onClick={() => setShowContextModal(true)}
+                >
+                  Contexto
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs"
+                  onClick={() => setShowEditModal(true)}
+                >
+                  Editar
+                </Button>
+              </div>
+            </div>
+
+            {/* Metrics Row - Inline Badges */}
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="secondary" className="h-7 px-2.5 gap-1.5">
+                <Briefcase className="h-3 w-3" />
+                <span className="font-semibold">{proyectosActivos}</span>
+                <span className="text-muted-foreground">/{proyectosTotales} proyectos</span>
+              </Badge>
+              <Badge variant="secondary" className="h-7 px-2.5 gap-1.5">
+                <Users className="h-3 w-3" />
+                <span className="font-semibold">{totalEmpleados}</span>
+                <span className="text-muted-foreground">personas</span>
+              </Badge>
+              <Badge variant="secondary" className="h-7 px-2.5 gap-1.5">
+                <TrendingUp className="h-3 w-3" />
+                <span className="font-semibold">{completionRate}%</span>
+                <span className="text-muted-foreground">completado</span>
+              </Badge>
+              {vacantes > 0 && (
+                <Badge variant="outline" className="h-7 px-2.5 gap-1.5 border-orange-500/50 text-orange-600">
+                  <AlertCircle className="h-3 w-3" />
+                  <span className="font-semibold">{vacantes}</span>
+                  <span>vacantes</span>
+                </Badge>
+              )}
+              <div className="ml-auto flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div>
+                  <span className="uppercase tracking-wider">Líder:</span>{" "}
+                  <span className="text-foreground font-medium">{departamentoActual.jefe?.nombreCompleto || "Sin asignar"}</span>
+                </div>
+                <div>
+                  <span className="uppercase tracking-wider">Contexto:</span>{" "}
+                  <span className="text-foreground font-medium">{contexto ? "Sí" : "Pendiente"}</span>
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 text-xs">
-              <Button className="h-10 rounded-full px-4 font-semibold shadow-sm" onClick={() => setShowCreateProjectModal(true)}>
-                <Plus className="mr-2 h-3.5 w-3.5" /> Nuevo proyecto
-              </Button>
-              <Button
-                variant="outline"
-                className="h-10 rounded-full border-dashed px-4 font-semibold"
-                onClick={() => setShowContextModal(true)}
-              >
-                Actualizar contexto
-              </Button>
-              <Button
-                variant="secondary"
-                className="h-10 rounded-full px-4 font-semibold"
-                onClick={() => setShowEditModal(true)}
-              >
-                Editar ficha
-              </Button>
-              <Button
-                variant="ghost"
-                className="h-10 rounded-full px-4 font-semibold text-primary underline-offset-4"
-                onClick={() => navigate("/proyectos")}
-              >
-                Ver portafolio
-              </Button>
-            </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm text-xs">
-          <p className="uppercase tracking-[0.2em] text-muted-foreground">Indicadores clave</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                label: "Proyectos activos",
-                value: proyectosActivos,
-                helper: `${proyectosTotales} totales`,
-              },
-              {
-                label: "Equipo asignado",
-                value: totalEmpleados,
-                helper: `${totalPuestos} puestos`,
-              },
-              {
-                label: "Tasa de completación",
-                value: `${completionRate}%`,
-                helper: `${tareasCompletadas} de ${totalTareas} tareas`,
-              },
-              {
-                label: "Vacantes estructurales",
-                value: vacantes,
-                helper: `${puestosConTalento}/${puestos.length} puestos cubiertos`,
-              },
-            ].map((metric) => (
-              <div key={metric.label} className="space-y-1 rounded-xl border border-border/50 bg-background/50 p-3 shadow-inner">
-                <p className="uppercase tracking-[0.2em] text-muted-foreground">{metric.label}</p>
-                <p className="text-lg font-semibold text-foreground">{metric.value}</p>
-                <p className="text-muted-foreground">{metric.helper}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 p-4">
-          <header className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium">
-            <div>
-              <p className="uppercase tracking-[0.2em] text-muted-foreground">Portafolio y carga</p>
-              <p className="text-sm text-foreground">Proyectos y tareas activas</p>
-            </div>
-            <span className="text-muted-foreground">
-              {tareasAbiertas} tareas abiertas · {proyectosActivos} proyectos activos
-            </span>
-          </header>
-          <DepartmentProjectsView
-            proyectos={departamentoActual.proyectos}
-            departamentoId={departamentoId}
-            departamentoNombre={departamentoActual.nombre}
-            onProjectClick={(projectId) => navigate(`/proyectos/${projectId}`)}
-            onCreateProject={() => setShowCreateProjectModal(true)}
-            onViewAllProjects={() => navigate("/proyectos")}
-            variant="condensed"
-          />
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 p-4">
-          <header className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium">
-            <div>
-              <p className="uppercase tracking-[0.2em] text-muted-foreground">Talento</p>
-              <p className="text-sm text-foreground">Equipo y roles asignados</p>
-            </div>
-            <span className="text-muted-foreground">
-              {totalEmpleados} personas · {totalPuestos} puestos
-            </span>
-          </header>
-          <DepartmentTeamView
-            departamentoId={departamentoId}
-            departamentoNombre={departamentoActual.nombre}
-            jefe={departamentoActual.jefe}
-            empleados={departamentoActual.usuarios}
-            puestosTrabajo={departamentoActual.puestosTrabajo}
-            totalEmpleados={totalEmpleados}
-            variant="condensed"
-          />
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-border/70 bg-card/50 p-4 text-xs">
-          <header className="flex flex-wrap items-center justify-between gap-3 font-medium">
-            <div>
-              <p className="uppercase tracking-[0.2em] text-muted-foreground">Finanzas</p>
-              <p className="text-sm text-foreground">Presupuesto operativo</p>
-            </div>
-          </header>
-          <BudgetView entityId={departamentoId} entityType="departamento" entityName={departamentoActual.nombre} variant="condensed" />
-        </section>
-
-        <section className="space-y-4 text-xs">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="space-y-4 rounded-2xl border border-border/70 bg-card/60 p-4">
-              <header>
-                <p className="uppercase tracking-[0.2em] text-muted-foreground">Base de conocimiento</p>
-                <p className="text-sm text-foreground">Contexto documentado</p>
+        {/* Main Content Grid */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Left Column */}
+          <div className="space-y-4">
+            {/* Projects */}
+            <section className="rounded-xl border border-border/70 bg-muted/20 p-3">
+              <header className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Portafolio</p>
+                  <p className="text-sm font-medium text-foreground">Proyectos activos</p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {tareasAbiertas} tareas abiertas
+                </span>
               </header>
-              <DepartmentContextView
-                contexto={contexto}
+              <DepartmentProjectsView
+                proyectos={departamentoActual.proyectos}
                 departamentoId={departamentoId}
                 departamentoNombre={departamentoActual.nombre}
-                onEdit={() => setShowContextModal(true)}
-                onCreate={() => setShowContextModal(true)}
+                onProjectClick={(projectId) => navigate(`/proyectos/${projectId}`)}
+                onCreateProject={() => setShowCreateProjectModal(true)}
+                onViewAllProjects={() => navigate("/proyectos")}
                 variant="condensed"
               />
-            </div>
+            </section>
 
-            <div className="space-y-4 rounded-2xl border border-border/70 bg-card/60 p-4">
-              <header>
-                <p className="uppercase tracking-[0.2em] text-muted-foreground">Documentación</p>
-                <p className="text-sm text-foreground">Entregables y notas</p>
+            {/* Budget */}
+            <section className="rounded-xl border border-border/70 bg-card/50 p-3">
+              <header className="mb-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Finanzas</p>
+                <p className="text-sm font-medium text-foreground">Presupuesto operativo</p>
               </header>
-              <DepartmentDocumentsManager
+              <BudgetView entityId={departamentoId} entityType="departamento" entityName={departamentoActual.nombre} variant="condensed" />
+            </section>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-4">
+            {/* Team */}
+            <section className="rounded-xl border border-border/70 bg-muted/20 p-3">
+              <header className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Talento</p>
+                  <p className="text-sm font-medium text-foreground">Equipo asignado</p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {totalPuestos} puestos
+                </span>
+              </header>
+              <DepartmentTeamView
                 departamentoId={departamentoId}
                 departamentoNombre={departamentoActual.nombre}
+                jefe={departamentoActual.jefe}
+                empleados={departamentoActual.usuarios}
+                puestosTrabajo={departamentoActual.puestosTrabajo}
+                totalEmpleados={totalEmpleados}
                 variant="condensed"
               />
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <section className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 p-4 text-xs">
-          <header className="flex flex-wrap items-center justify-between gap-3 font-medium">
-            <div>
-              <p className="uppercase tracking-[0.2em] text-muted-foreground">Organigrama</p>
-              <p className="text-sm text-foreground">Estructura y puestos</p>
-            </div>
-            <span className="text-muted-foreground">
-              {puestos.length} puestos definidos · {vacantes} vacantes
-            </span>
-          </header>
-          {puestos.length > 0 ? (
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-border/50 bg-background/60 p-3 shadow-inner">
-                  <p className="uppercase tracking-[0.2em] text-muted-foreground">Puestos</p>
-                  <p className="text-lg font-semibold text-foreground">{puestos.length}</p>
-                </div>
-                <div className="rounded-xl border border-border/50 bg-background/60 p-3 shadow-inner">
-                  <p className="uppercase tracking-[0.2em] text-muted-foreground">Cubiertos</p>
-                  <p className="text-lg font-semibold text-foreground">{puestosConTalento}</p>
-                </div>
-                <div className="rounded-xl border border-border/50 bg-background/60 p-3 shadow-inner">
-                  <p className="uppercase tracking-[0.2em] text-muted-foreground">Vacantes</p>
-                  <p className="text-lg font-semibold text-foreground">{vacantes}</p>
-                </div>
-              </div>
-              <details className="rounded-xl border border-dashed border-border/60 bg-background/40 p-3">
-                <summary className="cursor-pointer text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Ver organigrama completo
-                </summary>
-                <div className="mt-4 rounded-xl border border-border/60 bg-card/70 p-3">
-                  <DepartmentOrgChart
+            {/* Context & Documents - Tabs */}
+            <section className="rounded-xl border border-border/70 bg-card/60 p-3">
+              <Tabs defaultValue="context" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 h-8">
+                  <TabsTrigger value="context" className="text-xs">Contexto</TabsTrigger>
+                  <TabsTrigger value="docs" className="text-xs">Documentos</TabsTrigger>
+                </TabsList>
+                <TabsContent value="context" className="mt-3 space-y-2">
+                  <DepartmentContextView
+                    contexto={contexto}
                     departamentoId={departamentoId}
                     departamentoNombre={departamentoActual.nombre}
+                    onEdit={() => setShowContextModal(true)}
+                    onCreate={() => setShowContextModal(true)}
+                    variant="condensed"
                   />
+                </TabsContent>
+                <TabsContent value="docs" className="mt-3 space-y-2">
+                  <DepartmentDocumentsManager
+                    departamentoId={departamentoId}
+                    departamentoNombre={departamentoActual.nombre}
+                    variant="condensed"
+                  />
+                </TabsContent>
+              </Tabs>
+            </section>
+          </div>
+        </div>
+
+        {/* Org Chart - Collapsible */}
+        <section className="rounded-xl border border-border/70 bg-muted/20 p-3">
+          <details className="group">
+            <summary className="flex items-center justify-between cursor-pointer list-none">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Organigrama</p>
+                <p className="text-sm font-medium text-foreground">Estructura y puestos</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex gap-3 text-xs text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{puestos.length}</span> puestos</span>
+                  <span><span className="font-semibold text-foreground">{puestosConTalento}</span> cubiertos</span>
+                  <span><span className="font-semibold text-foreground">{vacantes}</span> vacantes</span>
                 </div>
-              </details>
+                <div className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">
+                  ▼
+                </div>
+              </div>
+            </summary>
+            <div className="mt-3 pt-3 border-t border-border/50">
+              {puestos.length > 0 ? (
+                <DepartmentOrgChart
+                  departamentoId={departamentoId}
+                  departamentoNombre={departamentoActual.nombre}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No se han definido puestos para este departamento.
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="text-muted-foreground">No se han definido puestos para este departamento.</p>
-          )}
+          </details>
         </section>
 
         <CreateDepartmentModal

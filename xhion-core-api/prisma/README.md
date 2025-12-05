@@ -34,7 +34,7 @@ Para que `npx prisma db seed` funcione, el `package.json` debe tener:
 - ✅ 73 Permisos granulares
 - ✅ 5 Roles
 - ✅ 6 Departamentos
-- ✅ 11 Usuarios
+- ✅ 41 Usuarios (11 principales + 30 adicionales para testing)
 - ✅ 7 Proyectos
 - ✅ 20 Etapas
 - ✅ 11 Tareas
@@ -71,6 +71,15 @@ SEED_MODE=basic npx prisma db seed
 - `eduardo.tanca@gmail.com` | `Password123!` (Eduardo Tanca - Administrador)
 - `luz.garcia@gmail.com` | `Password123!` (Luz García - Gerente de Proyecto)
 - `lucero.sanchez@gmail.com` | `Password123!` (Lucero Sánchez - Jefe de Depto)
+
+**Usuarios adicionales para testing (30 más):**
+- Patricia Morales, Roberto Silva, Carmen Vega, Diego Fernández, Sofía Ruiz
+- Miguel Ángel Herrera, Valentina Ortiz, Andrés Medina, Isabella Rojas, Gabriel Núñez
+- Camila Vargas, Sebastián Cruz, Daniela Reyes, Mateo Jiménez, Martina Delgado
+- Lucas Paredes, Emma Gutiérrez, Nicolás Mendoza, Renata Campos, Joaquín Salazar
+- Victoria Navarro, Emilio Cortés, Catalina Ríos, Tomás Aguilar, Florencia Peña
+- Felipe Romero, Julieta Soto, Maximiliano Luna, Antonella Bravo, Santiago Molina
+- Todos con rol "Colaborador" y password `Password123!`
 
 ### Personalizar Credenciales del Admin
 
@@ -233,8 +242,42 @@ npx prisma db seed
 npx prisma migrate reset --force
 ```
 
+### Los usuarios no aparecen después del seed
+
+Si ejecutaste el seed pero solo ves 11 usuarios en lugar de 41:
+
+1. **Verifica en Prisma Studio:**
+   ```bash
+   npx prisma studio
+   ```
+   Abre http://localhost:5555 y revisa la tabla `Usuario`
+
+2. **Ejecuta un reset completo:**
+   ```bash
+   npx prisma migrate reset --force
+   ```
+   Esto eliminará todos los datos y ejecutará el seed desde cero
+
+3. **Verifica que el archivo seed.ts tenga los cambios:**
+   - Debe tener el array `usuariosAdicionales` con 30 usuarios
+   - Debe tener el loop `for (const usuario of usuariosAdicionales)`
+   - El contador debe mostrar `usuarios: 41`
+
+4. **Ejecuta el seed manualmente con output:**
+   ```bash
+   npx ts-node prisma/seed.ts
+   ```
+   Verifica que veas el mensaje "✅ 30 usuarios adicionales creados"
+
+5. **Reinicia el servidor API:**
+   ```bash
+   # Detén el servidor (Ctrl+C)
+   pnpm run start:dev
+   ```
+
 ## 📚 Referencias
 
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Seeding Guide](https://www.prisma.io/docs/guides/database/seed-database)
 - [Schema Reference](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference)
+

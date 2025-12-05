@@ -287,6 +287,11 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
     descripcion: 'Permite gestionar catálogos de configuración',
     modulo: 'Sistema',
   },
+  {
+    nombreAccion: 'sistema.configurar_empresa',
+    descripcion: 'Permite configurar información y branding de la empresa (nombre, logo, colores)',
+    modulo: 'Sistema',
+  },
 
   // ========================================
   // MÓDULO: INVITACIONES
@@ -421,6 +426,40 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
     nombreAccion: 'finanzas:aprobar_presupuesto',
     descripcion: 'Permite aprobar y cerrar presupuestos',
     modulo: 'Finanzas'
+  },
+
+  // ========================================
+  // MÓDULO: INTELIGENCIA ARTIFICIAL
+  // ========================================
+  {
+    nombreAccion: 'ai.search',
+    descripcion: 'Permite realizar búsquedas contextuales con IA en lenguaje natural',
+    modulo: 'IA'
+  },
+  {
+    nombreAccion: 'ai.projects.assist',
+    descripcion: 'Permite usar el asistente de IA para generar propuestas de proyectos',
+    modulo: 'IA'
+  },
+  {
+    nombreAccion: 'ai.ideas.analyze',
+    descripcion: 'Permite analizar ideas con IA y obtener insights estratégicos',
+    modulo: 'IA'
+  },
+  {
+    nombreAccion: 'ai.reindex',
+    descripcion: 'Permite reindexar embeddings de la base de conocimiento',
+    modulo: 'IA'
+  },
+  {
+    nombreAccion: 'ai.logs',
+    descripcion: 'Permite ver historial de consultas de IA',
+    modulo: 'IA'
+  },
+  {
+    nombreAccion: 'ai.status',
+    descripcion: 'Permite ver estado y métricas del módulo de IA',
+    modulo: 'IA'
   },
 ];
 

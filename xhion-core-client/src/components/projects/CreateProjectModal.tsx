@@ -84,7 +84,7 @@ export function CreateProjectModal({ open, onOpenChange, departamentoIdPredeterm
         nombre: data.nombre,
         descripcion: data.descripcion || undefined,
         responsableId: data.responsableId,
-        departamentoId: selectedDepartamento || undefined,
+        departamentoId: selectedDepartamento && selectedDepartamento !== "none" ? selectedDepartamento : undefined,
         fechaInicio: dateRange?.from?.toISOString(),
         fechaFin: dateRange?.to?.toISOString(),
       });
@@ -94,7 +94,7 @@ export function CreateProjectModal({ open, onOpenChange, departamentoIdPredeterm
       setSelectedDepartamento("");
       setDateRange(undefined);
       onOpenChange(false);
-      
+
       // Llamar callback de éxito para actualizar la lista
       if (onSuccess) {
         onSuccess();

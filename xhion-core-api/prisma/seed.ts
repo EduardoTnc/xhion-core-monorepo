@@ -6,11 +6,13 @@
  */
 
 import { PrismaClient, EstadoProyecto, EstadoTarea, PrioridadTarea, TipoEvento, RolProyecto, EstadoIdea, CategoriaIdea, EstadoUsuario } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
 import { seedPermisos } from './seeds/permisos.seed';
 import { seedProyectosCompletos } from './seeds/empresa-proyectos.seed';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 // ============================================
 // SEED BÁSICO: Permisos + Admin
@@ -113,7 +115,7 @@ async function seedCompleto() {
 
   // ROLES ADICIONALES
   console.log('📋 Creando roles adicionales...');
-  
+
   const rolJefeDepartamento = await prisma.rol.upsert({
     where: { nombre: 'Jefe de Departamento' },
     update: {},
@@ -185,7 +187,7 @@ async function seedCompleto() {
 
   // DEPARTAMENTOS
   console.log('🏢 Creando departamentos...');
-  
+
   const deptVentas = await prisma.departamento.upsert({
     where: { nombre: 'Ventas' },
     update: {},
@@ -364,6 +366,58 @@ async function seedCompleto() {
     }
   });
 
+  // Usuarios adicionales para testing (30 más)
+  console.log('👥 Creando usuarios adicionales para testing...');
+
+  const usuariosAdicionales = [
+    { nombre: 'Patricia Morales', email: 'patricia.morales@gmail.com', seed: 'Patricia' },
+    { nombre: 'Roberto Silva', email: 'roberto.silva@gmail.com', seed: 'Roberto' },
+    { nombre: 'Carmen Vega', email: 'carmen.vega@gmail.com', seed: 'Carmen' },
+    { nombre: 'Diego Fernández', email: 'diego.fernandez@gmail.com', seed: 'Diego' },
+    { nombre: 'Sofía Ruiz', email: 'sofia.ruiz@gmail.com', seed: 'Sofia' },
+    { nombre: 'Miguel Ángel Herrera', email: 'miguel.herrera@gmail.com', seed: 'Miguel' },
+    { nombre: 'Valentina Ortiz', email: 'valentina.ortiz@gmail.com', seed: 'Valentina' },
+    { nombre: 'Andrés Medina', email: 'andres.medina@gmail.com', seed: 'Andres' },
+    { nombre: 'Isabella Rojas', email: 'isabella.rojas@gmail.com', seed: 'Isabella' },
+    { nombre: 'Gabriel Núñez', email: 'gabriel.nunez@gmail.com', seed: 'Gabriel' },
+    { nombre: 'Camila Vargas', email: 'camila.vargas@gmail.com', seed: 'Camila' },
+    { nombre: 'Sebastián Cruz', email: 'sebastian.cruz@gmail.com', seed: 'Sebastian' },
+    { nombre: 'Daniela Reyes', email: 'daniela.reyes@gmail.com', seed: 'Daniela' },
+    { nombre: 'Mateo Jiménez', email: 'mateo.jimenez@gmail.com', seed: 'Mateo' },
+    { nombre: 'Martina Delgado', email: 'martina.delgado@gmail.com', seed: 'Martina' },
+    { nombre: 'Lucas Paredes', email: 'lucas.paredes@gmail.com', seed: 'Lucas' },
+    { nombre: 'Emma Gutiérrez', email: 'emma.gutierrez@gmail.com', seed: 'Emma' },
+    { nombre: 'Nicolás Mendoza', email: 'nicolas.mendoza@gmail.com', seed: 'Nicolas' },
+    { nombre: 'Renata Campos', email: 'renata.campos@gmail.com', seed: 'Renata' },
+    { nombre: 'Joaquín Salazar', email: 'joaquin.salazar@gmail.com', seed: 'Joaquin' },
+    { nombre: 'Victoria Navarro', email: 'victoria.navarro@gmail.com', seed: 'Victoria' },
+    { nombre: 'Emilio Cortés', email: 'emilio.cortes@gmail.com', seed: 'Emilio' },
+    { nombre: 'Catalina Ríos', email: 'catalina.rios@gmail.com', seed: 'Catalina' },
+    { nombre: 'Tomás Aguilar', email: 'tomas.aguilar@gmail.com', seed: 'Tomas' },
+    { nombre: 'Florencia Peña', email: 'florencia.pena@gmail.com', seed: 'Florencia' },
+    { nombre: 'Felipe Romero', email: 'felipe.romero@gmail.com', seed: 'Felipe' },
+    { nombre: 'Julieta Soto', email: 'julieta.soto@gmail.com', seed: 'Julieta' },
+    { nombre: 'Maximiliano Luna', email: 'maximiliano.luna@gmail.com', seed: 'Maximiliano' },
+    { nombre: 'Antonella Bravo', email: 'antonella.bravo@gmail.com', seed: 'Antonella' },
+    { nombre: 'Santiago Molina', email: 'santiago.molina@gmail.com', seed: 'Santiago' },
+  ];
+
+  for (const usuario of usuariosAdicionales) {
+    await prisma.usuario.upsert({
+      where: { email: usuario.email },
+      update: {},
+      create: {
+        nombreCompleto: usuario.nombre,
+        email: usuario.email,
+        passwordHash: hashedPassword,
+        rolId: rolColaborador.id,
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${usuario.seed}`
+      }
+    });
+  }
+
+  console.log(`✅ ${usuariosAdicionales.length} usuarios adicionales creados`);
+
   // Asignar jefes a departamentos
   await prisma.departamento.update({
     where: { id: deptVentas.id },
@@ -395,7 +449,7 @@ async function seedCompleto() {
     totalPermisos,
     roles: 5,
     departamentos: 6,
-    usuarios: 11,
+    usuarios: 41, // 11 originales + 30 adicionales
     proyectos: statsProyectos.proyectos,
     etapas: statsProyectos.etapas,
     tareas: statsProyectos.tareas,
@@ -414,7 +468,7 @@ async function main() {
   try {
     if (seedMode === 'full') {
       const result = await seedCompleto();
-      
+
       console.log('\n═══════════════════════════════════════════════════════');
       console.log('🎉 SEED COMPLETO FINALIZADO CON ÉXITO');
       console.log('═══════════════════════════════════════════════════════');
@@ -440,7 +494,7 @@ async function main() {
       console.log('');
     } else {
       const result = await seedBasico();
-      
+
       console.log('═══════════════════════════════════════════════════════');
       console.log('🎉 SEED BÁSICO COMPLETADO CON ÉXITO');
       console.log('═══════════════════════════════════════════════════════');

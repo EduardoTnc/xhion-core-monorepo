@@ -1,70 +1,168 @@
 "use client"
-import { Clock } from "lucide-react"
 
-const days = ["Lun 8", "Mar 9", "Mié 10", "Jue 11", "Vie 12", "Sáb 13", "Dom 14"]
-const hours = Array.from({ length: 12 }, (_, i) => i + 8) // 8am to 8pm
-
-const events = [
-  { id: 1, title: "Daily Standup", day: 0, hour: 9, duration: 0.5, color: "bg-chart-1" },
-  { id: 2, title: "Implementar OAuth", day: 0, hour: 10, duration: 2, color: "bg-chart-2" },
-  { id: 3, title: "Code Review", day: 1, hour: 11, duration: 1, color: "bg-chart-3" },
-  { id: 4, title: "Revisión diseño UI", day: 2, hour: 14, duration: 1.5, color: "bg-chart-1" },
-  { id: 5, title: "Sprint Planning", day: 3, hour: 10, duration: 2, color: "bg-chart-4" },
-  { id: 6, title: "Deploy staging", day: 4, hour: 16, duration: 1, color: "bg-destructive" },
-]
+import { useState } from "react"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
+import { useCalendarStore } from "@/store/calendarStore"
+import {
+  getWeekDays,
+  generateTimeSlots
+} from "@/lib/calendar-utils"
+import { EventDetailPopover } from "./event-detail-popover"
+import { cn } from "@/lib/utils"
 
 export function CalendarWeek() {
+  const { currentDate, calendarItems, openCreateEventModal } = useCalendarStore()
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+
+  const weekDays = getWeekDays(currentDate)
+  const timeSlots = generateTimeSlots()
+
+  const handleTimeSlotClick = (day: Date, hour: number) => {
+    const clickedDate = new Date(day)
+    clickedDate.setHours(hour, 0, 0, 0)
+    openCreateEventModal(clickedDate)
+  }
+
+  const handleItemClick = (e: React.MouseEvent, itemId: string) => {
+    e.stopPropagation()
+    setSelectedItemId(itemId)
+  }
+
+  // Get items for a specific date and time slot
+  const getItemsForSlot = (day: Date, hour: number, minute: number) => {
+    return calendarItems.filter(item => {
+      const itemStart = parseISO(item.startDate)
+      const itemStartHour = itemStart.getHours()
+      const itemStartMinutes = itemStart.getMinutes()
+      const slotMinutes = hour * 60 + minute
+      const itemMinutesTotal = itemStartHour * 60 + itemStartMinutes
+
+      // Check if item starts in this slot and is on this day
+      const isSameDay = format(itemStart, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+      return isSameDay && itemMinutesTotal >= slotMinutes && itemMinutesTotal < slotMinutes + 30
+    })
+  }
+
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="flex">
-        {/* Time column */}
-        <div className="w-20 border-r border-border flex-shrink-0">
-          <div className="h-12 border-b border-border" />
-          {hours.map((hour) => (
-            <div key={hour} className="h-16 border-b border-border px-3 py-2 text-right">
-              <span className="text-xs text-muted-foreground">{hour.toString().padStart(2, "0")}:00</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Days columns */}
-        <div className="flex-1 flex overflow-x-auto">
-          {days.map((day, dayIndex) => (
-            <div key={day} className="flex-1 min-w-[140px] border-r border-border last:border-r-0">
-              <div className="h-12 border-b border-border bg-muted/30 px-3 flex items-center justify-center">
-                <span className={`text-sm font-medium ${dayIndex === 2 ? "text-primary" : "text-foreground"}`}>
-                  {day}
-                </span>
+      {/* Header with days */}
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border bg-muted/30 sticky top-0 z-10">
+        <div className="p-2 border-r border-border" /> {/* Time column header */}
+        {weekDays.map((day, index) => {
+          const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+          return (
+            <div
+              key={index}
+              className={cn(
+                "p-2 text-center border-r border-border last:border-r-0",
+                isToday && "bg-primary/10"
+              )}
+            >
+              <div className="text-xs text-muted-foreground">
+                {format(day, "EEE", { locale: es })}
               </div>
-              <div className="relative">
-                {hours.map((hour) => (
-                  <div key={hour} className="h-16 border-b border-border hover:bg-muted/20 transition-colors" />
-                ))}
+              <div
+                className={cn(
+                  "text-lg font-semibold mt-1",
+                  isToday && "text-primary"
+                )}
+              >
+                {format(day, "d")}
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
-                {/* Events for this day */}
-                {events
-                  .filter((event) => event.day === dayIndex)
-                  .map((event) => (
+      {/* Time grid */}
+      <div className="overflow-y-auto max-h-[600px]">
+        <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+          {/* Time slots */}
+          {timeSlots.map((time, timeIndex) => {
+            const hour = parseInt(time.split(':')[0])
+            const minute = parseInt(time.split(':')[1])
+            const isHourMark = time.endsWith(':00')
+
+            return (
+              <div key={timeIndex} className="contents">
+                {/* Time label */}
+                <div
+                  className={cn(
+                    "p-2 text-xs text-muted-foreground text-right border-r border-border",
+                    isHourMark ? "border-b border-border" : "border-b border-dashed border-border/50"
+                  )}
+                >
+                  {isHourMark && time}
+                </div>
+
+                {/* Day columns */}
+                {weekDays.map((day, dayIndex) => {
+                  const slotItems = getItemsForSlot(day, hour, minute)
+
+                  return (
                     <div
-                      key={event.id}
-                      className={`absolute left-1 right-1 rounded ${event.color} p-2 shadow-sm cursor-pointer transition-all hover:shadow-md`}
-                      style={{
-                        top: `${(event.hour - 8) * 64 + 48}px`,
-                        height: `${event.duration * 64 - 4}px`,
-                      }}
+                      key={dayIndex}
+                      className={cn(
+                        "relative min-h-[30px] border-r border-border last:border-r-0 hover:bg-muted/20 cursor-pointer transition-colors",
+                        isHourMark ? "border-b border-border" : "border-b border-dashed border-border/50"
+                      )}
+                      onClick={() => handleTimeSlotClick(day, hour)}
                     >
-                      <div className="flex flex-col h-full text-white">
-                        <h4 className="font-medium text-xs leading-tight line-clamp-2">{event.title}</h4>
-                        <div className="mt-1 flex items-center gap-1 text-[10px] opacity-90">
-                          <Clock className="h-2.5 w-2.5" />
-                          {event.hour}:00
-                        </div>
-                      </div>
+                      {slotItems.map((item) => {
+                        const isSelected = selectedItemId === item.id
+                        const isEvent = item.type === 'event' && item.evento
+
+                        return isEvent ? (
+                          <EventDetailPopover
+                            key={item.id}
+                            evento={item.evento!}
+                            open={isSelected}
+                            onOpenChange={(open) => !open && setSelectedItemId(null)}
+                          >
+                            <div
+                              className={cn(
+                                "absolute inset-x-1 rounded px-2 py-1 text-xs font-medium text-white cursor-pointer hover:shadow-md transition-all z-10",
+                                isSelected && "ring-2 ring-foreground"
+                              )}
+                              style={{
+                                backgroundColor: item.color || '#6b7280',
+                                top: '2px',
+                                height: 'calc(100% - 4px)',
+                              }}
+                              onClick={(e) => handleItemClick(e, item.id)}
+                            >
+                              <div className="font-semibold truncate">{item.title}</div>
+                              <div className="text-[10px] opacity-90 truncate">
+                                {format(parseISO(item.startDate), "HH:mm")} - {format(parseISO(item.endDate), "HH:mm")}
+                              </div>
+                            </div>
+                          </EventDetailPopover>
+                        ) : (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              "absolute inset-x-1 rounded px-2 py-1 text-xs font-medium text-white cursor-pointer hover:shadow-md transition-all z-10",
+                              isSelected && "ring-2 ring-foreground"
+                            )}
+                            style={{
+                              backgroundColor: item.color || '#6b7280',
+                              top: '2px',
+                              height: 'calc(100% - 4px)',
+                            }}
+                            onClick={(e) => handleItemClick(e, item.id)}
+                            title={item.title}
+                          >
+                            <div className="font-semibold truncate">{item.title}</div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ))}
+                  )
+                })}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

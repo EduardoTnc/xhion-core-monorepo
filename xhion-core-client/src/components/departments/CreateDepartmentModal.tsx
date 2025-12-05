@@ -29,7 +29,7 @@ import { useFinanzasStore } from "@/store/finanzasStore";
 import { useConocimientoStore } from "@/store/conocimientoStore";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
-import "@/styles/gantt-task-react-overrides.css";
+import "@/styles/estilos_personalizados.css";
 
 const departmentSchema = z.object({
   nombre: z.string().min(1, "El nombre es requerido").max(100, "Máximo 100 caracteres"),
@@ -260,11 +260,11 @@ export function CreateDepartmentModal({
       prev.map((doc) =>
         doc.id === id
           ? {
-              ...doc,
-              file,
-              titulo: doc.titulo || file.name,
-              contenido: doc.contenido || file.name,
-            }
+            ...doc,
+            file,
+            titulo: doc.titulo || file.name,
+            contenido: doc.contenido || file.name,
+          }
           : doc
       )
     );
@@ -471,9 +471,8 @@ export function CreateDepartmentModal({
                           <button
                             key={iconOption.name}
                             type="button"
-                            className={`h-12 rounded-lg border text-sm transition hover:border-primary/40 hover:bg-muted ${
-                              isActive ? "border-primary bg-primary/10" : "border-border/70"
-                            }`}
+                            className={`h-12 rounded-lg border text-sm transition hover:border-primary/40 hover:bg-muted ${isActive ? "border-primary bg-primary/10" : "border-border/70"
+                              }`}
                             onClick={() => {
                               setSelectedIcon(iconOption.name);
                               setValue("icono", iconOption.name);
@@ -497,11 +496,10 @@ export function CreateDepartmentModal({
                         <button
                           key={color.value}
                           type="button"
-                          className={`h-11 rounded-xl transition focus-visible:ring-2 focus-visible:ring-offset-2 ${color.value} ${
-                            selectedColor === color.value
+                          className={`h-11 rounded-xl transition focus-visible:ring-2 focus-visible:ring-offset-2 ${color.value} ${selectedColor === color.value
                               ? "ring-2 ring-primary ring-offset-2"
                               : "hover:scale-105"
-                          }`}
+                            }`}
                           onClick={() => {
                             setSelectedColor(color.value);
                             setValue("color", color.value);
@@ -613,11 +611,10 @@ export function CreateDepartmentModal({
                                   </div>
                                   <button
                                     type="button"
-                                    className={`ml-auto rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
-                                      selectedLeaderId === usuario.id
+                                    className={`ml-auto rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${selectedLeaderId === usuario.id
                                         ? "border-primary bg-primary/10 text-primary"
                                         : "border-border/60 text-muted-foreground hover:text-foreground"
-                                    }`}
+                                      }`}
                                     onClick={() => handleSelectLeader(usuario.id)}
                                   >
                                     {selectedLeaderId === usuario.id ? "Líder" : "Definir líder"}
@@ -791,9 +788,8 @@ export function CreateDepartmentModal({
                           />
                         </div>
                         <div
-                          className={`rounded-xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-sm transition ${
-                            draggingDocId === doc.id ? "border-primary bg-primary/5" : ""
-                          }`}
+                          className={`rounded-xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-sm transition ${draggingDocId === doc.id ? "border-primary bg-primary/5" : ""
+                            }`}
                           onDragOver={(event) => event.preventDefault()}
                           onDragEnter={() => setDraggingDocId(doc.id)}
                           onDragLeave={() => setDraggingDocId(null)}

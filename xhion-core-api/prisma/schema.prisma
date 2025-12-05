@@ -6,7 +6,7 @@
 
 // Le dice a Prisma qué debe generar y dónde.
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
 }
 
@@ -543,16 +543,16 @@ model Archivo {
   documentosProyecto                 DocumentoProyecto[]
   comprobantesMovimientoDepartamento MovimientoPresupuestoDepartamento[] @relation("ComprobanteMovimientoDepartamento")
   comprobantesMovimientoProyecto     MovimientoPresupuestoProyecto[]     @relation("ComprobanteMovimientoProyecto")
-  tareaActividads                    TareaActividad[] @relation("ActividadArchivo")
+  tareaActividads                    TareaActividad[]                    @relation("ActividadArchivo")
 }
 
 /// Tabla pivote polimórfica para adjuntar archivos a diferentes entidades (p. ej., Tareas, Proyectos).
 /// NOTA: Prisma no soporta relaciones polimórficas de forma nativa. La lógica para asociar
 /// entidadPadreTipo y entidadPadreId debe manejarse a nivel de la aplicación.
 model ArchivoAdjunto {
-  archivoId        String @db.Uuid
-  entidadPadreTipo String @db.VarChar(50)
-  entidadPadreId   String @db.Uuid
+  archivoId        String  @db.Uuid
+  entidadPadreTipo String  @db.VarChar(50)
+  entidadPadreId   String  @db.Uuid
   descripcion      String? @db.VarChar(255)
 
   archivo Archivo @relation(fields: [archivoId], references: [id])
@@ -671,6 +671,24 @@ model CatalogoConfiguracion {
 }
 
 /// Almacena el valor personalizado para una configuración por usuario.
+/// Configuración global del sistema (Empresa)
+model ConfiguracionSistema {
+  id                 String   @id @default(uuid()) @db.Uuid
+  nombreEmpresa      String   @default("Xhion Core")
+  logoUrl            String?
+  faviconUrl         String?
+  colorPrimario      String   @default("#FFBF00")
+  colorSecundario    String   @default("#1a1a2e")
+  // Contexto para Magnus IA
+  ubicacion          String?  @db.VarChar(200) // Ej: "Arequipa, Perú"
+  giroNegocio        String?  @db.VarChar(200) // Ej: "Desarrollo de Software"
+  descripcionEmpresa String? // Descripción general de la empresa
+  mercadoObjetivo    String? // A quién sirve la empresa
+  competidoresClave  String? // Competidores conocidos (separados por coma)
+  updatedAt          DateTime @updatedAt
+}
+
+/// Configuración de preferencias de usuario
 model ConfiguracionUsuario {
   id                 String   @id @default(uuid()) @db.Uuid
   usuarioId          String   @db.Uuid

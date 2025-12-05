@@ -278,10 +278,7 @@ export function RolesView() {
           {/* Content */}
           <div className="flex-1 overflow-hidden relative">
             {selectedRole ? (
-              <div className={cn(
-                "absolute inset-0 p-4 sm:p-6",
-                view === "roles" ? "overflow-hidden" : "overflow-y-auto"
-              )}>
+              <div className="absolute inset-0 p-4 sm:p-6 overflow-y-auto">
                 {view === "roles" ? <RoleCard /> : <UsersList />}
               </div>
             ) : (

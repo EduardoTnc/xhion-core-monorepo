@@ -200,74 +200,69 @@ export function RoleCard() {
   const permisosTotal = MODULOS_PERMISOS.reduce((acc, m) => acc + m.permisos.length, 0)
 
   return (
-    <div className="space-y-4 sm:space-y-6 h-full flex flex-col">
-      {/* Warning for admin role */}
+    <div className="space-y-2 h-full flex flex-col pb-4">
+      {/* Warning for admin role - Compact */}
       {(selectedRole.nombre === "Administrador" || selectedRole.nombre === "Admin") && (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 flex-shrink-0">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-foreground mb-1">Rol de Administrador</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Este rol tiene control total del sistema. Modificar sus permisos puede afectar la seguridad y
-                funcionalidad de la plataforma.
-              </p>
-            </div>
-          </div>
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 flex items-center gap-2 flex-shrink-0">
+          <AlertCircle className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Rol de administrador: modificar permisos puede afectar la seguridad del sistema.
+          </p>
         </div>
       )}
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 flex-shrink-0">
-        <div className="rounded-lg border border-border bg-card p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left">
-          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg shrink-0">
-            <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+      {/* Enhanced Stats Bar */}
+      <div className="flex items-center justify-between gap-2 sm:gap-4 px-2 sm:px-4 py-1.5 sm:py-2 border rounded-lg bg-gradient-to-r from-card to-card/50 flex-shrink-0 shadow-sm">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="p-1 sm:p-1.5 bg-primary/10 rounded-md">
+            <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
           </div>
-          <div className="min-w-0">
-            <p className="text-lg sm:text-2xl font-bold text-foreground leading-none sm:leading-tight">{permisosActivos}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate w-full">Activos</p>
-          </div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left">
-          <div className="p-1.5 sm:p-2 bg-muted rounded-lg shrink-0">
-            <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-lg sm:text-2xl font-bold text-foreground leading-none sm:leading-tight">{permisosTotal}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate w-full">Totales</p>
+          <div className="flex items-baseline gap-0.5 sm:gap-1">
+            <span className="text-sm sm:text-lg font-bold text-foreground">{permisosActivos}</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">activos</span>
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left">
-          <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg shrink-0">
-            <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+        <div className="hidden sm:block h-6 w-px bg-border/50" />
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="p-1 sm:p-1.5 bg-muted/50 rounded-md">
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </div>
-          <div className="min-w-0">
-            <p className="text-lg sm:text-2xl font-bold text-foreground leading-none sm:leading-tight">
-              {Math.round((permisosActivos / permisosTotal) * 100)}%
-            </p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate w-full">Cobertura</p>
+          <div className="flex items-baseline gap-0.5 sm:gap-1">
+            <span className="text-sm sm:text-lg font-bold text-foreground">{permisosTotal}</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">totales</span>
+          </div>
+        </div>
+        <div className="hidden sm:block h-6 w-px bg-border/50" />
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="p-1 sm:p-1.5 bg-green-500/10 rounded-md">
+            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+          </div>
+          <div className="flex items-baseline gap-0.5 sm:gap-1">
+            <span className="text-sm sm:text-lg font-bold text-green-600">{Math.round((permisosActivos / permisosTotal) * 100)}%</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">cobertura</span>
           </div>
         </div>
       </div>
 
       {/* Search and Content */}
       <div className="flex-1 flex flex-col min-h-0 border rounded-lg bg-card overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center gap-4 bg-muted/30">
+        <div className="p-2 border-b border-border flex items-center gap-3 bg-muted/30">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar permisos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background"
+              className="pl-9 bg-background h-8 text-sm"
             />
           </div>
         </div>
 
         <Tabs value={selectedModule} onValueChange={setSelectedModule} className="flex-1 flex flex-col min-h-0">
-          <div className="px-4 pt-4 border-b border-border bg-muted/10">
-            <ScrollArea className="w-full whitespace-nowrap pb-0">
-              <TabsList className="inline-flex w-max min-w-full bg-transparent p-0 h-auto gap-2 mb-0">
+          <div className="border-b border-border bg-muted/10">
+            {/* Horizontal scrollable tabs container */}
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+              <TabsList className="inline-flex w-max min-w-full bg-transparent p-0 h-auto gap-2 px-3 pt-2 pb-0">
                 {MODULOS_PERMISOS.map((modulo) => {
                   const permisosModulo = modulo.permisos.length
                   const permisosActivos = modulo.permisos.filter(p => localPermissions.has(p.nombreAccion)).length
@@ -296,7 +291,7 @@ export function RoleCard() {
                   )
                 })}
               </TabsList>
-            </ScrollArea>
+            </div>
           </div>
 
           <div className="flex-1 overflow-hidden bg-background">
@@ -308,7 +303,7 @@ export function RoleCard() {
                 <TabsContent key={modulo.id} value={modulo.id} className="h-full m-0 p-0 data-[state=inactive]:hidden">
                   <div className="flex flex-col h-full">
                     {/* Module Header Actions */}
-                    <div className="p-4 border-b border-border flex items-center justify-between bg-muted/5 flex-shrink-0">
+                    <div className="p-3 border-b border-border flex items-center justify-between bg-muted/5 flex-shrink-0">
                       <div>
                         <h3 className="text-sm font-semibold text-foreground">{modulo.nombre}</h3>
                         <p className="text-xs text-muted-foreground">{modulo.descripcion}</p>
@@ -335,7 +330,7 @@ export function RoleCard() {
                     </div>
 
                     {/* Permissions Grid */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 overflow-y-auto p-3">
                       {permisosFiltrados.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                           <Search className="h-8 w-8 mb-2 opacity-20" />

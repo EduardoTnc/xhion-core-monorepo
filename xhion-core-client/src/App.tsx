@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { MainLayout } from './components/layout/MainLayout'
 import { ThemeProvider } from './components/providers/ThemeProvider'
 import { useThemeStore } from './store/themeStore'
+import { useSystemSettingsStore } from './store/systemSettingsStore'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import LoginPage from './pages/LoginPage'
 import AceptarInvitacionPage from './pages/AceptarInvitacionPage'
@@ -18,17 +19,24 @@ import AiInsightsPage from './pages/AiInsightsPage'
 import IdeasPage from './pages/IdeasPage'
 import AuditPage from './pages/AuditPage'
 import { CalendarioPage } from './pages/CalendarioPage'
-import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
 import TasksPage from './pages/TasksPage'
 import UsuariosPage from './pages/UsuariosPage'
 import FinanzasPage from './pages/FinanzasPage'
 import DepartmentDetailPage from './pages/DepartmentDetailPage'
+import ProfileSettingsPage from './pages/ProfileSettingsPage'
+import SystemSettingsPage from './pages/SystemSettingsPage'
 
 // Componente interno que usa los hooks
 function AppContent() {
   const { theme } = useThemeStore();
+  const { fetchSettings } = useSystemSettingsStore();
   const { isOnline } = useServiceWorker();
+
+  // Cargar configuración del sistema al iniciar
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   // Aplicar el tema al elemento HTML
   useEffect(() => {
@@ -64,10 +72,10 @@ function AppContent() {
             <Route path="roles" element={<RolesPage />} />
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="perfil/sesiones" element={<SessionsPage />} />
-            <Route path="configuraciones" element={<SettingsPage />} />
+            <Route path="perfil/configuracion" element={<ProfileSettingsPage />} />
+            <Route path="sistema/configuracion" element={<SystemSettingsPage />} />
+            <Route path="configuraciones" element={<Navigate to="/perfil/configuracion" replace />} />
             <Route path="tareas" element={<TasksPage />} />
-            
-            {/* ... otras rutas protegidas */}
           </Route>
         </Route>
       </Routes>

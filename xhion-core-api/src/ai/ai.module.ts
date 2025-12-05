@@ -6,10 +6,12 @@ import { AiService } from './ai.service'
 import { AiController } from './ai.controller'
 import { AiEmbeddingSyncService } from './ai-embedding-sync.service'
 
+import { SystemSettingsModule } from '../system-settings/system-settings.module'
+
 @Module({
-  imports: [ConfigModule, PrismaModule, AuditoriaModule],
+  imports: [ConfigModule, PrismaModule, AuditoriaModule, SystemSettingsModule],
   controllers: [AiController],
   providers: [AiService, AiEmbeddingSyncService],
   exports: [AiService, AiEmbeddingSyncService],
 })
-export class AiModule {}
+export class AiModule { }

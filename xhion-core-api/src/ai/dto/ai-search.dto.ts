@@ -73,6 +73,11 @@ export class AiSearchResultDto {
   @ApiProperty({ description: 'Tiempo total de procesamiento en milisegundos' })
   @IsNumber()
   processingTimeMs!: number
+
+  @ApiProperty({ required: false, description: 'Estadísticas globales para consultas de conteo' })
+  @IsOptional()
+  @IsObject()
+  stats?: Record<string, any>
 }
 
 export class AiFeedbackDto {

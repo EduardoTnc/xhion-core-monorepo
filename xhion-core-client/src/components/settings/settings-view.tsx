@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { DatePickerSingle } from "@/components/ui/date-picker-single"
-import { 
-  User, Bell, Shield, Palette, Globe, Save, Upload, Loader2, 
+import {
+  User, Bell, Shield, Palette, Globe, Save, Upload, Loader2,
   Eye, EyeOff, Download, Trash2, LogOut, Smartphone, Monitor, FileText
 } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
@@ -35,7 +35,7 @@ export function SettingsView() {
   const tabFromUrl = searchParams.get('tab') || 'profile'
   const [activeTab, setActiveTab] = useState(tabFromUrl)
   const { user, setUser } = useAuthStore()
-  
+
   // Actualizar tab cuando cambie el parámetro de URL
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -77,7 +77,7 @@ export function SettingsView() {
   // Estados de eliminación de cuenta
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deletePassword, setDeletePassword] = useState("")
-  
+
   // Estados de confirmación de cerrar sesión
   const [sessionToTerminate, setSessionToTerminate] = useState<string | null>(null)
 
@@ -132,16 +132,16 @@ export function SettingsView() {
     try {
       // Limpiar y validar datos antes de enviar
       const dataToSend: any = {}
-      
+
       // Solo incluir campos que tienen valor
       if (profileData.nombreCompleto?.trim()) {
         dataToSend.nombreCompleto = profileData.nombreCompleto.trim()
       }
-      
+
       if (profileData.biografia?.trim()) {
         dataToSend.biografia = profileData.biografia.trim()
       }
-      
+
       // Validar y formatear fechas correctamente
       if (profileData.fechaNacimiento) {
         try {
@@ -153,7 +153,7 @@ export function SettingsView() {
           console.error("Error al procesar fecha de nacimiento:", e)
         }
       }
-      
+
       if (profileData.fechaIngreso) {
         try {
           const fecha = new Date(profileData.fechaIngreso)
@@ -164,9 +164,9 @@ export function SettingsView() {
           console.error("Error al procesar fecha de ingreso:", e)
         }
       }
-      
+
       console.log("Datos a enviar:", dataToSend)
-      
+
       const updatedUser = await settingsService.updateProfile(dataToSend)
       setUser(updatedUser)
       toast.success("Perfil actualizado correctamente")
@@ -321,8 +321,8 @@ export function SettingsView() {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="border-b border-border bg-card p-6">
-        <h1 className="text-2xl font-semibold text-foreground">Configuración</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Gestiona tu cuenta y preferencias del sistema</p>
+        <h1 className="text-2xl font-semibold text-foreground">Configuración de Perfil</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Gestiona tu cuenta y preferencias personales</p>
       </div>
 
       {/* Content */}
@@ -345,9 +345,9 @@ export function SettingsView() {
               <Palette className="h-4 w-4" />
               Apariencia
             </TabsTrigger>
-            <TabsTrigger value="system" className="gap-2">
+            <TabsTrigger value="data" className="gap-2">
               <Globe className="h-4 w-4" />
-              Sistema
+              Datos
             </TabsTrigger>
           </TabsList>
 
@@ -743,30 +743,26 @@ export function SettingsView() {
               ) : (
                 <div className="space-y-3">
                   {sessions.map((session) => (
-                    <div 
-                      key={session.id} 
-                      className={`flex items-center justify-between rounded-lg border p-4 transition-all ${
-                        session.isCurrentSession 
-                          ? 'border-primary border-2 bg-primary/10 shadow-md' 
-                          : 'border-border bg-muted/30 hover:bg-muted/50'
-                      }`}
+                    <div
+                      key={session.id}
+                      className={`flex items-center justify-between rounded-lg border p-4 transition-all ${session.isCurrentSession
+                        ? 'border-primary border-2 bg-primary/10 shadow-md'
+                        : 'border-border bg-muted/30 hover:bg-muted/50'
+                        }`}
                     >
                       <div className="flex items-center gap-4 flex-1">
                         {/* Icono */}
-                        <div className={`p-2 rounded-lg ${
-                          session.isCurrentSession ? 'bg-primary/20' : 'bg-muted'
-                        }`}>
+                        <div className={`p-2 rounded-lg ${session.isCurrentSession ? 'bg-primary/20' : 'bg-muted'
+                          }`}>
                           {session.userAgent?.includes("Mobile") ? (
-                            <Smartphone className={`h-6 w-6 ${
-                              session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
-                            }`} />
+                            <Smartphone className={`h-6 w-6 ${session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
+                              }`} />
                           ) : (
-                            <Monitor className={`h-6 w-6 ${
-                              session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
-                            }`} />
+                            <Monitor className={`h-6 w-6 ${session.isCurrentSession ? 'text-primary' : 'text-muted-foreground'
+                              }`} />
                           )}
                         </div>
-                        
+
                         {/* Información */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -776,9 +772,8 @@ export function SettingsView() {
                               </span>
                             )}
                           </div>
-                          <p className={`text-sm font-medium truncate ${
-                            session.isCurrentSession ? 'text-primary font-semibold' : 'text-foreground'
-                          }`}>
+                          <p className={`text-sm font-medium truncate ${session.isCurrentSession ? 'text-primary font-semibold' : 'text-foreground'
+                            }`}>
                             {session.userAgent || "Navegador desconocido"}
                           </p>
                           <div className="flex flex-col gap-0.5 mt-1">
@@ -807,7 +802,7 @@ export function SettingsView() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Botón Cerrar */}
                       {!session.isCurrentSession && (
                         <Button
@@ -906,48 +901,8 @@ export function SettingsView() {
             </div>
           </TabsContent>
 
-          {/* System Tab */}
-          <TabsContent value="system" className="space-y-6">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Idioma y Región</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="language">Idioma</Label>
-                  <Select
-                    value={preferences.language}
-                    onValueChange={(value: any) => updatePreferences({ language: value })}
-                  >
-                    <SelectTrigger id="language">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="pt">Português</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Zona horaria</Label>
-                  <Select
-                    value={preferences.timezone}
-                    onValueChange={(value: any) => updatePreferences({ timezone: value })}
-                  >
-                    <SelectTrigger id="timezone">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/Mexico_City">América/Ciudad de México (GMT-6)</SelectItem>
-                      <SelectItem value="America/New_York">América/Nueva York (GMT-5)</SelectItem>
-                      <SelectItem value="Europe/Madrid">Europa/Madrid (GMT+1)</SelectItem>
-                      <SelectItem value="America/Los_Angeles">América/Los Ángeles (GMT-8)</SelectItem>
-                      <SelectItem value="America/Bogota">América/Bogotá (GMT-5)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+          {/* Data Tab */}
+          <TabsContent value="data" className="space-y-6">
 
             <div className="rounded-lg border border-border bg-card p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Datos y Privacidad</h3>
@@ -972,12 +927,6 @@ export function SettingsView() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => updatePreferences({
-                language: 'es',
-                timezone: 'America/Mexico_City',
-              })}>
-                Restablecer
-              </Button>
               <Button className="gap-2" onClick={handleSaveSystem}>
                 <Save className="h-4 w-4" />
                 Guardar cambios

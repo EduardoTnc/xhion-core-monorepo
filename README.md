@@ -10,6 +10,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2-61dafb)](https://react.dev/)
 [![NestJS](https://img.shields.io/badge/NestJS-11.1-e0234e)](https://nestjs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-7.0-0c344b)](https://www.prisma.io/)
+[![Vite](https://img.shields.io/badge/Vite-7.1-646cff)](https://vitejs.dev/)
 
 **Centraliza la gestión de proyectos, optimiza la toma de decisiones con análisis predictivo y fomenta la innovación empresarial.**
 
@@ -149,11 +151,40 @@ XHION Core centraliza toda la gestión operativa en una plataforma moderna que:
 - Estados vacíos elegantes
 - Exportación de datos
 
-### 🤖 Inteligencia Artificial (Próximamente)
-- Creación de proyectos desde plantillas IA
-- Generación automática de estructura de tareas
-- Análisis predictivo de riesgos
-- Sugerencias de optimización
+### 🧠 Inteligencia Artificial (Gemini)
+- Integración nativa con Google Gemini AI
+- Asistente virtual para consultas sobre proyectos y tareas
+- Generación automática de resúmenes y reportes
+- Análisis de sentimientos en comentarios y feedback
+- Sugerencias inteligentes para optimización de recursos
+
+### 📚 Gestión de Conocimiento
+- Base de conocimiento centralizada (Wiki)
+- Organización por categorías y etiquetas
+- Búsqueda semántica potenciada por IA
+- Versionado de documentos y artículos
+- Permisos de lectura/escritura granulares
+
+### 💡 Gestión de Ideas e Innovación
+- Buzón de ideas y sugerencias
+- Flujo de aprobación y evaluación de ideas
+- Votación y comentarios colaborativos
+- Conversión de ideas aprobadas en proyectos
+- Gamificación por aportes innovadores
+
+### 🔐 Solicitudes de Acceso
+- Flujo automatizado para solicitud de accesos
+- Aprobación/Rechazo por administradores
+- Notificaciones automáticas de estado
+- Historial de solicitudes y auditoría
+- Integración con sistema de roles
+
+### 📅 Gestión de Eventos y Calendario
+- Calendario interactivo mensual, semanal y diario
+- Creación de eventos y reuniones
+- Invitaciones a usuarios y departamentos
+- Sincronización con tareas y fechas límite
+- Recordatorios y notificaciones
 
 ### 🎨 Experiencia de Usuario
 - Diseño moderno con shadcn/ui + Radix UI
@@ -202,8 +233,9 @@ XHION Core centraliza toda la gestión operativa en una plataforma moderna que:
 |------------|---------|-----------|
 | **NestJS** | 11.1.6 | Framework backend |
 | **TypeScript** | 5.9.3 | Tipado estático |
-| **Prisma** | 6.16.3 | ORM |
+| **Prisma** | 7.0.0 | ORM |
 | **PostgreSQL** | Latest | Base de datos |
+| **Google Gemini** | 0.24.1 | Inteligencia Artificial |
 | **Passport** | 0.7.0 | Autenticación |
 | **JWT** | 11.0.0 | Tokens |
 | **bcryptjs** | 3.0.2 | Hash de passwords |
@@ -388,6 +420,12 @@ xhion-core-monorepo/
 │   │   ├── presupuestos/     # Presupuestos
 │   │   ├── roles/            # Roles y permisos
 │   │   ├── auditoria/        # Auditoría
+│   │   ├── ai/               # Inteligencia Artificial (Gemini)
+│   │   ├── conocimiento/     # Base de conocimiento
+│   │   ├── ideas/            # Gestión de ideas
+│   │   ├── solicitudes-acceso/ # Solicitudes de acceso
+│   │   ├── eventos/          # Gestión de eventos
+│   │   ├── recursos/         # Gestión de recursos
 │   │   └── ...
 │   └── package.json
 │

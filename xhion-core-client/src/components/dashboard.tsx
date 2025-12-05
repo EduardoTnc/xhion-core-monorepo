@@ -8,7 +8,7 @@ import { GanttChartProfessional } from "@/components/dashboard/gantt-chart-profe
  */
 export function Dashboard() {
   return (
-    <div className="h-full flex flex-col p-4">
+    <div className="h-full flex flex-col p-2 md:p-4">
       <GanttChartProfessional />
     </div>
   )

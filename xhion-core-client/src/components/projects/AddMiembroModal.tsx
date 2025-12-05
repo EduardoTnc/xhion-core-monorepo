@@ -137,7 +137,7 @@ export function AddMiembroModal({ open, onOpenChange, proyectoId }: AddMiembroMo
       }
       onOpenChange(value);
     }}>
-      <DialogContent className="w-[95vw] max-w-[780px] max-h-[90vh] flex flex-col sm:w-full">
+      <DialogContent className="w-[95vw] max-w-[850px] max-h-[90vh] flex flex-col sm:w-full">
         <DialogHeader>
           <DialogTitle>Agregar miembros al proyecto</DialogTitle>
           <DialogDescription>
@@ -177,7 +177,7 @@ export function AddMiembroModal({ open, onOpenChange, proyectoId }: AddMiembroMo
                 )}
               </div>
             ) : (
-              <ScrollArea className="m-4 project-members-scroll h-full max-h-[55vh] sm:max-h-[60vh] lg:max-h-[520px]">
+              <ScrollArea className="m-4 project-members-scroll h-full max-h-[58vh] sm:max-h-[62vh] lg:max-h-[560px]">
                 <div className="divide-y divide-border/30">
                   {filteredUsuarios.length === 0 ? (
                     <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
