@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import { type Comentario } from "@/services/taskService";
-import { useTaskStore } from "@/store/taskStore";
+import { useAddTaskComment, useDeleteTaskComment } from "@/hooks/mutations/useTaskMutations";
 import { useAuthStore } from "@/store/authStore";
-import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -28,9 +27,11 @@ interface TaskCommentsProps {
 
 export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
   const { user } = useAuthStore();
-  const { addComentario, deleteComentario } = useTaskStore();
+  // TanStack Query mutations
+  const addCommentMutation = useAddTaskComment();
+  const deleteCommentMutation = useDeleteTaskComment();
+
   const [newComment, setNewComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [comentarioToDelete, setComentarioToDelete] = useState<string | null>(null);
 
   const getInitials = (name: string) => {
@@ -46,16 +47,14 @@ export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
     e.preventDefault();
     if (!newComment.trim()) return;
 
-    try {
-      setIsSubmitting(true);
-      await addComentario(tareaId, newComment);
-      setNewComment("");
-      toast.success("Comentario agregado");
-    } catch (error: any) {
-      toast.error(error.message || "Error al agregar comentario");
-    } finally {
-      setIsSubmitting(false);
-    }
+    addCommentMutation.mutate(
+      { taskId: tareaId, data: { contenido: newComment } },
+      {
+        onSuccess: () => {
+          setNewComment("");
+        },
+      }
+    );
   };
 
   const handleDeleteClick = (comentarioId: string) => {
@@ -65,13 +64,14 @@ export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
   const handleConfirmDelete = async () => {
     if (!comentarioToDelete) return;
 
-    try {
-      await deleteComentario(tareaId, comentarioToDelete);
-      toast.success("Comentario eliminado");
-      setComentarioToDelete(null);
-    } catch (error: any) {
-      toast.error(error.message || "Error al eliminar comentario");
-    }
+    deleteCommentMutation.mutate(
+      { taskId: tareaId, comentarioId: comentarioToDelete },
+      {
+        onSettled: () => {
+          setComentarioToDelete(null);
+        },
+      }
+    );
   };
 
   return (
@@ -135,11 +135,11 @@ export function TaskComments({ tareaId, comentarios }: TaskCommentsProps) {
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           rows={3}
-          disabled={isSubmitting}
+          disabled={addCommentMutation.isPending}
         />
         <div className="flex justify-end">
-          <Button type="submit" size="sm" disabled={isSubmitting || !newComment.trim()}>
-            {isSubmitting ? (
+          <Button type="submit" size="sm" disabled={addCommentMutation.isPending || !newComment.trim()}>
+            {addCommentMutation.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Send className="mr-2 h-4 w-4" />

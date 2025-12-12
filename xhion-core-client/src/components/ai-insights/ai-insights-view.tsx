@@ -3,25 +3,23 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Sparkles, TrendingUp, AlertTriangle, Target, Zap, RefreshCw, Brain } from "lucide-react"
+import { PageHeaderSimple } from "@/components/layout/PageHeader"
 
 export function AIInsightsView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">IA Insights</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Análisis predictivo y recomendaciones inteligentes para tus proyectos
-            </p>
-          </div>
+      <PageHeaderSimple
+        icon={Sparkles}
+        title="IA Insights"
+        subtitle="Análisis predictivo y recomendaciones inteligentes para tus proyectos"
+        actions={
           <Button className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Actualizar análisis
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">

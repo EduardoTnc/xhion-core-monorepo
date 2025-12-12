@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import { useConnectionStore } from '../store/connectionStore';
 
 const apiClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/v1`,
+  timeout: 15000, // 15 second timeout
 });
 
 // Interceptor para añadir el token a cada petición
@@ -35,11 +37,62 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Helper to check if it's a network/connection error
+const isNetworkError = (error: any): boolean => {
+  return (
+    !error.response &&
+    (error.code === 'ECONNABORTED' ||
+      error.code === 'ERR_NETWORK' ||
+      error.message?.includes('Network Error') ||
+      error.message?.includes('timeout'))
+  );
+};
+
+// Helper to check if it's a server error
+const isServerError = (error: any): boolean => {
+  return error.response?.status >= 500;
+};
+
 // Interceptor para manejar respuestas 401 y hacer refresh automático
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Success - mark server as connected
+    const connectionStore = useConnectionStore.getState();
+    if (!connectionStore.isServerConnected) {
+      connectionStore.setServerConnected(true);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    const connectionStore = useConnectionStore.getState();
+
+    // Handle network errors (no response from server)
+    if (isNetworkError(error)) {
+      connectionStore.setServerConnected(false);
+      connectionStore.setError('No se puede conectar con el servidor');
+      connectionStore.setBannerVisible(true);
+
+      // Show toast for mutating operations
+      const method = originalRequest?.method?.toUpperCase();
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        connectionStore.showBlockedOperationToast();
+      }
+
+      return Promise.reject(error);
+    }
+
+    // Handle server errors (5xx)
+    if (isServerError(error)) {
+      connectionStore.setError(`Error del servidor: ${error.response.status}`);
+      // Don't disconnect for occasional server errors, but log them
+      console.error('Server error:', error.response.status, error.response.data);
+    } else {
+      // For non-server errors, mark as connected (server is responding)
+      if (!connectionStore.isServerConnected) {
+        connectionStore.setServerConnected(true);
+      }
+    }
 
     // No intentar refresh si es una petición de logout o refresh
     const isLogoutRequest = originalRequest.url?.includes('/auth/logout');

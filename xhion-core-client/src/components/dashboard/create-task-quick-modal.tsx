@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -31,9 +30,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
-import { useTaskStore } from "@/store/taskStore"
-import { useProjectStore } from "@/store/projectStore"
+import { useProjects } from "@/hooks/queries"
+import { useCreateTask } from "@/hooks/mutations/useTaskMutations"
 
 const formSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres"),
@@ -61,9 +59,9 @@ export function CreateTaskQuickModal({
   onOpenChange,
   onSuccess,
 }: CreateTaskQuickModalProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { createTarea } = useTaskStore()
-  const { proyectos } = useProjectStore()
+  // TanStack Query hooks
+  const { data: proyectos = [] } = useProjects()
+  const createTaskMutation = useCreateTask()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -77,25 +75,21 @@ export function CreateTaskQuickModal({
   })
 
   const onSubmit = async (values: FormValues) => {
-    setIsSubmitting(true)
-    try {
-      await createTarea({
+    createTaskMutation.mutate(
+      {
         ...values,
         estado: "Por_Hacer",
-      })
-
-      toast.success("Tarea creada exitosamente")
-      form.reset()
-      onOpenChange(false)
-      
-      if (onSuccess) {
-        onSuccess()
+      },
+      {
+        onSuccess: () => {
+          form.reset()
+          onOpenChange(false)
+          if (onSuccess) {
+            onSuccess()
+          }
+        },
       }
-    } catch (error: any) {
-      toast.error(error.message || "Error al crear la tarea")
-    } finally {
-      setIsSubmitting(false)
-    }
+    )
   }
 
   const getPrioridadColor = (prioridad: string) => {
@@ -263,12 +257,12 @@ export function CreateTaskQuickModal({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={createTaskMutation.isPending}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={createTaskMutation.isPending}>
+                {createTaskMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Crear Tarea
               </Button>
             </DialogFooter>

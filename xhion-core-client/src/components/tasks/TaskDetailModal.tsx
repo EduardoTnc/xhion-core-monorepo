@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TaskComments } from "./TaskComments";
-import { useTaskStore } from "@/store/taskStore";
+import { useTask, useTaskAttachments, useTaskActivity } from "@/hooks/queries";
+import { useUpdateTask, useUploadTaskAttachment, useDeleteTaskAttachment } from "@/hooks/mutations/useTaskMutations";
 import type { Tarea, TareaAdjunto, TareaActividad } from "@/services/taskService";
 import { Loader2, Calendar, User, FolderKanban, Flag, Edit, Trash2, Paperclip, MessageSquare, Clock5, Check, X } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -39,60 +40,26 @@ const estadoColors = {
 
 export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete }: TaskDetailModalProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const {
-    tareas,
-    tareaActual,
-    fetchTareaById,
-    isLoading,
-    setTareaActual,
-    updateTarea,
-    adjuntos: adjuntosState,
-    actividad: actividadState,
-    fetchAdjuntos,
-    uploadAdjunto,
-    deleteAdjunto,
-    fetchActividad,
-    responderActividad,
-  } = useTaskStore();
+
+  // TanStack Query hooks
+  const { data: tareaActual, isLoading } = useTask(tareaId, { enabled: open && !!tareaId });
+  const { data: currentAdjuntos = [], isLoading: isLoadingAdjuntos, refetch: refetchAdjuntos } = useTaskAttachments(tareaId, { enabled: open && !!tareaId });
+  const { data: currentActividad = [], isLoading: isLoadingActividad, refetch: refetchActividad } = useTaskActivity(tareaId, { enabled: open && !!tareaId });
+
+  // Mutations
+  const updateTaskMutation = useUpdateTask();
+  const uploadAttachmentMutation = useUploadTaskAttachment();
+  const deleteAttachmentMutation = useDeleteTaskAttachment();
 
   const [attachmentDescription, setAttachmentDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoadingAdjuntos, setIsLoadingAdjuntos] = useState(false);
-  const [isLoadingActividad, setIsLoadingActividad] = useState(false);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replying, setReplying] = useState<Record<string, boolean>>({});
   const [editingField, setEditingField] = useState<string | null>(null);
   const [savingField, setSavingField] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
 
-  const currentAdjuntos = useMemo<TareaAdjunto[]>(
-    () => (tareaId ? adjuntosState[tareaId] || [] : []),
-    [adjuntosState, tareaId],
-  );
-  const currentActividad = useMemo<TareaActividad[]>(
-    () => (tareaId ? actividadState[tareaId] || [] : []),
-    [actividadState, tareaId],
-  );
-
-  useEffect(() => {
-    if (!tareaId || !open) return;
-
-    const cachedTask = tareas.find((t) => t.id === tareaId);
-    if (cachedTask) {
-      setTareaActual(cachedTask);
-    }
-  }, [tareaId, open, tareas, setTareaActual]);
-
-  useEffect(() => {
-    if (tareaId && open) {
-      fetchTareaById(tareaId);
-      setIsLoadingAdjuntos(true);
-      fetchAdjuntos(tareaId).finally(() => setIsLoadingAdjuntos(false));
-      setIsLoadingActividad(true);
-      fetchActividad(tareaId).finally(() => setIsLoadingActividad(false));
-    }
-  }, [tareaId, open, fetchTareaById, fetchAdjuntos, fetchActividad]);
-
+  // Sync title draft when task changes
   useEffect(() => {
     if (tareaActual) {
       setTitleDraft(tareaActual.titulo);
@@ -101,26 +68,30 @@ export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete 
 
   const handleEstadoChange = async (estado: "Por_Hacer" | "En_Progreso" | "Hecho" | "Bloqueado") => {
     if (!tareaId) return;
-    try {
-      await updateTarea(tareaId, { estado });
-      toast({ title: "Estado actualizado" });
-    } catch (error: any) {
-      toast({ title: "No se pudo actualizar el estado", description: error.message, variant: "destructive" });
-    }
+    updateTaskMutation.mutate(
+      { id: tareaId, data: { estado } },
+      {
+        onError: (error: any) => {
+          toast({ title: "No se pudo actualizar el estado", description: error.message, variant: "destructive" });
+        },
+      }
+    );
   };
 
   const handleAttachmentUpload = async (file: File) => {
     if (!tareaId) return;
     setIsUploading(true);
-    try {
-      await uploadAdjunto(tareaId, file, attachmentDescription.trim() || undefined);
-      toast({ title: "Adjunto agregado" });
-      setAttachmentDescription("");
-    } catch (error: any) {
-      toast({ title: "No se pudo subir el adjunto", description: error.message, variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-    }
+    uploadAttachmentMutation.mutate(
+      { taskId: tareaId, file, descripcion: attachmentDescription.trim() || undefined },
+      {
+        onSuccess: () => {
+          setAttachmentDescription("");
+        },
+        onSettled: () => {
+          setIsUploading(false);
+        },
+      }
+    );
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,12 +104,7 @@ export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete 
 
   const handleDeleteAdjunto = async (archivoId: string) => {
     if (!tareaId) return;
-    try {
-      await deleteAdjunto(tareaId, archivoId);
-      toast({ title: "Adjunto eliminado" });
-    } catch (error: any) {
-      toast({ title: "No se pudo eliminar el adjunto", description: error.message, variant: "destructive" });
-    }
+    deleteAttachmentMutation.mutate({ taskId: tareaId, archivoId });
   };
 
   const handleResponderActividad = async (actividadId: string) => {
@@ -147,9 +113,12 @@ export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete 
     if (!mensaje) return;
     setReplying((prev) => ({ ...prev, [actividadId]: true }));
     try {
-      await responderActividad(tareaId, actividadId, { descripcion: mensaje });
+      // Using direct service call since no mutation exists for this
+      const { taskService } = await import("@/services/taskService");
+      await taskService.responderActividad(tareaId, actividadId, { descripcion: mensaje });
       setReplyInputs((prev) => ({ ...prev, [actividadId]: "" }));
       toast({ title: "Respuesta publicada" });
+      refetchActividad();
     } catch (error: any) {
       toast({ title: "No se pudo responder", description: error.message, variant: "destructive" });
     } finally {
@@ -206,19 +175,24 @@ export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete 
         return;
     }
 
-    try {
-      setSavingField(field);
-      await updateTarea(tareaId, payload);
-      toast({ title: "Tarea actualizada" });
-      if (field === "titulo") {
-        setTitleDraft(trimmedValue as string);
+    setSavingField(field);
+    updateTaskMutation.mutate(
+      { id: tareaId, data: payload },
+      {
+        onSuccess: () => {
+          if (field === "titulo") {
+            setTitleDraft(trimmedValue as string);
+          }
+        },
+        onError: (error: any) => {
+          toast({ title: "No se pudo actualizar la tarea", description: error.message, variant: "destructive" });
+        },
+        onSettled: () => {
+          setSavingField(null);
+          setEditingField(null);
+        },
       }
-    } catch (error: any) {
-      toast({ title: "No se pudo actualizar la tarea", description: error.message, variant: "destructive" });
-    } finally {
-      setSavingField(null);
-      setEditingField(null);
-    }
+    );
   };
 
   return (
@@ -372,7 +346,7 @@ export function TaskDetailModal({ tareaId, open, onOpenChange, onEdit, onDelete 
             )}
           </div>
         </div>
-        
+
         <input ref={fileInputRef} type="file" hidden onChange={handleFileChange} />
       </DialogContent>
     </Dialog>

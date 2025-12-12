@@ -1,24 +1,23 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, TrendingUp, Lightbulb, Target, Zap, Loader2, BookOpen, List, Bot, ShieldCheck, X } from "lucide-react"
+import { PageHeader, type PageHeaderTab } from "@/components/layout/PageHeader"
 import { ExpandableIdeaCard } from "./expandable-idea-card"
 import { InlineIdeaEditor } from "./inline-idea-editor"
 import { MagnusIdeaGenerator } from "./magnus-idea-generator"
 import { IdeasTutorial } from "./ideas-tutorial"
 import { IdeasAdminPanel } from "./ideas-admin-panel"
 import { IdeasGroupedView } from "./ideas-grouped-view"
-import { useIdeasStore } from "@/store/ideasStore"
+// TanStack Query hooks - replacing useIdeasStore
+import { useIdeas, useIdeasStats, useIdeaFilters } from "@/hooks/queries"
 import { useAuthStore } from "@/store/authStore"
 
 
 export function IdeasView() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterCategory, setFilterCategory] = useState("all")
   const [activeTab, setActiveTab] = useState("ideas")
 
   // Panel states
@@ -26,7 +25,18 @@ export function IdeasView() {
   const [showMagnusPanel, setShowMagnusPanel] = useState(false)
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
 
-  const { ideas, estadisticas, isLoading, fetchIdeas, fetchEstadisticas } = useIdeasStore()
+  // Use URL-based filters from TanStack Query hooks
+  const { filters, setFilter } = useIdeaFilters()
+  const searchQuery = filters.busqueda || ""
+  const filterCategory = filters.categoria || "all"
+
+  // TanStack Query hooks
+  const { data: ideas = [], isLoading, refetch: refetchIdeas } = useIdeas({
+    categoria: filterCategory !== "all" ? filterCategory : undefined,
+    busqueda: searchQuery || undefined
+  })
+  const { data: estadisticas, refetch: refetchStats } = useIdeasStats()
+
   const { user } = useAuthStore()
 
   // Check if user has admin permissions
@@ -35,21 +45,6 @@ export function IdeasView() {
 
   // Get selected idea
   const selectedIdea = ideas.find(i => i.id === selectedIdeaId)
-
-  useEffect(() => {
-    loadIdeas()
-    fetchEstadisticas()
-  }, [])
-
-  useEffect(() => {
-    loadIdeas()
-  }, [filterCategory, searchQuery])
-
-  const loadIdeas = useCallback(() => {
-    const categoria = filterCategory !== "all" ? filterCategory : undefined
-    const busqueda = searchQuery || undefined
-    fetchIdeas(categoria, undefined, busqueda)
-  }, [filterCategory, searchQuery, fetchIdeas])
 
   const handleSelectIdea = (ideaId: string) => {
     setSelectedIdeaId(prev => prev === ideaId ? null : ideaId)
@@ -74,25 +69,45 @@ export function IdeasView() {
   }
 
   const handlePanelSuccess = () => {
-    loadIdeas()
-    fetchEstadisticas()
+    refetchIdeas()
+    refetchStats()
   }
 
   const handleSilentStatsRefresh = useCallback(() => {
-    fetchEstadisticas()
-  }, [fetchEstadisticas])
+    refetchStats()
+  }, [refetchStats])
+
+  const handleSetSearchQuery = (query: string) => {
+    setFilter('q', query || null)
+  }
+
+  const handleSetFilterCategory = (category: string) => {
+    setFilter('categoria', category !== 'all' ? category : null)
+  }
+
+  // Build tabs array dynamically
+  const headerTabs: PageHeaderTab[] = useMemo(() => {
+    const tabs: PageHeaderTab[] = [
+      { id: "ideas", label: "Ideas", icon: List },
+    ]
+    if (canAdminIdeas) {
+      tabs.push({ id: "admin", label: "Administración", icon: ShieldCheck })
+    }
+    tabs.push({ id: "guia", label: "Guía", icon: BookOpen })
+    return tabs
+  }, [canAdminIdeas])
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="border-b border-border bg-card p-4 md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-foreground">Ideas y Recomendaciones</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Comparte ideas innovadoras y recomendaciones que impulsen el crecimiento de la empresa
-            </p>
-          </div>
+      {/* Header with integrated tabs */}
+      <PageHeader
+        icon={Lightbulb}
+        title="Ideas y Recomendaciones"
+        subtitle="Comparte ideas innovadoras y recomendaciones que impulsen el crecimiento de la empresa"
+        tabs={headerTabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant={showMagnusPanel ? "default" : "outline"}
@@ -115,40 +130,12 @@ export function IdeasView() {
               <span className="sm:hidden">Nueva</span>
             </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <div className="border-b border-border bg-card px-4 md:px-6">
-          <TabsList className="h-12 bg-transparent p-0">
-            <TabsTrigger
-              value="ideas"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-4 h-12"
-            >
-              <List className="h-4 w-4 mr-2" />
-              Ideas
-            </TabsTrigger>
-            {canAdminIdeas && (
-              <TabsTrigger
-                value="admin"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-4 h-12"
-              >
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                Administración
-              </TabsTrigger>
-            )}
-            <TabsTrigger
-              value="guia"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-4 h-12"
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Guía
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="ideas" className="flex-1 flex flex-col m-0 overflow-hidden">
+      {/* Tab Content */}
+      {activeTab === "ideas" && (
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Stats Bar - Compact */}
           <div className="border-b border-border bg-card px-4 md:px-6 py-3">
             <div className="flex items-center justify-between gap-4">
@@ -183,11 +170,11 @@ export function IdeasView() {
                   <Input
                     placeholder="Buscar..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSetSearchQuery(e.target.value)}
                     className="pl-8 h-8 w-40 md:w-56 text-sm"
                   />
                 </div>
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <Select value={filterCategory} onValueChange={handleSetFilterCategory}>
                   <SelectTrigger className="h-8 w-32 md:w-40 text-sm">
                     <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
@@ -264,23 +251,27 @@ export function IdeasView() {
               </div>
             )}
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* Admin Tab */}
-        {canAdminIdeas && (
-          <TabsContent value="admin" className="flex-1 overflow-y-auto m-0">
-            <div className="p-4 md:p-6">
-              <IdeasAdminPanel onUpdate={handlePanelSuccess} />
-            </div>
-          </TabsContent>
-        )}
+      {/* Admin Tab */}
+      {activeTab === "admin" && canAdminIdeas && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6">
+            <IdeasAdminPanel onUpdate={handlePanelSuccess} />
+          </div>
+        </div>
+      )}
 
-        <TabsContent value="guia" className="flex-1 overflow-y-auto m-0">
+      {/* Guía Tab */}
+      {activeTab === "guia" && (
+        <div className="flex-1 overflow-y-auto">
           <div className="p-4 md:p-6">
             <IdeasTutorial />
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   )
 }
+

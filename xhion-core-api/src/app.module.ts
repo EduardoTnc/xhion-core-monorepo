@@ -25,6 +25,7 @@ import { SystemSettingsModule } from './system-settings/system-settings.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { FilesModule } from './files/files.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { FilesModule } from './files/files.module';
     FinanzasModule,
     SystemSettingsModule,
     FilesModule,
+    HealthModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',

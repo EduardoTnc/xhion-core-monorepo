@@ -9,18 +9,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { 
-  Mail, 
-  Calendar, 
-  Shield, 
-  Briefcase, 
+import {
+  Mail,
+  Calendar,
+  Shield,
+  Briefcase,
   Clock,
   User,
   CheckCircle2,
   XCircle,
   Hash
 } from "lucide-react"
-import { useRoleStore } from "../../store/roleStore"
+import { useUsersForRoles, useRolesWithDetails } from "@/hooks/queries"
 
 interface UserDetailsModalProps {
   userId: string
@@ -32,9 +32,9 @@ interface UserDetailsModalProps {
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
-  return date.toLocaleDateString('es-ES', { 
-    day: 'numeric', 
-    month: 'long', 
+  return date.toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
@@ -52,7 +52,9 @@ const getInitials = (name: string): string => {
 }
 
 export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModalProps) {
-  const { todosLosUsuarios, rolesCompletos } = useRoleStore()
+  // TanStack Query hooks
+  const { data: todosLosUsuarios = [] } = useUsersForRoles()
+  const { data: rolesCompletos = [] } = useRolesWithDetails()
 
   // Buscar el usuario
   const user = todosLosUsuarios.find(u => u.id === userId)
@@ -78,11 +80,11 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                 <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
                 <AvatarFallback className="text-2xl">{getInitials(user.nombreCompleto)}</AvatarFallback>
               </Avatar>
-              
+
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-foreground">{user.nombreCompleto}</h3>
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
-                  <Badge 
+                  <Badge
                     variant={user.estado === "ACTIVO" ? "default" : "secondary"}
                     className="gap-1"
                   >
@@ -94,11 +96,11 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                     {user.estado}
                   </Badge>
                   {userRole && (
-                    <Badge 
+                    <Badge
                       variant="outline"
-                      style={{ 
+                      style={{
                         borderColor: userRole.color || undefined,
-                        color: userRole.color || undefined 
+                        color: userRole.color || undefined
                       }}
                     >
                       <Shield className="h-3 w-3 mr-1" />
@@ -175,7 +177,7 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                   <div className="space-y-3">
                     <div className="rounded-lg border border-border bg-muted/30 p-4">
                       <div className="flex items-center gap-3">
-                        <div 
+                        <div
                           className="h-10 w-10 rounded-lg flex items-center justify-center"
                           style={{ backgroundColor: userRole.color || '#666' }}
                         >

@@ -13,8 +13,7 @@ import {
 import { MessageSquare, Flag, Calendar, MoreVertical, GripVertical, Edit, Trash2, FolderKanban, ChevronDown, ChevronRight } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 import { type Etapa } from "@/services/projectService";
-import { useTaskStore } from "@/store/taskStore";
-import { toast } from "sonner";
+import { useMoveTask } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Restricted } from "../auth/Restricted";
@@ -124,7 +123,8 @@ export function TaskKanbanViewDnD({
   onRefresh,
   groupBy = "none",
 }: TaskKanbanViewDnDProps) {
-  const { updateTarea, fetchTareas } = useTaskStore();
+  // TanStack Query mutation for moving tasks
+  const moveTaskMutation = useMoveTask();
 
   // We need to maintain local state for optimistic updates.
   // When grouped by project, we need a structure like { [projectId]: { [status]: Tarea[] } }
@@ -210,19 +210,17 @@ export function TaskKanbanViewDnD({
     setLocalTareas(newTareas);
 
     try {
-      await updateTarea(draggableId, {
-        estado: destParts.status,
-        // proyectoId: destParts.pid !== "global" ? destParts.pid : undefined 
+      // Using TanStack Query mutation hook for consistent cache invalidation
+      await moveTaskMutation.mutateAsync({
+        id: draggableId,
+        data: { estado: destParts.status },
       });
-      toast.success("Tarea actualizada");
+      // Toast and cache invalidation handled by the mutation hook
       if (onRefresh) onRefresh();
     } catch (error) {
-      setLocalTareas(tareas); // Revert
-      toast.error("Error al mover la tarea");
+      setLocalTareas(tareas); // Revert on error
     }
   };
-
-  // Grouping Logic
   const groupedData = useMemo(() => {
     if (groupBy === "project") {
       const groups: Record<string, { id: string; nombre: string; tareas: Tarea[] }> = {};

@@ -7,10 +7,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [
+    UsuariosConfiguracionController, // Must be first to avoid :id catching 'perfil-profesional', 'perfil', etc.
     UsuariosController,
-    UsuariosConfiguracionController,
   ],
   providers: [UsuariosService],
   exports: [UsuariosService],
 })
-export class UsuariosModule {}
+export class UsuariosModule { }

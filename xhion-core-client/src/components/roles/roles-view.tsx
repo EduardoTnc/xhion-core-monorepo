@@ -2,11 +2,12 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, Plus, Shield, Users, Pencil, ArrowLeft, Menu } from "lucide-react"
+import { Search, Plus, Shield, Users, Pencil, ArrowLeft } from "lucide-react"
 import { RoleCard } from "./role-card"
 import { UsersList } from "./users-list"
 import { RoleDialog } from "./role-dialog"
-import { useRoleStore } from "../../store/roleStore"
+// TanStack Query hooks - replacing useRoleStore for data fetching
+import { useRolesWithDetails, useCreateRole, useUpdateRole } from "@/hooks/queries"
 import type { RolConConteo } from "../../types"
 import { cn } from "@/lib/utils"
 import { Restricted } from "../auth/Restricted"
@@ -26,32 +27,25 @@ export function RolesView() {
   const [view, setView] = useState<"roles" | "users">("roles")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<RolConConteo | null>(null)
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
 
   // Estado para controlar la vista en móvil (lista vs detalle)
   const [showMobileDetail, setShowMobileDetail] = useState(false)
 
-  // Conectar con el store
-  const {
-    rolesCompletos,
-    selectedRole,
-    isLoading,
-    fetchInitialData,
-    selectRole,
-    createRole,
-    updateRole,
-  } = useRoleStore()
+  // ==================== TanStack Query Hooks ====================
+  const { data: rolesCompletos = [], isLoading } = useRolesWithDetails()
+  const createRoleMutation = useCreateRole()
+  const updateRoleMutation = useUpdateRole()
 
-  // Cargar todos los datos al montar el componente (Eager Loading)
-  useEffect(() => {
-    fetchInitialData()
-  }, [fetchInitialData])
+  // Obtener el rol seleccionado de los datos
+  const selectedRole = rolesCompletos.find(r => r.id === selectedRoleId) || null
 
   // Seleccionar el primer rol cuando se carguen (solo en desktop)
   useEffect(() => {
-    if (rolesCompletos.length > 0 && !selectedRole && window.innerWidth >= 1024) {
-      selectRole(rolesCompletos[0].id)
+    if (rolesCompletos.length > 0 && !selectedRoleId && window.innerWidth >= 1024) {
+      setSelectedRoleId(rolesCompletos[0].id)
     }
-  }, [rolesCompletos, selectedRole, selectRole])
+  }, [rolesCompletos, selectedRoleId])
 
   // Filtrar roles por búsqueda
   const filteredRoles = rolesCompletos.filter(role =>
@@ -63,7 +57,7 @@ export function RolesView() {
 
   // Manejar selección de rol
   const handleSelectRole = (roleId: string) => {
-    selectRole(roleId)
+    setSelectedRoleId(roleId)
     setShowMobileDetail(true)
   }
 
@@ -79,13 +73,14 @@ export function RolesView() {
     setIsDialogOpen(true)
   }
 
-  // Manejar submit del formulario
+  // Manejar submit del formulario - Using TanStack Query mutations
   const handleSubmitRole = async (data: { nombre: string; descripcion?: string; color?: string }) => {
     if (editingRole) {
-      await updateRole(editingRole.id, data)
+      await updateRoleMutation.mutateAsync({ id: editingRole.id, data })
     } else {
-      await createRole(data)
+      await createRoleMutation.mutateAsync(data)
     }
+    setIsDialogOpen(false)
   }
 
   return (
@@ -279,7 +274,7 @@ export function RolesView() {
           <div className="flex-1 overflow-hidden relative">
             {selectedRole ? (
               <div className="absolute inset-0 p-4 sm:p-6 overflow-y-auto">
-                {view === "roles" ? <RoleCard /> : <UsersList />}
+                {view === "roles" ? <RoleCard role={selectedRole} /> : <UsersList role={selectedRole} />}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center p-8">

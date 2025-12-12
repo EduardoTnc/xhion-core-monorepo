@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Search, UserPlus, MoreVertical, Mail, Calendar, Shield, UserCog, Trash2, Eye, Ban, CheckCircle2 } from "lucide-react"
 import { useState } from "react"
-import { useRoleStore } from "../../store/roleStore"
+import { useUsersForRoles } from "@/hooks/queries"
 import { InviteUserModal } from "../users/InviteUserModal"
 import { toast } from "sonner"
 import { useNavigate } from "react-router-dom"
+import type { RolCompleto } from "@/types"
 
 // Función para formatear fechas
 const formatDate = (dateString: string | null | undefined): string => {
@@ -44,22 +45,22 @@ const getInitials = (name: string): string => {
     .slice(0, 2)
 }
 
-export function UsersList() {
+interface UsersListProps {
+  role: RolCompleto;
+}
+
+export function UsersList({ role }: UsersListProps) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [userToRemove, setUserToRemove] = useState<string | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)
-  const { 
-    todosLosUsuarios,
-    selectedRole,
-    rolesCompletos,
-  } = useRoleStore()
+
+  // Use TanStack Query to get all users
+  const { data: todosLosUsuarios = [] } = useUsersForRoles()
 
   // Filtrar usuarios del rol seleccionado (instantáneo - en memoria)
-  const usersInRole = selectedRole 
-    ? todosLosUsuarios.filter(user => user.rolId === selectedRole.id)
-    : []
+  const usersInRole = todosLosUsuarios.filter(user => user.rolId === role.id)
 
   // Filtrar usuarios por búsqueda
   const filteredUsers = usersInRole.filter(user =>
@@ -81,16 +82,16 @@ export function UsersList() {
 
   // Manejar remover del rol
   const handleRemoveFromRole = async () => {
-    if (!userToRemove || !selectedRole) return
+    if (!userToRemove) return
 
     setIsRemoving(true)
     try {
       // TODO: Implementar endpoint para remover usuario de rol
-      // await userService.removeFromRole(userToRemove, selectedRole.id)
-      
+      // await userService.removeFromRole(userToRemove, role.id)
+
       toast.success('Usuario removido del rol exitosamente')
       setUserToRemove(null)
-      
+
       // Recargar datos
       // await fetchInitialData()
     } catch (error: any) {
@@ -106,9 +107,9 @@ export function UsersList() {
       const newStatus = currentStatus === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
       // TODO: Implementar endpoint para cambiar estado
       // await userService.updateStatus(userId, newStatus)
-      
+
       toast.success(`Usuario ${newStatus === 'ACTIVO' ? 'activado' : 'desactivado'} exitosamente`)
-      
+
       // Recargar datos
       // await fetchInitialData()
     } catch (error: any) {
@@ -129,7 +130,7 @@ export function UsersList() {
             className="pl-9"
           />
         </div>
-        <Button 
+        <Button
           className="gap-2 w-full sm:w-auto"
           onClick={() => setIsInviteModalOpen(true)}
         >
@@ -147,93 +148,93 @@ export function UsersList() {
           </div>
         ) : (
           filteredUsers.map((user) => (
-          <div
-            key={user.id}
-            className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 rounded-lg border border-border bg-card p-3 sm:p-4 transition-all hover:border-primary/50 hover:shadow-sm"
-          >
-            <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
-              <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
-              <AvatarFallback>{getInitials(user.nombreCompleto)}</AvatarFallback>
-            </Avatar>
+            <div
+              key={user.id}
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 rounded-lg border border-border bg-card p-3 sm:p-4 transition-all hover:border-primary/50 hover:shadow-sm"
+            >
+              <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
+                <AvatarImage src={user.avatarUrl || undefined} alt={user.nombreCompleto} />
+                <AvatarFallback>{getInitials(user.nombreCompleto)}</AvatarFallback>
+              </Avatar>
 
-            <div className="flex-1 min-w-0 w-full">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-sm font-medium text-foreground truncate">{user.nombreCompleto}</h4>
-                <Badge 
-                  variant={user.estado === "ACTIVO" ? "default" : "secondary"} 
-                  className="text-xs"
-                >
-                  {user.estado === "ACTIVO" ? "Activo" : user.estado}
-                </Badge>
-              </div>
-              <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1 truncate">
-                  <Mail className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{user.email}</span>
-                </div>
-                {user.puestoTrabajo && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3 flex-shrink-0" />
-                    {user.puestoTrabajo.titulo}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              <div className="text-left sm:text-right">
-                <p className="text-xs font-medium text-foreground">Unido</p>
-                <p className="text-xs text-muted-foreground">{formatDate(user.fechaIngreso)}</p>
-              </div>
-              
-              {/* Dropdown Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  
-                  <DropdownMenuItem onClick={() => handleViewProfile(user.id)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Ver Perfil
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleChangeRole(user.id)}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Cambiar Rol
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleToggleUserStatus(user.id, user.estado)}>
-                    {user.estado === 'ACTIVO' ? (
-                      <>
-                        <Ban className="mr-2 h-4 w-4" />
-                        Desactivar Usuario
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Activar Usuario
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator />
-                  
-                  <DropdownMenuItem 
-                    onClick={() => setUserToRemove(user.id)}
-                    className="text-destructive focus:text-destructive"
+              <div className="flex-1 min-w-0 w-full">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm font-medium text-foreground truncate">{user.nombreCompleto}</h4>
+                  <Badge
+                    variant={user.estado === "ACTIVO" ? "default" : "secondary"}
+                    className="text-xs"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remover del Rol
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    {user.estado === "ACTIVO" ? "Activo" : user.estado}
+                  </Badge>
+                </div>
+                <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 truncate">
+                    <Mail className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{user.email}</span>
+                  </div>
+                  {user.puestoTrabajo && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      {user.puestoTrabajo.titulo}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="text-left sm:text-right">
+                  <p className="text-xs font-medium text-foreground">Unido</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(user.fechaIngreso)}</p>
+                </div>
+
+                {/* Dropdown Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={() => handleViewProfile(user.id)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Ver Perfil
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => handleChangeRole(user.id)}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Cambiar Rol
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => handleToggleUserStatus(user.id, user.estado)}>
+                      {user.estado === 'ACTIVO' ? (
+                        <>
+                          <Ban className="mr-2 h-4 w-4" />
+                          Desactivar Usuario
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Activar Usuario
+                        </>
+                      )}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setUserToRemove(user.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remover del Rol
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
           ))
         )}
       </div>
@@ -255,7 +256,7 @@ export function UsersList() {
           </div>
           <h3 className="mt-4 text-sm font-medium text-foreground">No hay usuarios asignados</h3>
           <p className="mt-1 text-sm text-muted-foreground">Comienza invitando usuarios a este rol</p>
-          <Button 
+          <Button
             className="mt-4 gap-2"
             onClick={() => setIsInviteModalOpen(true)}
           >
@@ -269,7 +270,7 @@ export function UsersList() {
       <InviteUserModal
         open={isInviteModalOpen}
         onOpenChange={setIsInviteModalOpen}
-        initialRole={selectedRole || undefined}
+        initialRole={role}
       />
 
       {/* Alert Dialog para remover usuario */}

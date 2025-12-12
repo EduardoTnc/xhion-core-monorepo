@@ -38,9 +38,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { DepartmentDetailWidgets } from "./department-detail-widgets"
 import { CreateDepartmentModal } from "./CreateDepartmentModal"
-import { useDepartmentStore } from "@/store/departmentStore"
+// TanStack Query hooks - replacing useDepartmentStore
+import { useDepartments, useDepartment, useProjects, useTasks, useDeleteDepartment } from "@/hooks/queries"
 import { departmentService, type DepartamentoDetalle } from "@/services/departmentService"
-import { projectService, type Proyecto } from "@/services/projectService"
 import { taskService, type Tarea } from "@/services/taskService"
 import { toast } from "sonner"
 import { getDepartmentIcon } from "@/lib/department-icons"
@@ -64,32 +64,17 @@ export function DepartmentsView() {
   const [contextModalInfo, setContextModalInfo] = useState<{ departmentId: string; departmentName: string } | null>(null)
   const [taskDetailId, setTaskDetailId] = useState<string | null>(null)
   const [departmentToDelete, setDepartmentToDelete] = useState<{ id: string; nombre: string } | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
   const [departmentToEdit, setDepartmentToEdit] = useState<string | null>(null)
-  const [unassignedProjects, setUnassignedProjects] = useState<Proyecto[]>([])
-  const [unassignedProjectsLoading, setUnassignedProjectsLoading] = useState(false)
   const [expandedUnassignedSection, setExpandedUnassignedSection] = useState(true)
   const navigate = useNavigate()
 
-  const { departamentos, isLoading, fetchDepartamentos } = useDepartmentStore()
+  // ==================== TanStack Query Hooks ====================
+  const { data: departamentos = [], isLoading, refetch: refetchDepartamentos } = useDepartments()
+  const { data: allProjects = [], isLoading: isProjectsLoading } = useProjects()
+  const deleteDepartmentMutation = useDeleteDepartment()
 
-  useEffect(() => {
-    fetchDepartamentos()
-    fetchUnassignedProjects()
-  }, [])
-
-  const fetchUnassignedProjects = async () => {
-    try {
-      setUnassignedProjectsLoading(true)
-      const allProjects = await projectService.getAll()
-      const unassigned = allProjects.filter(project => !project.departamentoId)
-      setUnassignedProjects(unassigned)
-    } catch (error: any) {
-      toast.error(error.message || 'Error al cargar proyectos sin departamento')
-    } finally {
-      setUnassignedProjectsLoading(false)
-    }
-  }
+  // Filter projects without department
+  const unassignedProjects = allProjects.filter(project => !project.departamentoId)
 
   const filteredDepartments = departamentos.filter((dept) => {
     const matchesSearch =
@@ -112,7 +97,7 @@ export function DepartmentsView() {
         setProjectTasksLoading((prev) => ({ ...prev, [project.id]: true }))
         taskService
           .getAll({ proyectoId: project.id })
-          .then((tasks) => {
+          .then((tasks: Tarea[]) => {
             setProjectTasks((prev) => ({ ...prev, [project.id]: tasks }))
           })
           .catch(() => {
@@ -139,7 +124,7 @@ export function DepartmentsView() {
       setDepartmentLoading((prev) => ({ ...prev, [dept.id]: true }))
       departmentService
         .getById(dept.id)
-        .then((detail) => {
+        .then((detail: DepartamentoDetalle) => {
           setDepartmentDetails((prev) => ({ ...prev, [dept.id]: detail }))
           prefetchProjectTasks(detail.proyectos)
         })
@@ -382,7 +367,7 @@ export function DepartmentsView() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => fetchDepartamentos()} className="h-9 text-xs">
+          <Button variant="outline" size="sm" onClick={() => refetchDepartamentos()} className="h-9 text-xs">
             Actualizar
           </Button>
           <Button
@@ -588,7 +573,7 @@ export function DepartmentsView() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Proyectos Sin Departamento</h3>
                 <p className="text-xs text-muted-foreground">
-                  {unassignedProjectsLoading ? "Cargando..." : `${unassignedProjects.length} proyecto${unassignedProjects.length !== 1 ? 's' : ''}`}
+                  {isProjectsLoading ? "Cargando..." : `${unassignedProjects.length} proyecto${unassignedProjects.length !== 1 ? 's' : ''}`}
                 </p>
               </div>
             </div>
@@ -597,7 +582,7 @@ export function DepartmentsView() {
 
         {expandedUnassignedSection && (
           <div className="p-4">
-            {unassignedProjectsLoading ? (
+            {isProjectsLoading ? (
               <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando proyectos...
               </div>
@@ -623,7 +608,7 @@ export function DepartmentsView() {
                             setProjectTasksLoading((prev) => ({ ...prev, [project.id]: true }));
                             taskService
                               .getAll({ proyectoId: project.id })
-                              .then((tasks) => {
+                              .then((tasks: Tarea[]) => {
                                 setProjectTasks((prev) => ({ ...prev, [project.id]: tasks }));
                               })
                               .catch(() => {
@@ -752,7 +737,7 @@ export function DepartmentsView() {
           onOpenChange={(open) => {
             if (!open) {
               setDepartmentToEdit(null);
-              fetchDepartamentos();
+              refetchDepartamentos();
             }
           }}
           departamento={departamentos.find(d => d.id === departmentToEdit) || null}
@@ -770,27 +755,21 @@ export function DepartmentsView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteDepartmentMutation.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isDeleting}
+              disabled={deleteDepartmentMutation.isPending}
               className="bg-destructive hover:bg-destructive/90"
               onClick={async () => {
                 if (!departmentToDelete) return;
-                setIsDeleting(true);
                 try {
-                  const { deleteDepartamento } = useDepartmentStore.getState();
-                  await deleteDepartamento(departmentToDelete.id);
-                  toast.success(`Departamento "${departmentToDelete.nombre}" eliminado exitosamente`);
+                  await deleteDepartmentMutation.mutateAsync(departmentToDelete.id);
                   setDepartmentToDelete(null);
-                  await fetchDepartamentos();
                 } catch (error: any) {
-                  toast.error(error.message || "Error al eliminar departamento");
-                } finally {
-                  setIsDeleting(false);
+                  // Error is handled by the mutation hook
                 }
               }}
             >
-              {isDeleting ? (
+              {deleteDepartmentMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Eliminando...

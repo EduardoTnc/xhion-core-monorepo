@@ -16,7 +16,8 @@ import {
     ShieldCheck,
     XCircle,
 } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+// TanStack Query hooks - replacing useIdeasStore
+import { useVoteIdea } from "@/hooks/queries"
 import type { Idea } from "@/services/ideasService"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
@@ -29,7 +30,7 @@ interface CompactIdeaCardProps {
 }
 
 export function CompactIdeaCard({ idea, onSelect, isSelected }: CompactIdeaCardProps) {
-    const { votarIdea } = useIdeasStore()
+    const voteIdeaMutation = useVoteIdea()
     const [localIdea, setLocalIdea] = useState(idea)
 
     const handleVote = async (e: React.MouseEvent) => {
@@ -46,7 +47,7 @@ export function CompactIdeaCard({ idea, onSelect, isSelected }: CompactIdeaCardP
         }))
 
         try {
-            await votarIdea(localIdea.id)
+            await voteIdeaMutation.mutateAsync(localIdea.id)
         } catch {
             setLocalIdea(prev => ({
                 ...prev,

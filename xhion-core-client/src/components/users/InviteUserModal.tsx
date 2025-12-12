@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/select"
 import { Loader2, Copy, Check, UserPlus, Link as LinkIcon, UserCheck } from "lucide-react"
 import { toast } from "sonner"
-import { useRoleStore } from "../../store/roleStore"
+import { useRolesWithDetails } from "@/hooks/queries"
+import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "@/lib/queryKeys"
 import { useAuthStore } from "../../store/authStore"
 import { CompleteRegistrationModal } from "./CompleteRegistrationModal"
 import apiClient from "../../api/axios"
@@ -43,7 +45,9 @@ interface InviteUserModalProps {
 }
 
 export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserModalProps) {
-  const { rolesCompletos, fetchInitialData } = useRoleStore()
+  // TanStack Query for roles
+  const { data: rolesCompletos = [] } = useRolesWithDetails()
+  const queryClient = useQueryClient()
   const { user: currentUser } = useAuthStore()
   const [step, setStep] = useState<"form" | "success">("form")
   const [invitationUrl, setInvitationUrl] = useState("")
@@ -89,7 +93,7 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
         toast.error("No se pudo identificar el usuario actual. Por favor, inicia sesión nuevamente.")
         return
       }
-      
+
       const response = await apiClient.post("/invitaciones", {
         ...data,
         invitado_por_id: currentUser.id,
@@ -325,8 +329,8 @@ export function InviteUserModal({ open, onOpenChange, initialRole }: InviteUserM
           onSuccess={async () => {
             toast.success("Usuario registrado exitosamente")
             handleClose()
-            // Recargar datos
-            await fetchInitialData()
+            // Invalidate queries to refresh data
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
           }}
         />
       )}

@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Download, RefreshCw, Filter, Calendar as CalendarIcon } from "lucide-react"
+import { Search, Download, RefreshCw, Filter, Calendar as CalendarIcon, Lock } from "lucide-react"
 import { AuditTable } from "./audit-table"
 import { AuditDetail } from "./audit-detail"
 import { AuditStats } from "./audit-stats"
-import { auditService, type AuditLog, type AuditStatsData, type ActiveUser } from "@/services/auditService"
+// TanStack Query hooks - replacing direct API calls
+import { useAuditLogs, useAuditStats, useActiveUsers, useAuditFilters, useUsers } from "@/hooks/queries"
+import { auditService, type AuditLog } from "@/services/auditService"
 import { toast } from "sonner"
-import { userService } from "@/services/userService"
-import { type Usuario } from "@/types"
 import { UserDetailsModal } from "../users/user-details-modal"
 import {
   Sheet,
@@ -25,27 +25,23 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { ActiveUsersModal } from "./active-users-modal"
+import { PageHeaderSimple } from "@/components/layout/PageHeader"
 
 import { type DateRange } from "react-day-picker"
 
 
 
 export function AuditView() {
-  const [logs, setLogs] = useState<AuditLog[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
+
+  // Local filter state for inputs (synced with URL filters)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterUser, setFilterUser] = useState("all")
   const [filterEvent, setFilterEvent] = useState("all")
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
-  const [users, setUsers] = useState<Usuario[]>([])
 
   // Pagination State
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
-  const [total, setTotal] = useState(0)
-
-  // Stats State
-  const [stats, setStats] = useState<AuditStatsData | undefined>(undefined)
 
   // User Details Modal State
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -53,79 +49,34 @@ export function AuditView() {
 
   // Active Users Modal State
   const [isActiveUsersModalOpen, setIsActiveUsersModalOpen] = useState(false)
-  const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([])
 
   // Date Filter State
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 
-  const fetchLogs = async () => {
-    setIsLoading(true)
-    try {
-      const response = await auditService.getAll({
-        page,
-        limit,
-        accion: filterEvent !== "all" ? filterEvent : undefined,
-        usuarioId: filterUser !== "all" ? filterUser : undefined,
-        search: searchQuery || undefined,
-        fechaDesde: dateRange?.from ? dateRange.from.toISOString() : undefined,
-        fechaHasta: dateRange?.to ? dateRange.to.toISOString() : undefined,
-      })
-      setLogs(response.data)
-      setTotal(response.total)
-    } catch (error: any) {
-      // Ignore 401 errors as they are handled by the auth interceptor
-      if (error?.response?.status === 401) return;
-      console.error("Error fetching audit logs:", error)
-      toast.error("Error al cargar registros de auditoría")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // ==================== TanStack Query Hooks ====================
+  const { data: auditData, isLoading, refetch: refetchLogs } = useAuditLogs({
+    page,
+    limit,
+    accion: filterEvent !== "all" ? filterEvent : undefined,
+    usuarioId: filterUser !== "all" ? filterUser : undefined,
+    search: searchQuery || undefined,
+    fechaDesde: dateRange?.from?.toISOString(),
+    fechaHasta: dateRange?.to?.toISOString(),
+  })
 
-  const fetchStats = async () => {
-    try {
-      const data = await auditService.getStats()
-      setStats(data)
-    } catch (error: any) {
-      if (error?.response?.status === 401) return;
-      console.error("Error fetching stats:", error)
-    }
-  }
+  const { data: stats, refetch: refetchStats } = useAuditStats()
+  const { data: activeUsers = [] } = useActiveUsers({ enabled: isActiveUsersModalOpen })
+  const { data: users = [] } = useUsers()
 
-  const fetchActiveUsers = async () => {
-    try {
-      const data = await auditService.getActiveUsers()
-      setActiveUsers(data)
-    } catch (error: any) {
-      if (error?.response?.status === 401) return;
-      console.error("Error fetching active users:", error)
-      toast.error("Error al cargar usuarios activos")
-    }
-  }
+  // Extract logs and total from response
+  const logs = auditData?.data || []
+  const total = auditData?.total || 0
+  const totalPages = Math.ceil(total / limit)
 
+  // Reset page when filters change
   useEffect(() => {
-    setPage(1) // Reset to page 1 when filters change
+    setPage(1)
   }, [filterUser, filterEvent, searchQuery, dateRange])
-
-  useEffect(() => {
-    fetchLogs()
-  }, [page, filterUser, filterEvent, searchQuery, dateRange])
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [usersData] = await Promise.all([
-          userService.obtenerTodosLosUsuarios(),
-          fetchStats()
-        ])
-        setUsers(usersData)
-      } catch (error: any) {
-        if (error?.response?.status === 401) return;
-        console.error("Error loading initial data:", error)
-      }
-    }
-    loadData()
-  }, [])
 
   const handleExport = async () => {
     try {
@@ -154,36 +105,44 @@ export function AuditView() {
   }
 
   const handleActiveUsersClick = () => {
-    fetchActiveUsers()
     setIsActiveUsersModalOpen(true)
   }
 
-  const totalPages = Math.ceil(total / limit)
+  const handleRefresh = () => {
+    refetchLogs()
+    refetchStats()
+  }
+
+  const handleClearFilters = () => {
+    setSearchQuery("")
+    setFilterEvent("all")
+    setFilterUser("all")
+    setDateRange(undefined)
+  }
 
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm p-6 sticky top-0 z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Seguridad y Auditoría</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Monitoreo y control de actividad del sistema
-            </p>
-          </div>
+      <PageHeaderSimple
+        icon={Lock}
+        title="Seguridad y Auditoría"
+        subtitle="Monitoreo y control de actividad del sistema"
+        actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" className="gap-2" onClick={handleExport}>
               <Download className="h-4 w-4" />
               Exportar
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => { fetchLogs(); fetchStats(); }} className="hover:bg-muted">
+            <Button variant="ghost" size="icon" onClick={handleRefresh} className="hover:bg-muted">
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+        }
+      />
 
-        {/* Filters & Search */}
-        <div className="mt-6 flex flex-col lg:flex-row items-center gap-3">
+      {/* Filters & Search */}
+      <div className="border-b border-border bg-card/50 px-6 py-4">
+        <div className="flex flex-col lg:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input

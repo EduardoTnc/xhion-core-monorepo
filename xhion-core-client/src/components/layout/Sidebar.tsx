@@ -119,7 +119,7 @@ const navigationAdmin: NavItem[] = [
     icon: Shield,
   },
   {
-    title: "Config. Perfil",
+    title: "Configuración de Cuenta",
     url: "/perfil/configuracion",
     icon: User,
   },

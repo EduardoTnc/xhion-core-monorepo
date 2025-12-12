@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Loader2, Check, Palette } from "lucide-react"
-import { useRoleStore } from "../../store/roleStore"
+import { useRolesWithDetails } from "@/hooks/queries"
 import type { RolCompleto } from "../../types"
 
 // Schema de validación
@@ -46,7 +46,8 @@ const PRESET_COLORS = [
 ]
 
 export function RoleDialog({ open, onOpenChange, role, onSubmit }: RoleDialogProps) {
-  const { rolesCompletos } = useRoleStore()
+  // TanStack Query for roles (used for duplicate name validation)
+  const { data: rolesCompletos = [] } = useRolesWithDetails()
   const [customColor, setCustomColor] = useState("")
   const [nameError, setNameError] = useState<string | null>(null)
   const colorPickerRef = useRef<HTMLInputElement>(null)
@@ -208,11 +209,10 @@ export function RoleDialog({ open, onOpenChange, role, onSubmit }: RoleDialogPro
                   />
                   <Label
                     htmlFor={color.value}
-                    className={`flex h-12 w-full cursor-pointer items-center justify-center rounded-lg border-2 transition-all ${color.value} ${
-                      selectedColor === color.value
+                    className={`flex h-12 w-full cursor-pointer items-center justify-center rounded-lg border-2 transition-all ${color.value} ${selectedColor === color.value
                         ? "ring-2 ring-primary ring-offset-2 scale-105"
                         : "border-transparent hover:scale-105"
-                    }`}
+                      }`}
                     title={color.name}
                   >
                     {selectedColor === color.value && (
@@ -239,7 +239,7 @@ export function RoleDialog({ open, onOpenChange, role, onSubmit }: RoleDialogPro
                   disabled={isSubmitting}
                 />
               </div>
-              
+
               {/* Color Picker Button */}
               <Button
                 type="button"
@@ -251,7 +251,7 @@ export function RoleDialog({ open, onOpenChange, role, onSubmit }: RoleDialogPro
               >
                 <Palette className="h-4 w-4" />
               </Button>
-              
+
               {/* Hidden native color picker */}
               <input
                 ref={colorPickerRef}

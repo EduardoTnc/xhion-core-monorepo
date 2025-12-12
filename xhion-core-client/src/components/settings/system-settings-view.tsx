@@ -18,13 +18,21 @@ import {
     MapPin,
     Sparkles,
     Info,
+    AlertCircle,
+    Check,
+    Settings,
 } from "lucide-react"
-import { useSystemSettingsStore } from "@/store/systemSettingsStore"
+// TanStack Query hooks - replacing useSystemSettingsStore
+import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/queries"
 import { systemSettingsService } from "@/services/systemSettingsService"
 import { toast } from "sonner"
+import { PRESET_THEMES, getContrastColor } from "@/hooks/useThemeCustomization"
+import { PageHeaderSimple } from "@/components/layout/PageHeader"
 
 export function SystemSettingsView() {
-    const { settings, isLoading, fetchSettings, updateSettings } = useSystemSettingsStore()
+    // ==================== TanStack Query Hooks ====================
+    const { data: settings, isLoading } = useSystemSettings()
+    const updateSettingsMutation = useUpdateSystemSettings()
 
     const [localSettings, setLocalSettings] = useState({
         nombreEmpresa: "",
@@ -36,15 +44,10 @@ export function SystemSettingsView() {
         descripcionEmpresa: "",
     })
 
-    const [isSaving, setIsSaving] = useState(false)
     const [isUploadingLogo, setIsUploadingLogo] = useState(false)
     const [isUploadingFavicon, setIsUploadingFavicon] = useState(false)
     const logoInputRef = useRef<HTMLInputElement>(null)
     const faviconInputRef = useRef<HTMLInputElement>(null)
-
-    useEffect(() => {
-        fetchSettings()
-    }, [fetchSettings])
 
     useEffect(() => {
         if (settings) {
@@ -78,9 +81,8 @@ export function SystemSettingsView() {
     }
 
     const handleSave = async () => {
-        setIsSaving(true)
         try {
-            await updateSettings({
+            await updateSettingsMutation.mutateAsync({
                 nombreEmpresa: localSettings.nombreEmpresa,
                 logoUrl: localSettings.logoUrl,
                 faviconUrl: localSettings.faviconUrl,
@@ -89,10 +91,10 @@ export function SystemSettingsView() {
                 ubicacion: localSettings.ubicacion,
                 descripcionEmpresa: localSettings.descripcionEmpresa,
             })
+            // Success toast handled by mutation
         } catch (error) {
+            // Error toast handled by mutation
             console.error("Error saving settings:", error)
-        } finally {
-            setIsSaving(false)
         }
     }
 
@@ -137,27 +139,12 @@ export function SystemSettingsView() {
 
     return (
         <div className="flex h-full flex-col">
-            {/* Header - Compact */}
-            <div className="border-b border-border bg-card px-4 py-3 md:px-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-lg font-semibold text-foreground">Configuración del Sistema</h1>
-                        <p className="text-xs text-muted-foreground">
-                            Personaliza la apariencia y datos de tu empresa
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={handleReset} disabled={!hasChanges || isSaving}>
-                            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                            Descartar
-                        </Button>
-                        <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
-                            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-                            Guardar
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            {/* Header */}
+            <PageHeaderSimple
+                icon={Settings}
+                title="Config. Sistema"
+                subtitle="Personaliza la apariencia y datos de tu empresa"
+            />
 
             {/* Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-3 md:p-4">
@@ -277,75 +264,213 @@ export function SystemSettingsView() {
                         </CardContent>
                     </Card>
 
-                    {/* Colores */}
+                    {/* Personalización de Tema */}
                     <Card>
                         <CardHeader className="py-2 px-4">
                             <div className="flex items-center gap-2">
                                 <Palette className="h-4 w-4 text-primary" />
-                                <CardTitle className="text-base">Colores del Tema</CardTitle>
+                                <CardTitle className="text-base">Personalización del Tema</CardTitle>
                             </div>
                             <CardDescription className="text-sm">
-                                Personaliza los colores de la interfaz
+                                Elige un tema predefinido o personaliza los colores de la interfaz
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="px-4 pb-3 pt-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Primary Color */}
-                                <div className="space-y-1">
-                                    <Label htmlFor="colorPrimario" className="text-sm">Color Primario</Label>
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="h-9 w-9 rounded-md border cursor-pointer flex-shrink-0"
-                                            style={{ backgroundColor: localSettings.colorPrimario }}
-                                            onClick={() => document.getElementById('colorPrimarioInput')?.click()}
-                                        />
-                                        <input
-                                            id="colorPrimarioInput"
-                                            type="color"
-                                            value={localSettings.colorPrimario}
-                                            onChange={(e) => setLocalSettings(prev => ({ ...prev, colorPrimario: e.target.value }))}
-                                            className="sr-only"
-                                        />
-                                        <Input
-                                            id="colorPrimario"
-                                            value={localSettings.colorPrimario}
-                                            onChange={(e) => setLocalSettings(prev => ({ ...prev, colorPrimario: e.target.value }))}
-                                            placeholder="#3b82f6"
-                                            className="font-mono"
-                                        />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Botones principales, enlaces activos
-                                    </p>
+                        <CardContent className="px-4 pb-4 pt-0 space-y-4">
+                            {/* Preset Themes */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Temas Predefinidos</Label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                                    {Object.entries(PRESET_THEMES).map(([key, theme]) => {
+                                        const isSelected =
+                                            localSettings.colorPrimario === theme.primary &&
+                                            localSettings.colorSecundario === theme.secondary
+                                        return (
+                                            <button
+                                                key={key}
+                                                onClick={() => setLocalSettings(prev => ({
+                                                    ...prev,
+                                                    colorPrimario: theme.primary,
+                                                    colorSecundario: theme.secondary,
+                                                }))}
+                                                className={`relative group p-2 rounded-lg border-2 transition-all hover:scale-105 ${isSelected
+                                                    ? 'border-primary ring-2 ring-primary/20'
+                                                    : 'border-border hover:border-primary/50'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <div
+                                                        className="h-5 w-5 rounded-full border shadow-sm"
+                                                        style={{ backgroundColor: theme.primary }}
+                                                    />
+                                                    <div
+                                                        className="h-5 w-5 rounded-full border shadow-sm"
+                                                        style={{ backgroundColor: theme.secondary }}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] font-medium text-foreground truncate">{theme.name}</p>
+                                                {isSelected && (
+                                                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                                                        <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
                                 </div>
+                            </div>
 
-                                {/* Secondary Color */}
-                                <div className="space-y-1">
-                                    <Label htmlFor="colorSecundario" className="text-sm">Color Secundario</Label>
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="h-9 w-9 rounded-md border cursor-pointer flex-shrink-0"
-                                            style={{ backgroundColor: localSettings.colorSecundario }}
-                                            onClick={() => document.getElementById('colorSecundarioInput')?.click()}
-                                        />
-                                        <input
-                                            id="colorSecundarioInput"
-                                            type="color"
-                                            value={localSettings.colorSecundario}
-                                            onChange={(e) => setLocalSettings(prev => ({ ...prev, colorSecundario: e.target.value }))}
-                                            className="sr-only"
-                                        />
-                                        <Input
-                                            id="colorSecundario"
-                                            value={localSettings.colorSecundario}
-                                            onChange={(e) => setLocalSettings(prev => ({ ...prev, colorSecundario: e.target.value }))}
-                                            placeholder="#6366f1"
-                                            className="font-mono"
-                                        />
+                            <div className="border-t pt-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Custom Colors */}
+                                    <div className="space-y-3">
+                                        <Label className="text-sm font-medium">Colores Personalizados</Label>
+
+                                        {/* Primary Color */}
+                                        <div className="space-y-1">
+                                            <Label htmlFor="colorPrimario" className="text-xs text-muted-foreground">Color Primario</Label>
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="h-10 w-10 rounded-lg border-2 cursor-pointer flex-shrink-0 shadow-sm transition-transform hover:scale-110"
+                                                    style={{ backgroundColor: localSettings.colorPrimario }}
+                                                    onClick={() => document.getElementById('colorPrimarioInput')?.click()}
+                                                />
+                                                <input
+                                                    id="colorPrimarioInput"
+                                                    type="color"
+                                                    value={localSettings.colorPrimario}
+                                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, colorPrimario: e.target.value }))}
+                                                    className="sr-only"
+                                                />
+                                                <Input
+                                                    id="colorPrimario"
+                                                    value={localSettings.colorPrimario}
+                                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, colorPrimario: e.target.value }))}
+                                                    placeholder="#FFBF00"
+                                                    className="font-mono text-sm"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Secondary Color */}
+                                        <div className="space-y-1">
+                                            <Label htmlFor="colorSecundario" className="text-xs text-muted-foreground">Color Secundario</Label>
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="h-10 w-10 rounded-lg border-2 cursor-pointer flex-shrink-0 shadow-sm transition-transform hover:scale-110"
+                                                    style={{ backgroundColor: localSettings.colorSecundario }}
+                                                    onClick={() => document.getElementById('colorSecundarioInput')?.click()}
+                                                />
+                                                <input
+                                                    id="colorSecundarioInput"
+                                                    type="color"
+                                                    value={localSettings.colorSecundario}
+                                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, colorSecundario: e.target.value }))}
+                                                    className="sr-only"
+                                                />
+                                                <Input
+                                                    id="colorSecundario"
+                                                    value={localSettings.colorSecundario}
+                                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, colorSecundario: e.target.value }))}
+                                                    placeholder="#1a1a2e"
+                                                    className="font-mono text-sm"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Elementos de acento, hover effects
-                                    </p>
+
+                                    {/* Live Preview */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Vista Previa</Label>
+                                        <div
+                                            className="rounded-lg border-2 p-3 space-y-3"
+                                            style={{ backgroundColor: localSettings.colorSecundario + '15' }}
+                                        >
+                                            {/* Preview Header */}
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="h-8 w-8 rounded-lg flex items-center justify-center"
+                                                    style={{ backgroundColor: localSettings.colorPrimario }}
+                                                >
+                                                    <Sparkles className="h-4 w-4" style={{ color: getContrastColor(localSettings.colorPrimario) }} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold">Tu Empresa</p>
+                                                    <p className="text-[10px] text-muted-foreground">Dashboard</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Preview Buttons */}
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    className="px-3 py-1.5 rounded-md text-xs font-medium transition-opacity hover:opacity-90"
+                                                    style={{
+                                                        backgroundColor: localSettings.colorPrimario,
+                                                        color: getContrastColor(localSettings.colorPrimario)
+                                                    }}
+                                                >
+                                                    Botón Primario
+                                                </button>
+                                                <button
+                                                    className="px-3 py-1.5 rounded-md text-xs font-medium border transition-opacity hover:opacity-90"
+                                                    style={{
+                                                        backgroundColor: localSettings.colorSecundario,
+                                                        color: getContrastColor(localSettings.colorSecundario),
+                                                        borderColor: localSettings.colorPrimario + '40'
+                                                    }}
+                                                >
+                                                    Secundario
+                                                </button>
+                                            </div>
+
+                                            {/* Preview Progress */}
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-[10px]">
+                                                    <span className="text-muted-foreground">Progreso</span>
+                                                    <span className="font-medium">75%</span>
+                                                </div>
+                                                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all"
+                                                        style={{
+                                                            width: '75%',
+                                                            backgroundColor: localSettings.colorPrimario
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Preview Card */}
+                                            <div
+                                                className="rounded-md p-2 border"
+                                                style={{ borderColor: localSettings.colorPrimario + '30' }}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div
+                                                        className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                                        style={{
+                                                            backgroundColor: localSettings.colorPrimario + '20',
+                                                            color: localSettings.colorPrimario
+                                                        }}
+                                                    >
+                                                        JD
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[10px] font-medium truncate">Proyecto Ejemplo</p>
+                                                        <p className="text-[9px] text-muted-foreground">3 tareas pendientes</p>
+                                                    </div>
+                                                    <div
+                                                        className="px-1.5 py-0.5 rounded text-[9px] font-medium"
+                                                        style={{
+                                                            backgroundColor: localSettings.colorPrimario + '20',
+                                                            color: localSettings.colorPrimario
+                                                        }}
+                                                    >
+                                                        Activo
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -386,6 +511,34 @@ export function SystemSettingsView() {
                             </div>
                         </CardContent>
                     </Card>
+                </div>
+            </div>
+
+            {/* Sticky Footer */}
+            <div className="border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-4 py-3 md:px-6">
+                <div className="flex items-center justify-between">
+                    {hasChanges && (
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            <span>Tienes cambios sin guardar</span>
+                        </div>
+                    )}
+                    <div className={`flex items-center gap-2 ${hasChanges ? '' : 'ml-auto'}`}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleReset}
+                            disabled={!hasChanges || updateSettingsMutation.isPending}
+                            className="gap-1.5 text-muted-foreground hover:text-foreground"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Descartar
+                        </Button>
+                        <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateSettingsMutation.isPending} className="gap-1.5">
+                            {updateSettingsMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                            Guardar
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

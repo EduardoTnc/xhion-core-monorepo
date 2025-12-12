@@ -8,22 +8,25 @@ import {
   UseGuards,
   NotFoundException,
   Patch,
+  Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { UsuariosService } from './usuarios.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequiresPermission } from '../auth/permissions.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { AsignarRolDto } from './dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { AsignarRolDto, CreateContactoDto, UpdateContactoDto, CreateEnlaceProfesionalDto, UpdateEnlaceProfesionalDto } from './dto';
 
 @ApiTags('Usuarios')
 @ApiBearerAuth('JWT-auth')
 @Controller('usuarios')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UsuariosController {
-  constructor(private readonly usuariosService: UsuariosService) {}
+  constructor(private readonly usuariosService: UsuariosService) { }
 
   /**
    * GET /api/v1/usuarios
@@ -52,6 +55,130 @@ export class UsuariosController {
     return this.usuariosService.obtenerUsuariosSinPuesto();
   }
 
+  // ==================== CONTACT CRUD ENDPOINTS ====================
+  // IMPORTANTE: Estas rutas deben estar ANTES de ':id' para evitar conflictos
+
+  /**
+   * GET /api/v1/usuarios/contactos (current user's contacts)
+   * Obtiene los contactos del usuario autenticado
+   */
+  @Get('contactos')
+  @ApiOperation({ summary: 'Obtener contactos del usuario actual' })
+  @ApiResponse({ status: 200, description: 'Lista de contactos' })
+  async obtenerMisContactos(@Req() req: Request) {
+    const user = req.user as any;
+    return this.usuariosService.obtenerContactos(user.id);
+  }
+
+  /**
+   * POST /api/v1/usuarios/contactos
+   * Agregar un nuevo contacto para el usuario autenticado
+   */
+  @Post('contactos')
+  @ApiOperation({ summary: 'Agregar contacto' })
+  @ApiBody({ type: CreateContactoDto })
+  @ApiResponse({ status: 201, description: 'Contacto creado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  async agregarContacto(@Req() req: Request, @Body() dto: CreateContactoDto) {
+    const user = req.user as any;
+    return this.usuariosService.agregarContacto(user.id, dto);
+  }
+
+  /**
+   * PATCH /api/v1/usuarios/contactos/:id
+   * Actualizar un contacto existente
+   */
+  @Patch('contactos/:id')
+  @ApiOperation({ summary: 'Actualizar contacto' })
+  @ApiParam({ name: 'id', description: 'ID del contacto' })
+  @ApiBody({ type: UpdateContactoDto })
+  @ApiResponse({ status: 200, description: 'Contacto actualizado' })
+  @ApiResponse({ status: 404, description: 'Contacto no encontrado' })
+  async actualizarContacto(
+    @Param('id') contactoId: string,
+    @Req() req: Request,
+    @Body() dto: UpdateContactoDto,
+  ) {
+    const user = req.user as any;
+    return this.usuariosService.actualizarContacto(contactoId, user.id, dto);
+  }
+
+  /**
+   * DELETE /api/v1/usuarios/contactos/:id
+   * Eliminar un contacto
+   */
+  @Delete('contactos/:id')
+  @ApiOperation({ summary: 'Eliminar contacto' })
+  @ApiParam({ name: 'id', description: 'ID del contacto' })
+  @ApiResponse({ status: 200, description: 'Contacto eliminado' })
+  @ApiResponse({ status: 404, description: 'Contacto no encontrado' })
+  async eliminarContacto(@Param('id') contactoId: string, @Req() req: Request) {
+    const user = req.user as any;
+    return this.usuariosService.eliminarContacto(contactoId, user.id);
+  }
+
+  // ==================== PROFESSIONAL LINKS CRUD ENDPOINTS ====================
+  // IMPORTANTE: Estas rutas deben estar ANTES de ':id' para evitar conflictos
+
+  /**
+   * GET /api/v1/usuarios/enlaces-profesionales
+   * Obtiene los enlaces profesionales del usuario autenticado
+   */
+  @Get('enlaces-profesionales')
+  @ApiOperation({ summary: 'Obtener enlaces profesionales del usuario actual' })
+  @ApiResponse({ status: 200, description: 'Lista de enlaces profesionales' })
+  async obtenerMisEnlacesProfesionales(@Req() req: Request) {
+    const user = req.user as any;
+    return this.usuariosService.obtenerEnlacesProfesionales(user.id);
+  }
+
+  /**
+   * POST /api/v1/usuarios/enlaces-profesionales
+   * Agregar un nuevo enlace profesional para el usuario autenticado
+   */
+  @Post('enlaces-profesionales')
+  @ApiOperation({ summary: 'Agregar enlace profesional' })
+  @ApiBody({ type: CreateEnlaceProfesionalDto })
+  @ApiResponse({ status: 201, description: 'Enlace creado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  async agregarEnlaceProfesional(@Req() req: Request, @Body() dto: CreateEnlaceProfesionalDto) {
+    const user = req.user as any;
+    return this.usuariosService.agregarEnlaceProfesional(user.id, dto);
+  }
+
+  /**
+   * PATCH /api/v1/usuarios/enlaces-profesionales/:id
+   * Actualizar un enlace profesional existente
+   */
+  @Patch('enlaces-profesionales/:id')
+  @ApiOperation({ summary: 'Actualizar enlace profesional' })
+  @ApiParam({ name: 'id', description: 'ID del enlace' })
+  @ApiBody({ type: UpdateEnlaceProfesionalDto })
+  @ApiResponse({ status: 200, description: 'Enlace actualizado' })
+  @ApiResponse({ status: 404, description: 'Enlace no encontrado' })
+  async actualizarEnlaceProfesional(
+    @Param('id') enlaceId: string,
+    @Req() req: Request,
+    @Body() dto: UpdateEnlaceProfesionalDto,
+  ) {
+    const user = req.user as any;
+    return this.usuariosService.actualizarEnlaceProfesional(enlaceId, user.id, dto);
+  }
+
+  /**
+   * DELETE /api/v1/usuarios/enlaces-profesionales/:id
+   * Eliminar un enlace profesional
+   */
+  @Delete('enlaces-profesionales/:id')
+  @ApiOperation({ summary: 'Eliminar enlace profesional' })
+  @ApiParam({ name: 'id', description: 'ID del enlace' })
+  @ApiResponse({ status: 200, description: 'Enlace eliminado' })
+  @ApiResponse({ status: 404, description: 'Enlace no encontrado' })
+  async eliminarEnlaceProfesional(@Param('id') enlaceId: string, @Req() req: Request) {
+    const user = req.user as any;
+    return this.usuariosService.eliminarEnlaceProfesional(enlaceId, user.id);
+  }
+
   /**
    * GET /api/v1/usuarios/:id
    * Obtiene un usuario específico por ID
@@ -64,7 +191,7 @@ export class UsuariosController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async obtenerUsuarioPorId(@Param('id') id: string) {
     const usuario = await this.usuariosService.obtenerUsuarioPorId(id);
-    
+
     if (!usuario) {
       throw new NotFoundException('Usuario no encontrado');
     }
@@ -164,8 +291,8 @@ export class UsuariosController {
   @RequiresPermission('usuarios.editar')
   @ApiOperation({ summary: 'Cambiar estado de usuario' })
   @ApiParam({ name: 'id', description: 'ID del usuario' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Estado cambiado exitosamente',
     schema: {
       example: {
@@ -198,8 +325,8 @@ export class UsuariosController {
   @RequiresPermission('usuarios.eliminar')
   @ApiOperation({ summary: 'Eliminar usuario' })
   @ApiParam({ name: 'id', description: 'ID del usuario' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Usuario eliminado exitosamente',
     schema: {
       example: {
@@ -297,5 +424,249 @@ export class UsuariosController {
   })
   async obtenerEstadisticasPorRol() {
     return this.usuariosService.obtenerEstadisticasPorRol();
+  }
+
+  /**
+   * GET /api/v1/usuarios/:id/perfil-completo
+   * Obtiene el perfil completo de un usuario incluyendo proyectos, tareas y perfil profesional
+   * Requiere permiso: usuarios.ver
+   */
+  @Get(':id/perfil-completo')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener perfil completo de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil completo del usuario',
+    schema: {
+      example: {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        nombreCompleto: 'Juan Pérez',
+        email: 'juan@example.com',
+        avatarUrl: null,
+        biografia: 'Desarrollador con 5 años de experiencia',
+        estado: 'ACTIVO',
+        fechaIngreso: '2024-01-15',
+        fechaNacimiento: '1990-05-20',
+        archivoCvId: 'archivo-123',
+        puntajePerfilCompleto: 85,
+        rol: { id: 'rol-id', nombre: 'Editor', color: '#3B82F6' },
+        puestoTrabajo: { titulo: 'Desarrollador Senior', descripcion: '...' },
+        proyectos: {
+          responsable: [],
+          miembro: [],
+          totalResponsable: 2,
+          totalMiembro: 5,
+        },
+        tareas: {
+          asignadas: [],
+          totalAsignadas: 10,
+          pendientes: 3,
+          enProgreso: 2,
+          completadas: 5,
+        },
+        perfilProfesional: {
+          yearsExperience: '5-10',
+          professionalLevel: 'senior',
+          specializations: ['frontend', 'backend'],
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async obtenerPerfilCompleto(@Param('id') usuarioId: string) {
+    return this.usuariosService.obtenerPerfilCompleto(usuarioId);
+  }
+
+  /**
+   * GET /api/v1/usuarios/:id/tareas-historial
+   * Obtiene el historial de tareas de un usuario con paginación
+   * Requiere permiso: usuarios.ver
+   */
+  @Get(':id/tareas-historial')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener historial de tareas de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiQuery({ name: 'page', required: false, description: 'Número de página', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Elementos por página', example: 10 })
+  @ApiQuery({ name: 'estado', required: false, description: 'Filtrar por estado', enum: ['Por_Hacer', 'En_Progreso', 'Hecho', 'Bloqueado'] })
+  @ApiResponse({
+    status: 200,
+    description: 'Historial de tareas del usuario',
+    schema: {
+      example: {
+        data: [],
+        total: 50,
+        page: 1,
+        limit: 10,
+        totalPages: 5,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async obtenerTareasHistorial(
+    @Param('id') usuarioId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('estado') estado?: string,
+  ) {
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    return this.usuariosService.obtenerTareasHistorial(usuarioId, pageNum, limitNum, estado);
+  }
+
+  /**
+   * GET /api/v1/usuarios/:id/proyectos
+   * Obtiene los proyectos de un usuario con paginación
+   * Requiere permiso: usuarios.ver
+   */
+  @Get(':id/proyectos')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener proyectos de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiQuery({ name: 'page', required: false, description: 'Número de página', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Elementos por página', example: 10 })
+  @ApiQuery({ name: 'rol', required: false, description: 'Filtrar por rol', enum: ['responsable', 'miembro', 'todos'] })
+  @ApiResponse({
+    status: 200,
+    description: 'Proyectos del usuario',
+    schema: {
+      example: {
+        data: [],
+        total: 15,
+        page: 1,
+        limit: 10,
+        totalPages: 2,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async obtenerProyectosUsuario(
+    @Param('id') usuarioId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('rol') rol: string = 'todos',
+  ) {
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    return this.usuariosService.obtenerProyectosUsuario(usuarioId, pageNum, limitNum, rol);
+  }
+
+  // ==================== USER IDEAS ENDPOINT ====================
+
+  /**
+   * GET /api/v1/usuarios/:id/ideas
+   * Obtiene las ideas creadas y votadas por un usuario
+   * Requiere permiso: usuarios.ver
+   */
+  @Get(':id/ideas')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener ideas de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Ideas del usuario',
+    schema: {
+      example: {
+        creadas: [],
+        votadas: [],
+        totalCreadas: 5,
+        totalVotadas: 12,
+        estadisticas: {
+          pendientes: 2,
+          aprobadas: 1,
+          enDesarrollo: 1,
+          implementadas: 1,
+          rechazadas: 0,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async obtenerIdeasUsuario(@Param('id') usuarioId: string) {
+    return this.usuariosService.obtenerIdeasUsuario(usuarioId);
+  }
+
+  // ==================== USER ACTIVITY ENDPOINT ====================
+
+  /**
+   * GET /api/v1/usuarios/:id/actividad
+   * Obtiene el historial de actividad de un usuario
+   * Requiere permiso: usuarios.ver
+   */
+  @Get(':id/actividad')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener historial de actividad de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Límite de registros', example: 50 })
+  @ApiResponse({
+    status: 200,
+    description: 'Actividad del usuario',
+    schema: {
+      example: {
+        actividad: [],
+        ultimoLogin: '2024-01-15T10:30:00Z',
+        totalAcciones: 50,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async obtenerActividadUsuario(
+    @Param('id') usuarioId: string,
+    @Query('limit') limit: string = '50',
+  ) {
+    const limitNum = parseInt(limit, 10);
+    return this.usuariosService.obtenerActividadUsuario(usuarioId, limitNum);
+  }
+
+  // ==================== USER ANALYTICS ENDPOINT ====================
+
+  /**
+   * GET /api/v1/usuarios/:id/analytics
+   * Obtiene analytics avanzados de un usuario para Magnus IA
+   * Requiere permiso: usuarios.ver
+   */
+  @Get(':id/analytics')
+  @RequiresPermission('usuarios.ver')
+  @ApiOperation({ summary: 'Obtener analytics de productividad de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Analytics del usuario',
+    schema: {
+      example: {
+        productividad: {
+          tareasCompletadasSemana: 5,
+          tareasCompletadasSemanaAnterior: 3,
+          tareasCompletadasMes: 15,
+          tendencia: 66,
+        },
+        estadoActual: {
+          tareasEnProgreso: 3,
+          tareasPendientes: 5,
+          tareasVencidas: 1,
+          proyectosActivos: 4,
+        },
+        colaboracion: {
+          comentariosSemana: 12,
+        },
+        cargaTrabajo: {
+          total: 8,
+          nivel: 'media',
+        },
+        perfil: {
+          antiguedadMeses: 24,
+          rol: 'Developer',
+          departamento: 'Tecnología',
+        },
+        insights: [
+          { tipo: 'success', texto: 'Productividad aumentó 66% esta semana' },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async obtenerAnalyticsUsuario(@Param('id') usuarioId: string) {
+    return this.usuariosService.obtenerAnalyticsUsuario(usuarioId);
   }
 }

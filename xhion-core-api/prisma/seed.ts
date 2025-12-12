@@ -253,8 +253,7 @@ async function seedCompleto() {
       nombreCompleto: 'Carlos Mendoza',
       email: 'gerente@gmail.com',
       passwordHash: hashedPassword,
-      rolId: adminRol.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos'
+      rolId: adminRol.id
     }
   });
 
@@ -265,8 +264,7 @@ async function seedCompleto() {
       nombreCompleto: 'Eduardo Tanca',
       email: 'eduardo.tanca@gmail.com',
       passwordHash: hashedPassword,
-      rolId: adminRol.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eduardo'
+      rolId: adminRol.id
     }
   });
 
@@ -277,8 +275,7 @@ async function seedCompleto() {
       nombreCompleto: 'Luz García',
       email: 'luz.garcia@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolGerenteProyecto.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luz'
+      rolId: rolGerenteProyecto.id
     }
   });
 
@@ -289,8 +286,7 @@ async function seedCompleto() {
       nombreCompleto: 'Maitet Rodríguez',
       email: 'maitet.rodriguez@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolGerenteProyecto.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maitet'
+      rolId: rolGerenteProyecto.id
     }
   });
 
@@ -301,8 +297,7 @@ async function seedCompleto() {
       nombreCompleto: 'Lucero Sánchez',
       email: 'lucero.sanchez@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolJefeDepartamento.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucero'
+      rolId: rolJefeDepartamento.id
     }
   });
 
@@ -313,8 +308,7 @@ async function seedCompleto() {
       nombreCompleto: 'Ricardo Torres',
       email: 'ricardo.torres@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ricardo'
+      rolId: rolMiembroEquipo.id
     }
   });
 
@@ -325,8 +319,7 @@ async function seedCompleto() {
       nombreCompleto: 'Omar Pérez',
       email: 'omar.perez@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Omar'
+      rolId: rolMiembroEquipo.id
     }
   });
 
@@ -337,8 +330,7 @@ async function seedCompleto() {
       nombreCompleto: 'Ana Flores',
       email: 'ana.flores@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ana'
+      rolId: rolMiembroEquipo.id
     }
   });
 
@@ -349,8 +341,7 @@ async function seedCompleto() {
       nombreCompleto: 'María Castro',
       email: 'maria.castro@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolMiembroEquipo.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria'
+      rolId: rolMiembroEquipo.id
     }
   });
 
@@ -361,8 +352,7 @@ async function seedCompleto() {
       nombreCompleto: 'Juan Ramírez',
       email: 'juan.ramirez@gmail.com',
       passwordHash: hashedPassword,
-      rolId: rolColaborador.id,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Juan'
+      rolId: rolColaborador.id
     }
   });
 
@@ -410,8 +400,7 @@ async function seedCompleto() {
         nombreCompleto: usuario.nombre,
         email: usuario.email,
         passwordHash: hashedPassword,
-        rolId: rolColaborador.id,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${usuario.seed}`
+        rolId: rolColaborador.id
       }
     });
   }

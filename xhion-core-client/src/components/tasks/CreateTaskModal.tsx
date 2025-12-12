@@ -20,9 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { useTaskStore } from "@/store/taskStore";
-import { useProjectStore } from "@/store/projectStore";
-import { toast } from "sonner";
+import { useProjectStages, useProjectMembers } from "@/hooks/queries";
+import { useCreateTask, useUpdateTask } from "@/hooks/mutations/useTaskMutations";
 import { Loader2 } from "lucide-react";
 import { type Tarea } from "@/services/taskService";
 
@@ -45,9 +44,12 @@ interface TaskFormData {
 }
 
 export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit, stagesEnabled = true }: CreateTaskModalProps) {
-  const { createTarea, updateTarea, isLoading } = useTaskStore();
-  const { etapas, miembros, fetchEtapas, fetchMiembros } = useProjectStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // TanStack Query hooks
+  const { data: etapas = [] } = useProjectStages(proyectoId, { enabled: open && !!proyectoId });
+  const { data: miembros = [] } = useProjectMembers(proyectoId, { enabled: open && !!proyectoId });
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
+
   const [fechaVencimiento, setFechaVencimiento] = useState<Date | undefined>();
 
   const {
@@ -65,13 +67,6 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit, s
   });
 
   useEffect(() => {
-    if (open && proyectoId) {
-      fetchEtapas(proyectoId);
-      fetchMiembros(proyectoId);
-    }
-  }, [open, proyectoId]);
-
-  useEffect(() => {
     if (tareaToEdit) {
       setValue("titulo", tareaToEdit.titulo);
       setValue("descripcion", tareaToEdit.descripcion || "");
@@ -87,34 +82,28 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit, s
     }
   }, [tareaToEdit, reset, setValue, proyectoId]);
 
+  const isPending = createTaskMutation.isPending || updateTaskMutation.isPending;
+
   const onSubmit = async (data: TaskFormData) => {
-    try {
-      setIsSubmitting(true);
-      
-      const taskData = {
-        titulo: data.titulo,
-        descripcion: data.descripcion || undefined,
-        proyectoId: data.proyectoId,
-        etapaId: data.etapaId || undefined,
-        asignadoId: data.asignadoId || undefined,
-        prioridad: data.prioridad as any,
-        fechaVencimiento: fechaVencimiento?.toISOString() || undefined,
-      };
+    const taskData = {
+      titulo: data.titulo,
+      descripcion: data.descripcion || undefined,
+      proyectoId: data.proyectoId,
+      etapaId: data.etapaId || undefined,
+      asignadoId: data.asignadoId || undefined,
+      prioridad: data.prioridad as any,
+      fechaVencimiento: fechaVencimiento?.toISOString() || undefined,
+    };
 
-      if (tareaToEdit) {
-        await updateTarea(tareaToEdit.id, taskData);
-        toast.success("Tarea actualizada exitosamente");
-      } else {
-        await createTarea(taskData);
-        toast.success("Tarea creada exitosamente");
-      }
-
+    const onSuccess = () => {
       reset();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error.message || "Error al guardar tarea");
-    } finally {
-      setIsSubmitting(false);
+    };
+
+    if (tareaToEdit) {
+      updateTaskMutation.mutate({ id: tareaToEdit.id, data: taskData }, { onSuccess });
+    } else {
+      createTaskMutation.mutate(taskData, { onSuccess });
     }
   };
 
@@ -264,12 +253,12 @@ export function CreateTaskModal({ open, onOpenChange, proyectoId, tareaToEdit, s
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={isPending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || isLoading}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {tareaToEdit ? "Actualizar" : "Crear"} Tarea
             </Button>
           </DialogFooter>

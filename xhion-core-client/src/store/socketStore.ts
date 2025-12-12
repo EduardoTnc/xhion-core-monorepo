@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
+import { useConnectionStore } from './connectionStore';
 
 interface SocketState {
     socket: Socket | null;
@@ -37,16 +38,46 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         newSocket.on('connect', () => {
             console.log('✅ WebSocket Singleton conectado');
             set({ isConnected: true, isConnecting: false });
+            // Sync with connectionStore
+            useConnectionStore.getState().setServerConnected(true);
         });
 
         newSocket.on('disconnect', (reason) => {
             console.log('❌ WebSocket Singleton desconectado:', reason);
             set({ isConnected: false, isConnecting: false });
+            // Sync with connectionStore
+            useConnectionStore.getState().setServerConnected(false);
         });
 
         newSocket.on('connect_error', (error) => {
             console.error('❌ Error de conexión WebSocket Singleton:', error.message);
             set({ isConnecting: false });
+            // Sync with connectionStore
+            useConnectionStore.getState().setServerConnected(false);
+            useConnectionStore.getState().setError(`WebSocket: ${error.message}`);
+        });
+
+        newSocket.on('reconnect_attempt', (attempt) => {
+            console.log(`🔄 Intento de reconexión #${attempt}`);
+            set({ isConnecting: true });
+            useConnectionStore.getState().setReconnecting(true);
+            useConnectionStore.getState().incrementReconnectAttempts();
+        });
+
+        newSocket.on('reconnect', () => {
+            console.log('✅ WebSocket reconectado');
+            set({ isConnected: true, isConnecting: false });
+            // Mark server as connected - this will trigger refresh and update UI
+            useConnectionStore.getState().setServerConnected(true);
+            useConnectionStore.getState().setReconnecting(false);
+            useConnectionStore.getState().resetReconnectAttempts();
+        });
+
+        newSocket.on('reconnect_failed', () => {
+            console.error('❌ Reconexión fallida');
+            set({ isConnecting: false });
+            useConnectionStore.getState().setReconnecting(false);
+            useConnectionStore.getState().setBannerVisible(true);
         });
 
         set({ socket: newSocket });
@@ -59,3 +90,4 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         }
     }
 }));
+

@@ -23,6 +23,7 @@ import { UsuariosService } from './usuarios.service';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
 import { UpdateNotificacionesDto } from './dto/update-notificaciones.dto';
+import { UpdatePerfilProfesionalDto } from './dto/update-perfil-profesional.dto';
 import { CambiarContrasenaDto } from '../auth/dto/cambiar-contrasena.dto';
 import { EliminarCuentaDto } from './dto/eliminar-cuenta.dto';
 import { diskStorage } from 'multer';
@@ -40,7 +41,7 @@ export class UsuariosConfiguracionController {
   constructor(
     private readonly usuariosService: UsuariosService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   // ========== PERFIL ==========
 
@@ -330,6 +331,80 @@ export class UsuariosConfiguracionController {
     return config.notificaciones;
   }
 
+  // ========== PERFIL PROFESIONAL ==========
+
+  @Get('perfil-profesional')
+  @ApiOperation({ summary: 'Obtener perfil profesional del usuario' })
+  @ApiResponse({ status: 200, description: 'Perfil profesional obtenido correctamente' })
+  async getPerfilProfesional(@Request() req) {
+    const config = await this.prisma.configuracionUsuario.findFirst({
+      where: { usuarioId: req.user.id },
+    });
+
+    if (!config || !config.perfilProfesional) {
+      // Valores por defecto para un perfil profesional nuevo
+      return {
+        yearsExperience: '',
+        professionalLevel: '',
+        specializations: [],
+        workMode: '',
+        currentCapacity: '',
+        weeklySchedule: {
+          monday: { available: true, timeRange: '9-5' },
+          tuesday: { available: true, timeRange: '9-5' },
+          wednesday: { available: true, timeRange: '9-5' },
+          thursday: { available: true, timeRange: '9-5' },
+          friday: { available: true, timeRange: '9-5' },
+          saturday: { available: false, timeRange: '' },
+          sunday: { available: false, timeRange: '' },
+        },
+        hasLeadershipExperience: false,
+        languages: [],
+      };
+    }
+
+    return config.perfilProfesional;
+  }
+
+  @Patch('perfil-profesional')
+  @ApiOperation({ summary: 'Actualizar perfil profesional del usuario' })
+  @ApiResponse({ status: 200, description: 'Perfil profesional actualizado correctamente' })
+  async updatePerfilProfesional(
+    @Request() req,
+    @Body() updatePerfilProfesionalDto: UpdatePerfilProfesionalDto,
+  ) {
+    const usuarioId = req.user.id;
+
+    let config = await this.prisma.configuracionUsuario.findFirst({
+      where: { usuarioId },
+    });
+
+    const perfilActual = (config?.perfilProfesional as any) || {};
+    const nuevoPerfilProfesional = {
+      ...perfilActual,
+      ...updatePerfilProfesionalDto,
+    };
+
+    if (config) {
+      config = await this.prisma.configuracionUsuario.update({
+        where: { id: config.id },
+        data: { perfilProfesional: nuevoPerfilProfesional },
+      });
+    } else {
+      config = await this.prisma.configuracionUsuario.create({
+        data: {
+          usuarioId,
+          perfilProfesional: nuevoPerfilProfesional,
+        },
+      });
+    }
+
+    // Recalcular puntaje del perfil incluyendo perfil profesional
+    await this.actualizarPuntajePerfilConProfesional(usuarioId, nuevoPerfilProfesional);
+
+    return config.perfilProfesional;
+  }
+
   // ========== DATOS Y PRIVACIDAD ==========
 
   @Get('exportar-datos')
@@ -448,5 +523,47 @@ export class UsuariosConfiguracionController {
     });
 
     return Math.round(puntaje);
+  }
+
+  /**
+   * Recalcula el puntaje del perfil incluyendo datos del perfil profesional.
+   * El perfil profesional puede agregar hasta 20 puntos extra.
+   */
+  private async actualizarPuntajePerfilConProfesional(
+    usuarioId: string,
+    perfilProfesional: any,
+  ): Promise<void> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+    });
+
+    if (!usuario) return;
+
+    // Calcular puntaje base (hasta 100 puntos)
+    let puntajeBase = this.calcularPuntajePerfil(usuario);
+
+    // Bonus por perfil profesional completo (hasta 20 puntos adicionales)
+    let bonusProfesional = 0;
+    const camposProfesionales = [
+      perfilProfesional?.yearsExperience,
+      perfilProfesional?.professionalLevel,
+      perfilProfesional?.specializations?.length > 0,
+      perfilProfesional?.workMode,
+      perfilProfesional?.currentCapacity,
+      perfilProfesional?.hasLeadershipExperience !== undefined,
+      perfilProfesional?.languages?.length > 0,
+    ];
+
+    camposProfesionales.forEach((campo) => {
+      if (campo) bonusProfesional += 3;
+    });
+
+    // El puntaje no puede exceder 100
+    const puntajeFinal = Math.min(100, puntajeBase + Math.min(bonusProfesional, 20));
+
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { puntajePerfilCompleto: puntajeFinal },
+    });
   }
 }

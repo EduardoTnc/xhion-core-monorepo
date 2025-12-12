@@ -110,6 +110,22 @@ enum TipoContacto {
   email_personal
 }
 
+enum Genero {
+  Masculino
+  Femenino
+  Otro
+  Prefiero_No_Decir
+}
+
+enum EstadoCivil {
+  Soltero
+  Casado
+  Divorciado
+  Viudo
+  Union_Libre
+  Prefiero_No_Decir
+}
+
 enum TipoEnlaceProfesional {
   linkedin
   portafolio_personal
@@ -242,6 +258,19 @@ model Usuario {
   fechaCreacion         DateTime      @default(now())
   fechaActualizacion    DateTime      @updatedAt
   fechaEliminacion      DateTime? // Para eliminación lógica.
+
+  // Personal Information Fields
+  direccionResidencia String?      @db.VarChar(255)
+  ciudadResidencia    String?      @db.VarChar(100)
+  paisResidencia      String?      @db.VarChar(100)
+  genero              Genero?
+  estadoCivil         EstadoCivil?
+  nacionalidad        String?      @db.VarChar(100)
+
+  // Professional Extensions
+  tituloAcademico      String?  @db.VarChar(150)
+  institucionEducativa String?  @db.VarChar(200)
+  certificaciones      String[] @default([])
 
   invitaciones_enviadas              Invitacion[]                        @relation("InvitadoPor")
   rol                                Rol                                 @relation(fields: [rolId], references: [id])
@@ -694,6 +723,7 @@ model ConfiguracionUsuario {
   usuarioId          String   @db.Uuid
   preferencias       Json? // Preferencias de UI (tema, idioma, etc.)
   notificaciones     Json? // Configuración de notificaciones
+  perfilProfesional  Json? // Perfil profesional (experiencia, especialidades, disponibilidad)
   fechaCreacion      DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
 

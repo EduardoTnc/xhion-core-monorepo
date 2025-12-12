@@ -1,4 +1,4 @@
-import { Bell, Activity, User, Moon, Sun, LogOut, ChevronsUpDown, Palette, Shield, Globe, Wifi, WifiOff, Server, RefreshCw, CheckCircle2, AlertCircle, XCircle, Zap, Loader2, Sparkles } from "lucide-react"
+import { Bell, Activity, User, Moon, Sun, LogOut, ChevronsUpDown, Palette, Shield, Globe, Wifi, WifiOff, Server, RefreshCw, AlertCircle, Loader2, Sparkles, Database } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +36,7 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { useServiceWorker } from "@/hooks/useServiceWorker"
 import { useWebSocket } from "@/hooks/useWebSocket"
+import { useConnectionStore } from "@/store/connectionStore"
 import { cn } from "@/lib/utils"
 
 export function Header() {
@@ -46,7 +47,10 @@ export function Header() {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
   const { isOnline, isUpdateAvailable, updateServiceWorker } = useServiceWorker()
-  const { isConnected, isConnecting } = useWebSocket()
+  const { isConnecting } = useWebSocket()
+  // Use connectionStore as source of truth for server status
+  const isServerConnected = useConnectionStore(state => state.isServerConnected)
+  const isConnected = isServerConnected
 
   // AI Search state
   const { isLoading: isAiLoading, backgroundQuery } = useAiSearchStore()
@@ -70,33 +74,13 @@ export function Header() {
 
   const getSystemStatus = useMemo(() => {
     if (!isOnline) return { status: 'error', color: 'text-destructive', bg: 'bg-destructive', label: 'Sin conexión', icon: WifiOff }
-    if (!isConnected) return { status: 'warning', color: 'text-amber-500', bg: 'bg-amber-500', label: 'Servidor desconectado', icon: Server }
+    if (!isServerConnected) return { status: 'warning', color: 'text-amber-500', bg: 'bg-amber-500', label: 'Servidor desconectado', icon: Server }
     if (isUpdateAvailable) return { status: 'info', color: 'text-blue-500', bg: 'bg-blue-500', label: 'Actualización disponible', icon: RefreshCw }
     return { status: 'healthy', color: 'text-green-500', bg: 'bg-green-500', label: 'Sistemas operativos', icon: Activity }
-  }, [isOnline, isConnected, isUpdateAvailable])
+  }, [isOnline, isServerConnected, isUpdateAvailable])
 
   const systemStatus = getSystemStatus
   const StatusIcon = systemStatus.icon
-
-  // Obtener nombre de la página actual
-  const getPageName = () => {
-    const path = location.pathname
-    if (path === '/') return 'Dashboard'
-    if (path.startsWith('/proyectos')) return 'Proyectos'
-    if (path.startsWith('/tareas')) return 'Tareas'
-    if (path.startsWith('/calendario')) return 'Calendario'
-    if (path.startsWith('/ai-insights')) return 'IA Insights'
-    if (path.startsWith('/ideas')) return 'Ideas'
-    if (path.startsWith('/departamentos')) return 'Departamentos'
-    if (path.startsWith('/usuarios')) return 'Usuarios'
-    if (path.startsWith('/roles')) return 'Roles y Permisos'
-    if (path.startsWith('/auditoria')) return 'Seguridad'
-    if (path.startsWith('/perfil/configuracion')) return 'Configuración de Perfil'
-    if (path.startsWith('/sistema/configuracion')) return 'Configuración del Sistema'
-    if (path.startsWith('/perfil')) return 'Mi Perfil'
-    return 'Xhion Core'
-  }
-
   const handleLogout = async () => {
     try {
       await authService.logout()
@@ -157,9 +141,6 @@ export function Header() {
         <div className="flex items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">{getPageName()}</span>
-          </div>
         </div>
 
 
@@ -233,111 +214,178 @@ export function Header() {
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          {/* System Status */}
+          {/* System Status - Compact */}
           <HoverCard openDelay={100} closeDelay={200}>
             <HoverCardTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative hidden md:flex h-9 w-9">
-                <StatusIcon className={cn("h-5 w-5 transition-colors", systemStatus.color)} />
-                <span className={cn("absolute right-1.5 top-1.5 h-2 w-2 rounded-full animate-pulse", systemStatus.bg)} />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative hidden md:flex h-8 w-8 transition-all",
+                  systemStatus.status === 'error' && "bg-destructive/10 hover:bg-destructive/20",
+                  systemStatus.status === 'warning' && "bg-amber-500/10 hover:bg-amber-500/20"
+                )}
+                onClick={() => {
+                  const { showBanner, setBannerVisible } = useConnectionStore.getState()
+                  if (systemStatus.status !== 'healthy') {
+                    setBannerVisible(!showBanner)
+                  }
+                }}
+              >
+                <StatusIcon className={cn(
+                  "h-4 w-4 transition-all",
+                  systemStatus.color,
+                  systemStatus.status !== 'healthy' && "animate-pulse"
+                )} />
+                <span className={cn(
+                  "absolute right-0.5 top-0.5 h-2 w-2 rounded-full border border-background",
+                  systemStatus.bg
+                )} />
               </Button>
             </HoverCardTrigger>
-            <HoverCardContent className="w-80 p-0" align="end">
-              <div className="p-4 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2 mb-1">
-                  <Activity className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="font-medium text-sm">Estado del Sistema</h4>
+            <HoverCardContent className="w-72 p-0" align="end" sideOffset={6}>
+              {/* Compact Header */}
+              <div className={cn(
+                "px-3 py-2 border-b border-border flex items-center justify-between",
+                systemStatus.status === 'healthy' && "bg-green-500/5",
+                systemStatus.status === 'warning' && "bg-amber-500/5",
+                systemStatus.status === 'error' && "bg-red-500/5",
+                systemStatus.status === 'info' && "bg-blue-500/5"
+              )}>
+                <div className="flex items-center gap-2">
+                  <Activity className={cn("h-3.5 w-3.5", systemStatus.color)} />
+                  <span className="text-xs font-semibold">Estado del Sistema</span>
                 </div>
-                <p className={cn("text-xs font-medium", systemStatus.color)}>
-                  {systemStatus.label}
-                </p>
+                <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded", systemStatus.color,
+                  systemStatus.status === 'healthy' && "bg-green-500/10",
+                  systemStatus.status === 'warning' && "bg-amber-500/10",
+                  systemStatus.status === 'error' && "bg-red-500/10"
+                )}>
+                  {systemStatus.status === 'healthy' ? 'OK' : systemStatus.status === 'warning' ? 'WARN' : 'ERROR'}
+                </span>
               </div>
-              <div className="p-2 grid gap-1">
-                {/* Internet Status */}
-                <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-full bg-background border", isOnline ? "border-green-200 text-green-600" : "border-destructive/20 text-destructive")}>
-                      {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">Internet</span>
-                      <span className="text-xs text-muted-foreground">{isOnline ? 'Conectado' : 'Sin conexión'}</span>
-                    </div>
+
+              {/* Compact Status Items */}
+              <div className="p-2 space-y-1">
+                {/* Internet */}
+                <div className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    {isOnline ? (
+                      <Wifi className="h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <WifiOff className="h-3.5 w-3.5 text-red-500" />
+                    )}
+                    <span className="text-xs">Internet</span>
                   </div>
-                  {isOnline ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
+                  <span className={cn("text-[10px] font-medium", isOnline ? "text-green-600" : "text-red-600")}>
+                    {isOnline ? 'Conectado' : 'Offline'}
+                  </span>
                 </div>
 
-                {/* Server Status */}
-                <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-full bg-background border", isConnected ? "border-green-200 text-green-600" : "border-amber-200 text-amber-600")}>
-                      <Server className="h-4 w-4" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">Servidor</span>
-                      <span className="text-xs text-muted-foreground">
-                        {isConnected ? 'Conectado' : isConnecting ? 'Reconectando...' : 'Desconectado'}
-                      </span>
-                    </div>
+                {/* Backend/API */}
+                <div className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Database className={cn(
+                      "h-3.5 w-3.5",
+                      isConnected ? "text-green-500" : "text-amber-500",
+                      isConnecting && "animate-pulse"
+                    )} />
+                    <span className="text-xs">Base de Datos</span>
                   </div>
                   {isConnected ? (
-                    <div className="flex items-center gap-1 text-xs text-green-600 font-mono bg-green-50 dark:bg-green-950/30 px-1.5 py-0.5 rounded">
-                      <Zap className="h-3 w-3" />
-                      <span>OK</span>
-                    </div>
+                    <span className="text-[10px] font-medium text-green-600">Sincronizado</span>
+                  ) : isConnecting ? (
+                    <Loader2 className="h-3 w-3 text-amber-500 animate-spin" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 px-1.5 text-[10px] text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                      onClick={async () => {
+                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+                        try {
+                          await fetch(`${baseUrl}/api/v1/health`, { cache: 'no-store' })
+                          useConnectionStore.getState().setServerConnected(true)
+                        } catch {
+                          useConnectionStore.getState().setServerConnected(false)
+                        }
+                      }}
+                    >
+                      <RefreshCw className="h-2.5 w-2.5 mr-0.5" />
+                      Reconectar
+                    </Button>
                   )}
                 </div>
 
-                {/* AI Status */}
-                <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "p-2 rounded-full bg-background border",
-                      isAiLoading ? "border-[#FFBF00]/50 text-[#FFBF00]" : "border-[#FFBF00]/30 text-[#FFBF00]/70"
-                    )}>
-                      {isAiLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">Magnus AI</span>
-                      <span className="text-xs text-muted-foreground">
-                        {isAiLoading ? 'Procesando consulta...' : backgroundQuery?.status === "success" ? 'Respuesta lista' : 'Disponible'}
-                      </span>
-                    </div>
+                {/* Magnus AI */}
+                <div className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    {isAiLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 text-[#FFBF00] animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-[#FFBF00]" />
+                    )}
+                    <span className="text-xs">Magnus AI</span>
                   </div>
-                  {isAiLoading ? (
-                    <div className="flex items-center gap-1 text-xs text-[#FFBF00] font-mono bg-[#FFBF00]/10 px-1.5 py-0.5 rounded animate-pulse">
-                      <span>...</span>
-                    </div>
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 text-[#FFBF00]" />
-                  )}
+                  <span className={cn("text-[10px] font-medium", isAiLoading ? "text-[#FFBF00]" : "text-muted-foreground")}>
+                    {isAiLoading ? 'Pensando...' : backgroundQuery?.status === "success" ? 'Respuesta lista' : 'Disponible'}
+                  </span>
                 </div>
 
-                {/* Update Status */}
+                {/* Storage - LocalStorage usage */}
+                <div className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Server className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs">Almacenamiento</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    {(() => {
+                      try {
+                        const used = new Blob(Object.values(localStorage)).size
+                        return `${(used / 1024).toFixed(1)} KB`
+                      } catch {
+                        return 'N/A'
+                      }
+                    })()}
+                  </span>
+                </div>
+
+                {/* Update */}
                 {isUpdateAvailable && (
-                  <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-md">
-                    <div className="flex items-start gap-3">
-                      <RefreshCw className="h-4 w-4 text-blue-600 mt-0.5 animate-spin" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Actualización disponible</p>
-                        <p className="text-xs text-blue-600/80 dark:text-blue-400 mb-2">Nueva versión del sistema detectada.</p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-7 text-xs border-blue-200 hover:bg-blue-100 text-blue-700"
-                          onClick={() => updateServiceWorker()}
-                        >
-                          Actualizar ahora
-                        </Button>
-                      </div>
+                  <div className="flex items-center justify-between px-2 py-1.5 rounded bg-blue-50 dark:bg-blue-950/30">
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-3.5 w-3.5 text-blue-500 animate-spin" />
+                      <span className="text-xs text-blue-700 dark:text-blue-300">Actualización</span>
                     </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 px-1.5 text-[10px] text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                      onClick={() => updateServiceWorker()}
+                    >
+                      Instalar
+                    </Button>
                   </div>
                 )}
+              </div>
+
+              {/* Footer with timestamp */}
+              <div className="px-3 py-1.5 border-t border-border bg-muted/30 flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">
+                  Actualizado: {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    toast.info('Recargando...', { duration: 1000 })
+                    setTimeout(() => window.location.reload(), 500)
+                  }}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Recargar
+                </Button>
               </div>
             </HoverCardContent>
           </HoverCard>

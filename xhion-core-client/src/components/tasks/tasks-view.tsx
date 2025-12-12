@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Loader2, Layers, LayoutGrid, Filter, X } from "lucide-react"
-import { useTaskStore } from "@/store/taskStore"
+import { Plus, Loader2, Layers, Filter, X, CheckSquare } from "lucide-react"
+// TanStack Query hooks - replacing useTaskStore
+import { useTasks, useMyTasks, useUsers, useDeleteTask } from "@/hooks/queries"
 import { useAuthStore } from "@/store/authStore"
-import { userService } from "@/services/userService"
-import { type Usuario } from "@/types"
 import { type ProyectoMiembro } from "@/services/projectService"
 import { TaskViewSwitcher } from "../projects/TaskViewSwitcher"
 import { TaskFilters, type TaskFiltersType, applyTaskFilters } from "../projects/TaskFilters"
@@ -16,7 +15,6 @@ import { TaskTableView } from "../projects/TaskTableView"
 import { TaskTimelineView } from "../projects/TaskTimelineView"
 import { CreateTaskModal } from "./CreateTaskModal"
 import { TaskDetailModal } from "./TaskDetailModal"
-import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -25,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { PageHeaderSimple } from "@/components/layout/PageHeader"
 
 type ViewMode = "kanban" | "list" | "table" | "timeline"
 type GroupBy = "none" | "project" | "stage"
@@ -43,8 +42,6 @@ export function TasksView() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban")
   const [filters, setFilters] = useState<TaskFiltersType>(initialFilters)
   const [groupBy, setGroupBy] = useState<GroupBy>("project") // Default group by project for global view
-  const [users, setUsers] = useState<Usuario[]>([])
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
 
   // Modals state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
@@ -52,42 +49,27 @@ export function TasksView() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   const { user } = useAuthStore()
-  const { tareas, misTareas, fetchTareas, fetchMisTareas, isLoading: isLoadingTasks, deleteTarea } = useTaskStore()
 
   const canViewAll = user?.permisos?.includes("tareas.ver_todas")
   const canCreate = user?.permisos?.includes("tareas.crear")
 
-  // Fetch users for filters
-  useEffect(() => {
-    const loadUsers = async () => {
-      setIsLoadingUsers(true)
-      try {
-        const data = await userService.obtenerTodosLosUsuarios()
-        setUsers(data)
-      } catch (error) {
-        console.error("Error loading users:", error)
-        toast.error("Error al cargar usuarios")
-      } finally {
-        setIsLoadingUsers(false)
-      }
-    }
-    loadUsers()
-  }, [])
-
-  // Fetch tasks
-  const refreshTasks = async () => {
-    if (canViewAll) {
-      await fetchTareas()
-    } else {
-      await fetchMisTareas()
-    }
-  }
-
-  useEffect(() => {
-    refreshTasks()
-  }, [canViewAll])
+  // ==================== TanStack Query Hooks ====================
+  const { data: users = [], isLoading: isLoadingUsers } = useUsers()
+  const { data: tareas = [], isLoading: isLoadingAllTasks, refetch: refetchTareas } = useTasks({}, { enabled: canViewAll })
+  const { data: misTareas = [], isLoading: isLoadingMyTasks, refetch: refetchMisTareas } = useMyTasks({ enabled: !canViewAll })
+  const deleteTaskMutation = useDeleteTask()
 
   const tasksToDisplay = canViewAll ? tareas : misTareas
+  const isLoadingTasks = canViewAll ? isLoadingAllTasks : isLoadingMyTasks
+
+  // Refresh function
+  const refreshTasks = async () => {
+    if (canViewAll) {
+      await refetchTareas()
+    } else {
+      await refetchMisTareas()
+    }
+  }
 
   // Map users to ProyectoMiembro format for TaskFilters
   const miembrosForFilters: ProyectoMiembro[] = useMemo(() => {
@@ -119,10 +101,10 @@ export function TasksView() {
   const handleDeleteTask = async (taskId: string) => {
     if (window.confirm("¿Estás seguro de eliminar esta tarea?")) {
       try {
-        await deleteTarea(taskId)
-        toast.success("Tarea eliminada")
+        await deleteTaskMutation.mutateAsync(taskId)
+        // Success toast is handled by the mutation hook
       } catch (error) {
-        toast.error("Error al eliminar tarea")
+        // Error toast is handled by the mutation hook
       }
     }
   }
@@ -138,22 +120,22 @@ export function TasksView() {
   return (
     <div className="flex h-full flex-col bg-background overflow-hidden">
       {/* Header */}
-      <div className="border-b border-border bg-card px-4 md:px-6 py-3 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Tareas Globales</h1>
-            <p className="text-xs text-muted-foreground">
-              {canViewAll ? "Gestiona todas las tareas del sistema" : "Gestiona tus tareas asignadas"}
-            </p>
-          </div>
-          {canCreate && (
+      <PageHeaderSimple
+        icon={CheckSquare}
+        title="Tareas Globales"
+        subtitle={canViewAll ? "Gestiona todas las tareas del sistema" : "Gestiona tus tareas asignadas"}
+        actions={
+          canCreate && (
             <Button onClick={() => setShowCreateTaskModal(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               Nueva Tarea
             </Button>
-          )}
-        </div>
+          )
+        }
+      />
 
+      {/* Toolbar */}
+      <div className="border-b border-border bg-card px-4 md:px-6 py-3">
         <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
           <div className="flex flex-wrap items-center gap-2 flex-1">
             <TaskViewSwitcher

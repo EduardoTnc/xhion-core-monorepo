@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,8 +20,7 @@ import {
   Settings,
   Info
 } from "lucide-react"
-import { useRoleStore } from "../../store/roleStore"
-import { toast } from "sonner"
+import { usePermissions, useUpdateRolePermissions } from "@/hooks/queries"
 import { MODULOS_PERMISOS, type PermisoDefinicion } from "@/constants/permissions"
 import { cn } from "@/lib/utils"
 import {
@@ -85,27 +84,41 @@ const getPermissionStyle = (actionName: string) => {
   }
 }
 
-export function RoleCard() {
-  const { selectedRole, permisosActivosSet, updateRolePermissions, isLoading, todosLosPermisos } = useRoleStore()
+import type { RolCompleto } from "@/types"
+
+interface RoleCardProps {
+  role: RolCompleto;
+}
+
+export function RoleCard({ role }: RoleCardProps) {
+  // TanStack Query mutation for updating permissions
+  const updatePermissionsMutation = useUpdateRolePermissions()
+
+  // Get all available permissions from the system
+  const { data: allPermissions = [] } = usePermissions()
+
+  // Extract active permission names from the role
+  const permisosActivosSet = useMemo(() => {
+    return new Set(
+      role.permisos
+        .filter(rp => rp.permiso !== null)
+        .map(rp => rp.permiso!.nombreAccion)
+    )
+  }, [role.permisos])
+
   const [localPermissions, setLocalPermissions] = useState<Set<string>>(new Set())
   const [hasChanges, setHasChanges] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedModule, setSelectedModule] = useState<string>(MODULOS_PERMISOS[0]?.id || "proyectos")
 
-  // Inicializar permisos locales desde el Set optimizado del store
+  // Inicializar permisos locales desde el rol
   useEffect(() => {
     setLocalPermissions(new Set(permisosActivosSet))
     setHasChanges(false)
-  }, [permisosActivosSet, selectedRole])
+  }, [permisosActivosSet, role.id])
 
-  if (!selectedRole) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Selecciona un rol para ver sus permisos</p>
-      </div>
-    )
-  }
+  // isSaving comes from mutation state
+  const isSaving = updatePermissionsMutation.isPending
 
   // Verificar si un permiso está activo (O(1) lookup)
   const hasPermission = (nombreAccion: string): boolean => {
@@ -163,29 +176,26 @@ export function RoleCard() {
     )
   }
 
-  // Guardar cambios
+  // Guardar cambios usando TanStack Query mutation
   const handleSave = async () => {
-    if (!selectedRole) return
+    // Crear mapa de nombreAccion -> permisoId desde todos los permisos del sistema
+    const permisosMap = new Map(
+      allPermissions.map(p => [p.nombreAccion, p.id])
+    )
 
-    setIsSaving(true)
+    // Convertir nombres de permisos activos a IDs
+    const permisosIds = Array.from(localPermissions)
+      .map(nombre => permisosMap.get(nombre))
+      .filter((id): id is string => id !== undefined)
+
     try {
-      // Crear mapa de nombreAccion -> permisoId desde todos los permisos del sistema
-      const permisosMap = new Map(
-        todosLosPermisos.map(p => [p.nombreAccion, p.id])
-      )
-
-      // Convertir nombres de permisos activos a IDs
-      const permisosIds = Array.from(localPermissions)
-        .map(nombre => permisosMap.get(nombre))
-        .filter((id): id is string => id !== undefined)
-
-      await updateRolePermissions(selectedRole.id, permisosIds)
+      await updatePermissionsMutation.mutateAsync({
+        roleId: role.id,
+        permisosIds
+      })
       setHasChanges(false)
-      toast.success(`Permisos actualizados: ${permisosIds.length} permisos asignados`)
     } catch (error) {
-      // El error ya se maneja en el store con toast
-    } finally {
-      setIsSaving(false)
+      // Error is handled by the mutation's onError callback
     }
   }
 
@@ -202,7 +212,7 @@ export function RoleCard() {
   return (
     <div className="space-y-2 h-full flex flex-col pb-4">
       {/* Warning for admin role - Compact */}
-      {(selectedRole.nombre === "Administrador" || selectedRole.nombre === "Admin") && (
+      {(role.nombre === "Administrador" || role.nombre === "Admin") && (
         <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 flex items-center gap-2 flex-shrink-0">
           <AlertCircle className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
@@ -312,7 +322,7 @@ export function RoleCard() {
                         variant={todosSeleccionados ? "secondary" : "outline"}
                         size="sm"
                         onClick={() => toggleModulePermissions(modulo.id)}
-                        disabled={isLoading || isSaving}
+                        disabled={isSaving}
                         className="gap-2 h-8"
                       >
                         {todosSeleccionados ? (
@@ -346,7 +356,7 @@ export function RoleCard() {
                             return (
                               <div
                                 key={permiso.nombreAccion}
-                                onClick={() => !isLoading && !isSaving && togglePermission(permiso.nombreAccion)}
+                                onClick={() => !isSaving && togglePermission(permiso.nombreAccion)}
                                 className={cn(
                                   "group relative flex flex-col gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-sm",
                                   isSelected
@@ -368,7 +378,7 @@ export function RoleCard() {
                                   <Checkbox
                                     checked={isSelected}
                                     onCheckedChange={() => togglePermission(permiso.nombreAccion)}
-                                    disabled={isLoading || isSaving}
+                                    disabled={isSaving}
                                     className={cn("data-[state=checked]:bg-primary data-[state=checked]:border-primary", isSelected ? "opacity-100" : "opacity-50 group-hover:opacity-100")}
                                   />
                                 </div>

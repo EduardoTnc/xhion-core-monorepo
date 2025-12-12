@@ -13,7 +13,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Loader2, CheckCircle2 } from "lucide-react"
-import { useRoleStore } from "../../store/roleStore"
+import { useUsersForRoles, useRolesWithDetails } from "@/hooks/queries"
+import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "@/lib/queryKeys"
 import { userService } from "../../services/userService"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,7 +37,10 @@ const getInitials = (name: string): string => {
 }
 
 export function ChangeUserRoleModal({ userId, open, onOpenChange }: ChangeUserRoleModalProps) {
-  const { todosLosUsuarios, rolesCompletos, fetchInitialData } = useRoleStore()
+  // TanStack Query hooks
+  const { data: todosLosUsuarios = [] } = useUsersForRoles()
+  const { data: rolesCompletos = [] } = useRolesWithDetails()
+  const queryClient = useQueryClient()
   const [selectedRoleId, setSelectedRoleId] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -65,13 +70,14 @@ export function ChangeUserRoleModal({ userId, open, onOpenChange }: ChangeUserRo
     setIsSubmitting(true)
     try {
       await userService.changeRole(userId, selectedRoleId)
-      
+
       const newRole = rolesCompletos.find(r => r.id === selectedRoleId)
       toast.success(`Rol cambiado a "${newRole?.nombre}" exitosamente`)
-      
-      // Recargar datos
-      await fetchInitialData()
-      
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
+
       onOpenChange(false)
     } catch (error: any) {
       toast.error(error.message || 'Error al cambiar el rol del usuario')
@@ -106,11 +112,11 @@ export function ChangeUserRoleModal({ userId, open, onOpenChange }: ChangeUserRo
               <p className="text-xs text-muted-foreground">{user.email}</p>
             </div>
             {currentRole && (
-              <Badge 
+              <Badge
                 variant="outline"
-                style={{ 
+                style={{
                   borderColor: currentRole.color || undefined,
-                  color: currentRole.color || undefined 
+                  color: currentRole.color || undefined
                 }}
               >
                 <Shield className="h-3 w-3 mr-1" />
@@ -129,22 +135,21 @@ export function ChangeUserRoleModal({ userId, open, onOpenChange }: ChangeUserRo
                 {rolesCompletos.map((role) => {
                   const isCurrentRole = role.id === user.rolId
                   const isSelected = role.id === selectedRoleId
-                  
+
                   return (
                     <div
                       key={role.id}
-                      className={`flex items-start gap-3 rounded-lg border p-4 transition-all cursor-pointer ${
-                        isSelected 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                      }`}
+                      className={`flex items-start gap-3 rounded-lg border p-4 transition-all cursor-pointer ${isSelected
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}
                       onClick={() => setSelectedRoleId(role.id)}
                     >
                       <RadioGroupItem value={role.id} id={role.id} className="mt-1" />
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <div 
+                          <div
                             className="h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0"
                             style={{ backgroundColor: role.color || '#666' }}
                           >
@@ -152,8 +157,8 @@ export function ChangeUserRoleModal({ userId, open, onOpenChange }: ChangeUserRo
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Label 
-                                htmlFor={role.id} 
+                              <Label
+                                htmlFor={role.id}
                                 className="text-sm font-medium cursor-pointer"
                               >
                                 {role.nombre}
@@ -170,7 +175,7 @@ export function ChangeUserRoleModal({ userId, open, onOpenChange }: ChangeUserRo
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="mt-2 pt-2 border-t border-border">
                           <p className="text-xs text-muted-foreground">
                             {role.permisos.length} permisos • {role._count?.usuarios || 0} usuarios

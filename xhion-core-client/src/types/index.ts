@@ -134,7 +134,7 @@ export interface Rol {
     permisos: RolPermiso[];
     catalogoConfiguraciones: CatalogoConfiguracion[];
     plantillaDashboard?: PlantillaDashboard | null;
-    
+
     catalogoWidgets: CatalogoWidget[];
     invitaciones: Invitacion[];
 }
@@ -328,33 +328,33 @@ export interface JwtPayload {
 
 // Tipo para la configuración de un widget en el dashboard
 export interface WidgetInstancia {
-id: string;
-dashboardId: string;
-widgetCatalogoId: string;
-// Campo de conveniencia para el frontend (se puede derivar de CatalogoWidget)
-tipoWidget?: string; // Ej: "lista_tareas_pendientes"
-tituloPersonalizado?: string | null;
-configuracionEspecifica?: any; // JSON
-posX: number;
-posY: number;
-ancho: number;
-alto: number;
+    id: string;
+    dashboardId: string;
+    widgetCatalogoId: string;
+    // Campo de conveniencia para el frontend (se puede derivar de CatalogoWidget)
+    tipoWidget?: string; // Ej: "lista_tareas_pendientes"
+    tituloPersonalizado?: string | null;
+    configuracionEspecifica?: any; // JSON
+    posX: number;
+    posY: number;
+    ancho: number;
+    alto: number;
 
-// Relaciones
-dashboard?: DashboardUsuario;
-widgetCatalogo?: CatalogoWidget;
+    // Relaciones
+    dashboard?: DashboardUsuario;
+    widgetCatalogo?: CatalogoWidget;
 }
 
 // Tipo para la configuración de un dashboard completo
 export interface DashboardUsuario {
-id: string;
-nombre: string;
-propietarioId: string;
-fechaCreacion: string; // ISO
-fechaEliminacion?: string | null; // ISO
+    id: string;
+    nombre: string;
+    propietarioId: string;
+    fechaCreacion: string; // ISO
+    fechaEliminacion?: string | null; // ISO
 
-propietario?: UsuarioSimple;
-widgets: WidgetInstancia[];
+    propietario?: UsuarioSimple;
+    widgets: WidgetInstancia[];
 }
 
 // Alias de compatibilidad con versiones anteriores
@@ -612,8 +612,8 @@ export interface UsuarioEnRol {
     avatarUrl?: string | null;
     estado: EstadoUsuario;
     fechaIngreso?: string | null;
-    creadoEn?: string | null;
-    actualizadoEn?: string | null;
+    fechaCreacion?: string | null;
+    fechaActualizacion?: string | null;
     rolId: string;
     puestoTrabajo?: {
         titulo: string;

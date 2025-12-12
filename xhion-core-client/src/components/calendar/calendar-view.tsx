@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,28 +10,26 @@ import { CalendarMonth } from "./calendar-month"
 import { CalendarYear } from "./calendar-year"
 import { CalendarSidebar } from "./calendar-sidebar"
 import { EventModal } from "./event-modal"
+// UI state stays in store, data fetching now uses TanStack Query internally within the store
 import { useCalendarStore } from "@/store/calendarStore"
+import { useEvents } from "@/hooks/queries"
 import { formatCalendarHeader } from "@/lib/calendar-utils"
 
 export function CalendarView() {
   const {
     viewMode,
     currentDate,
-    isLoading,
     filters,
     setViewMode,
     goToToday,
     goToPrevious,
     goToNext,
-    fetchAllData,
     setFilters,
     openCreateEventModal,
   } = useCalendarStore()
 
-  // Fetch events on mount and when view changes
-  useEffect(() => {
-    fetchAllData()
-  }, [fetchAllData])
+  // TanStack Query hook for events data
+  const { isLoading } = useEvents(filters)
 
   const headerText = formatCalendarHeader(currentDate, viewMode)
 

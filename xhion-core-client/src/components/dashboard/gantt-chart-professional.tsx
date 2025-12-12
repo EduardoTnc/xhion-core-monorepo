@@ -1194,11 +1194,13 @@ export function GanttChartProfessional() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {proyectosPorDepartamento.map((grupo) => (
-                      <SelectItem key={grupo.departamento.id} value={grupo.departamento.id}>
-                        {grupo.departamento.nombre}
-                      </SelectItem>
-                    ))}
+                    {proyectosPorDepartamento
+                      .filter((grupo) => grupo.departamento?.id && grupo.departamento.id !== '')
+                      .map((grupo) => (
+                        <SelectItem key={grupo.departamento.id} value={grupo.departamento.id}>
+                          {grupo.departamento.nombre}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
 

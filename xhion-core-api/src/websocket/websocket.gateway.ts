@@ -40,7 +40,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
       // Verificar token
       const payload = await this.jwtService.verifyAsync(token);
-      const userId = payload.userId;
+      // JWT uses 'sub' as the standard claim for subject (userId)
+      const userId = payload.sub;
+
+      if (!userId) {
+        this.logger.warn(`Client ${client.id} disconnected: No userId in token payload`);
+        client.disconnect();
+        return;
+      }
 
       // Guardar la relación usuario-socket
       if (!this.userSockets.has(userId)) {
@@ -56,6 +63,11 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
       this.logger.log(`Client ${client.id} connected as user ${userId}`);
       this.logger.log(`Total connections for user ${userId}: ${this.userSockets.get(userId)!.size}`);
+
+      // Broadcast presence when user comes online (only for first connection)
+      if (this.userSockets.get(userId)!.size === 1) {
+        this.notifyPresenceChange(userId, true);
+      }
     } catch (error) {
       this.logger.error(`Connection error for client ${client.id}:`, error.message);
       client.disconnect();
@@ -70,6 +82,8 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
       if (this.userSockets.get(userId)!.size === 0) {
         this.userSockets.delete(userId);
+        // Broadcast presence when user goes offline (last connection closed)
+        this.notifyPresenceChange(userId, false);
       }
 
       this.logger.log(`Client ${client.id} disconnected (user ${userId})`);
@@ -174,5 +188,84 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     client.leave(`events:${userId}`);
     this.logger.log(`User ${userId} unsubscribed from events`);
     return { success: true };
+  }
+
+  // ==================== USER PRESENCE ====================
+
+  // Broadcast user presence change to all connected clients
+  broadcastUserPresence(userId: string, isOnline: boolean) {
+    this.server.emit('user:presence', { userId, isOnline, timestamp: new Date().toISOString() });
+    this.logger.log(`Presence broadcasted: User ${userId} is ${isOnline ? 'online' : 'offline'}`);
+  }
+
+  // Get all online users with their status
+  getOnlineUsersStatus(): { userId: string; isOnline: boolean }[] {
+    return Array.from(this.userSockets.keys()).map(userId => ({
+      userId,
+      isOnline: true,
+    }));
+  }
+
+  @SubscribeMessage('subscribe:user-presence')
+  handleSubscribeUserPresence(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { userIds: string[] },
+  ) {
+    const { userIds } = data;
+    const clientUserId = client.data.userId;
+
+    this.logger.log(`[Presence] Client ${client.id} (user: ${clientUserId}) subscribing to presence for: ${JSON.stringify(userIds)}`);
+
+    // Join rooms for each user to track their presence
+    userIds.forEach(userId => {
+      client.join(`presence:${userId}`);
+    });
+
+    // Return current online status for requested users
+    const presenceStatus = userIds.map(userId => {
+      const online = this.isUserConnected(userId);
+      this.logger.log(`[Presence] User ${userId} is ${online ? 'ONLINE' : 'OFFLINE'} (has ${this.userSockets.get(userId)?.size || 0} sockets)`);
+      return {
+        userId,
+        isOnline: online,
+      };
+    });
+
+    this.logger.log(`[Presence] Returning presence status: ${JSON.stringify(presenceStatus)}`);
+    return { success: true, presence: presenceStatus };
+  }
+
+  @SubscribeMessage('unsubscribe:user-presence')
+  handleUnsubscribeUserPresence(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { userIds: string[] },
+  ) {
+    const { userIds } = data;
+
+    userIds.forEach(userId => {
+      client.leave(`presence:${userId}`);
+    });
+
+    this.logger.log(`Client ${client.id} unsubscribed from presence for ${userIds.length} users`);
+    return { success: true };
+  }
+
+  @SubscribeMessage('get:online-users')
+  handleGetOnlineUsers() {
+    const onlineUsers = this.getConnectedUsers();
+    return { success: true, onlineUsers };
+  }
+
+  // Override handleConnection to broadcast presence
+  private notifyPresenceChange(userId: string, isOnline: boolean) {
+    // Notify users who subscribed to this user's presence
+    this.server.to(`presence:${userId}`).emit('user:presence-change', {
+      userId,
+      isOnline,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Also broadcast globally for general awareness
+    this.broadcastUserPresence(userId, isOnline);
   }
 }

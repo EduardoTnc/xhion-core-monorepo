@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useProjectStore } from "@/store/projectStore";
-import { useTaskStore } from "@/store/taskStore";
+import { useTasks, useDeleteTask as useDeleteTaskMutation } from "@/hooks/queries";
 import { ProjectSidebarShadcn } from "./ProjectSidebarShadcn";
 import { ProjectHeader } from "./ProjectHeader";
 import { TaskViewSwitcher } from "./TaskViewSwitcher";
@@ -101,8 +101,6 @@ export function ProjectWorkspaceEnhanced({
     updateStagesEnabled,
   } = useProjectStore();
 
-  const { tareas: taskStoreTareas, fetchTareas } = useTaskStore();
-
   type CachedProjectData = {
     etapas: Etapa[];
     miembros: ProyectoMiembro[];
@@ -122,6 +120,13 @@ export function ProjectWorkspaceEnhanced({
   const [displayTareas, setDisplayTareas] = useState<Tarea[]>([]);
   const [projectDataCache, setProjectDataCache] = useState<Record<string, CachedProjectData>>({});
   const [lastFetchedProjectId, setLastFetchedProjectId] = useState<string | null>(null);
+
+  // TanStack Query for tasks (after selectedProjectId is declared)
+  const { data: taskStoreTareas = [], refetch: refetchTareas } = useTasks(
+    selectedProjectId ? { proyectoId: selectedProjectId } : { proyectoId: '' },
+    { enabled: !!selectedProjectId }
+  );
+  const deleteTaskMutation = useDeleteTaskMutation();
 
   // Modals State
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
@@ -259,7 +264,8 @@ export function ProjectWorkspaceEnhanced({
       ]);
 
       const { etapas: latestEtapas, miembros: latestMiembros } = useProjectStore.getState();
-      const { tareas: latestTareas } = useTaskStore.getState();
+      // Tasks now come from TanStack Query
+      const latestTareas = taskStoreTareas;
 
       setLastFetchedProjectId(projectId);
       setDisplayEtapas(latestEtapas);
@@ -396,13 +402,16 @@ export function ProjectWorkspaceEnhanced({
     if (!tareaToDelete) return;
 
     try {
-      await useTaskStore.getState().deleteTarea(tareaToDelete);
-      toast.success('Tarea eliminada exitosamente');
-      if (selectedProjectId) {
-        fetchTareas({ proyectoId: selectedProjectId });
-      }
-      setShowTaskDetailModal(false);
-      setTareaToDelete(null);
+      deleteTaskMutation.mutate(tareaToDelete, {
+        onSuccess: () => {
+          toast.success('Tarea eliminada exitosamente');
+          setShowTaskDetailModal(false);
+          setTareaToDelete(null);
+        },
+        onError: (error: any) => {
+          toast.error(error.message || 'Error al eliminar tarea');
+        },
+      });
     } catch (error: any) {
       toast.error(error.message || 'Error al eliminar tarea');
     }
