@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { X, Loader2 } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useUpdateIdea } from "@/hooks/mutations/useIdeaMutations"
 import { toast } from "sonner"
 import type { Idea } from "@/services/ideasService"
 
@@ -26,9 +26,8 @@ export function EditIdeaModal({ open, onOpenChange, idea, onSuccess }: EditIdeaM
   const [categoria, setCategoria] = useState<"Feature" | "Improvement" | "Innovation" | "Recommendation">(idea.categoria)
   const [tags, setTags] = useState<string[]>(idea.tags || [])
   const [newTag, setNewTag] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { actualizarIdea } = useIdeasStore()
+  const updateIdeaMutation = useUpdateIdea()
 
   // Actualizar estado cuando cambia la idea
   useEffect(() => {
@@ -57,25 +56,23 @@ export function EditIdeaModal({ open, onOpenChange, idea, onSuccess }: EditIdeaM
       return
     }
 
-    setIsSubmitting(true)
-
-    try {
-      await actualizarIdea(idea.id, {
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim(),
-        categoria,
-        tags,
-      })
-
-      toast.success("Idea actualizada correctamente")
-      onOpenChange(false)
-      onSuccess?.()
-    } catch (error: any) {
-      console.error("Error al actualizar idea:", error)
-      toast.error(error.response?.data?.message || "Error al actualizar la idea")
-    } finally {
-      setIsSubmitting(false)
-    }
+    updateIdeaMutation.mutate(
+      {
+        id: idea.id,
+        data: {
+          titulo: titulo.trim(),
+          descripcion: descripcion.trim(),
+          categoria,
+          tags,
+        },
+      },
+      {
+        onSuccess: () => {
+          onOpenChange(false)
+          onSuccess?.()
+        },
+      }
+    )
   }
 
   return (
@@ -163,11 +160,11 @@ export function EditIdeaModal({ open, onOpenChange, idea, onSuccess }: EditIdeaM
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={updateIdeaMutation.isPending}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={updateIdeaMutation.isPending}>
+              {updateIdeaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Guardar Cambios
             </Button>
           </DialogFooter>

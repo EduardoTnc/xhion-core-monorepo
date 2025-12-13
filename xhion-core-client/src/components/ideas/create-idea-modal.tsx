@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { X, Loader2 } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useCreateIdea } from "@/hooks/mutations/useIdeaMutations"
 
 interface CreateIdeaModalProps {
   open: boolean
@@ -21,9 +21,8 @@ export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaMod
   const [categoria, setCategoria] = useState<"Feature" | "Improvement" | "Innovation" | "Recommendation">("Feature")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { crearIdea } = useIdeasStore()
+  const createIdeaMutation = useCreateIdea()
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -38,34 +37,32 @@ export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaMod
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!titulo.trim() || !descripcion.trim()) {
       return
     }
 
-    setIsSubmitting(true)
-    try {
-      await crearIdea({
+    createIdeaMutation.mutate(
+      {
         titulo: titulo.trim(),
         descripcion: descripcion.trim(),
         categoria,
         tags,
-      })
-      
-      // Reset form
-      setTitulo("")
-      setDescripcion("")
-      setCategoria("Feature")
-      setTags([])
-      setNewTag("")
-      
-      onOpenChange(false)
-      if (onSuccess) onSuccess()
-    } catch (error) {
-      console.error("Error al crear idea:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
+      },
+      {
+        onSuccess: () => {
+          // Reset form
+          setTitulo("")
+          setDescripcion("")
+          setCategoria("Feature")
+          setTags([])
+          setNewTag("")
+
+          onOpenChange(false)
+          if (onSuccess) onSuccess()
+        },
+      }
+    )
   }
 
   return (
@@ -162,11 +159,11 @@ export function CreateIdeaModal({ open, onOpenChange, onSuccess }: CreateIdeaMod
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={createIdeaMutation.isPending}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || !titulo.trim() || !descripcion.trim()}>
-              {isSubmitting ? (
+            <Button type="submit" disabled={createIdeaMutation.isPending || !titulo.trim() || !descripcion.trim()}>
+              {createIdeaMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creando...

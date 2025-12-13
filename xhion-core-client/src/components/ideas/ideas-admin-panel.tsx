@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,9 +35,9 @@ import {
     Rocket,
     ShieldCheck,
 } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useIdeas } from "@/hooks/queries"
+import { useUpdateIdea } from "@/hooks/mutations/useIdeaMutations"
 import { useAuthStore } from "@/store/authStore"
-import { ideasService } from "@/services/ideasService"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import { toast } from "sonner"
@@ -50,7 +50,10 @@ type IdeaStatus = 'Evaluating' | 'Approved' | 'InDevelopment' | 'Implemented' | 
 
 export function IdeasAdminPanel({ onUpdate }: IdeasAdminPanelProps) {
     const { user } = useAuthStore()
-    const { ideas, isLoading, fetchIdeas } = useIdeasStore()
+
+    // TanStack Query
+    const { data: ideas = [], isLoading, refetch } = useIdeas()
+    const updateIdeaMutation = useUpdateIdea()
 
     const [searchQuery, setSearchQuery] = useState("")
     const [filterStatus, setFilterStatus] = useState<string>("all")
@@ -60,10 +63,6 @@ export function IdeasAdminPanel({ onUpdate }: IdeasAdminPanelProps) {
     // Check permissions
     const canModerate = user?.permisos?.includes("ideas.moderar") ||
         user?.permisos?.includes("ideas.cambiar_estado")
-
-    useEffect(() => {
-        fetchIdeas()
-    }, [])
 
     const filteredIdeas = ideas.filter(idea => {
         const matchesSearch = idea.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,17 +74,20 @@ export function IdeasAdminPanel({ onUpdate }: IdeasAdminPanelProps) {
 
     const handleStatusChange = async (ideaId: string, newStatus: IdeaStatus) => {
         setIsUpdating(ideaId)
-        try {
-            await ideasService.actualizar(ideaId, { estado: newStatus })
-            toast.success(`Estado actualizado a "${getStatusLabel(newStatus)}"`)
-            fetchIdeas()
-            onUpdate?.()
-        } catch (error) {
-            console.error("Error updating status:", error)
-            toast.error("Error al actualizar el estado")
-        } finally {
-            setIsUpdating(null)
-        }
+        updateIdeaMutation.mutate(
+            { id: ideaId, data: { estado: newStatus } },
+            {
+                onSuccess: () => {
+                    toast.success(`Estado actualizado a "${getStatusLabel(newStatus)}"`)
+                    onUpdate?.()
+                    setIsUpdating(null)
+                },
+                onError: () => {
+                    toast.error("Error al actualizar el estado")
+                    setIsUpdating(null)
+                },
+            }
+        )
     }
 
     const handleBulkStatusChange = async (newStatus: IdeaStatus) => {
@@ -94,11 +96,13 @@ export function IdeasAdminPanel({ onUpdate }: IdeasAdminPanelProps) {
         setIsUpdating("bulk")
         try {
             await Promise.all(
-                selectedIds.map(id => ideasService.actualizar(id, { estado: newStatus }))
+                selectedIds.map(id =>
+                    updateIdeaMutation.mutateAsync({ id, data: { estado: newStatus } })
+                )
             )
             toast.success(`${selectedIds.length} ideas actualizadas`)
             setSelectedIds([])
-            fetchIdeas()
+            refetch()
             onUpdate?.()
         } catch (error) {
             console.error("Error in bulk update:", error)

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X, Plus, Loader2, Sparkles, Tag } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useCreateIdea, useUpdateIdea } from "@/hooks/mutations/useIdeaMutations"
 import type { CrearIdeaDto } from "@/services/ideasService"
 
 interface InlineIdeaEditorProps {
@@ -25,7 +25,10 @@ interface InlineIdeaEditorProps {
 }
 
 export function InlineIdeaEditor({ onClose, onSuccess, ideaId, initialData }: InlineIdeaEditorProps) {
-    const { crearIdea, actualizarIdea, isLoading } = useIdeasStore()
+    // TanStack Query mutations
+    const createIdeaMutation = useCreateIdea()
+    const updateIdeaMutation = useUpdateIdea()
+    const isLoading = createIdeaMutation.isPending || updateIdeaMutation.isPending
 
     const [titulo, setTitulo] = useState(initialData?.titulo || "")
     const [descripcion, setDescripcion] = useState(initialData?.descripcion || "")
@@ -62,26 +65,28 @@ export function InlineIdeaEditor({ onClose, onSuccess, ideaId, initialData }: In
     const handleSubmit = async () => {
         if (!titulo.trim() || !descripcion.trim()) return
 
-        try {
-            if (isEditing) {
-                await actualizarIdea(ideaId, {
-                    titulo,
-                    descripcion,
-                    categoria,
-                    tags,
-                })
-            } else {
-                await crearIdea({
-                    titulo,
-                    descripcion,
-                    categoria,
-                    tags,
-                } as CrearIdeaDto)
-            }
+        const ideaData = {
+            titulo,
+            descripcion,
+            categoria,
+            tags,
+        }
+
+        const handleSuccessCallback = () => {
             onSuccess?.()
             onClose()
-        } catch (error) {
-            console.error("Error:", error)
+        }
+
+        if (isEditing) {
+            updateIdeaMutation.mutate(
+                { id: ideaId, data: ideaData },
+                { onSuccess: handleSuccessCallback }
+            )
+        } else {
+            createIdeaMutation.mutate(
+                ideaData as CrearIdeaDto,
+                { onSuccess: handleSuccessCallback }
+            )
         }
     }
 

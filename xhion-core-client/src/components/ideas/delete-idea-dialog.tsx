@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,8 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Loader2 } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
-import { toast } from "sonner"
+import { useDeleteIdea } from "@/hooks/mutations/useIdeaMutations"
 import type { Idea } from "@/services/ideasService"
 
 interface DeleteIdeaDialogProps {
@@ -24,23 +22,15 @@ interface DeleteIdeaDialogProps {
 }
 
 export function DeleteIdeaDialog({ open, onOpenChange, idea, onSuccess }: DeleteIdeaDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
-  const { eliminarIdea } = useIdeasStore()
+  const deleteIdeaMutation = useDeleteIdea()
 
   const handleDelete = async () => {
-    setIsDeleting(true)
-
-    try {
-      await eliminarIdea(idea.id)
-      toast.success("Idea eliminada correctamente")
-      onOpenChange(false)
-      onSuccess?.()
-    } catch (error: any) {
-      console.error("Error al eliminar idea:", error)
-      toast.error(error.response?.data?.message || "Error al eliminar la idea")
-    } finally {
-      setIsDeleting(false)
-    }
+    deleteIdeaMutation.mutate(idea.id, {
+      onSuccess: () => {
+        onOpenChange(false)
+        onSuccess?.()
+      },
+    })
   }
 
   return (
@@ -58,16 +48,16 @@ export function DeleteIdeaDialog({ open, onOpenChange, idea, onSuccess }: Delete
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleteIdeaMutation.isPending}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()
               handleDelete()
             }}
-            disabled={isDeleting}
+            disabled={deleteIdeaMutation.isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {deleteIdeaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Eliminar
           </AlertDialogAction>
         </AlertDialogFooter>

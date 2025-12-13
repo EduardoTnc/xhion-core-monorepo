@@ -220,7 +220,7 @@ export function ProjectWorkspaceEnhanced({
       toast.success("Etapa creada");
       await Promise.all([
         fetchEtapas(selectedProjectId),
-        fetchTareas({ proyectoId: selectedProjectId }),
+        refetchTareas(),
       ]);
     } catch (error: any) {
       const message = error?.message || "Error al crear etapa";
@@ -233,7 +233,7 @@ export function ProjectWorkspaceEnhanced({
     if (!selectedProjectId) return;
     try {
       await updateEtapa(selectedProjectId, etapaId, data);
-      await Promise.all([fetchEtapas(selectedProjectId), fetchTareas({ proyectoId: selectedProjectId })]);
+      await Promise.all([fetchEtapas(selectedProjectId), refetchTareas()]);
       toast.success("Etapa actualizada");
     } catch (error: any) {
       toast.error(error.message || "Error al actualizar etapa");
@@ -248,7 +248,7 @@ export function ProjectWorkspaceEnhanced({
       setEtapaToDelete(null);
       setShowDeleteEtapaConfirm(false);
       await fetchEtapas(selectedProjectId);
-      await fetchTareas({ proyectoId: selectedProjectId });
+      await refetchTareas();
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar etapa");
     }
@@ -260,7 +260,7 @@ export function ProjectWorkspaceEnhanced({
         fetchProyectoById(projectId),
         fetchEtapas(projectId),
         fetchMiembros(projectId),
-        fetchTareas({ proyectoId: projectId }),
+        refetchTareas(),
       ]);
 
       const { etapas: latestEtapas, miembros: latestMiembros } = useProjectStore.getState();
@@ -748,7 +748,7 @@ export function ProjectWorkspaceEnhanced({
         onOpenChange={(open) => {
           setShowCreateTaskModal(open);
           if (!open && selectedProjectId) {
-            fetchTareas({ proyectoId: selectedProjectId });
+            refetchTareas();
           }
         }}
         proyectoId={selectedProjectId || ""}
@@ -762,7 +762,7 @@ export function ProjectWorkspaceEnhanced({
           if (!open) {
             setTareaToEdit(null);
             if (selectedProjectId) {
-              fetchTareas({ proyectoId: selectedProjectId });
+              refetchTareas();
             }
           }
         }}

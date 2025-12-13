@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,12 +17,12 @@ import {
 import { ThumbsUp, MessageSquare, Sparkles, Calendar, User, MoreVertical, Edit, Trash2, Loader2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useIdea } from "@/hooks/queries"
+import { useVoteIdea } from "@/hooks/mutations/useIdeaMutations"
 import { useAuthStore } from "@/store/authStore"
 import { IdeaComments } from "./idea-comments"
 import { EditIdeaModal } from "./edit-idea-modal"
 import { DeleteIdeaDialog } from "./delete-idea-dialog"
-import type { Idea } from "@/services/ideasService"
 
 interface IdeaDetailsModalProps {
   open: boolean
@@ -32,42 +32,21 @@ interface IdeaDetailsModalProps {
 }
 
 export function IdeaDetailsModal({ open, onOpenChange, ideaId, onUpdate }: IdeaDetailsModalProps) {
-  const [idea, setIdea] = useState<Idea | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const { votarIdea } = useIdeasStore()
+  // TanStack Query hooks
+  const { data: idea, isLoading, refetch } = useIdea(ideaId, { enabled: open && !!ideaId })
+  const voteIdeaMutation = useVoteIdea()
   const { user } = useAuthStore()
-
-  useEffect(() => {
-    if (open && ideaId) {
-      cargarIdea()
-    }
-  }, [open, ideaId])
-
-  const cargarIdea = async () => {
-    setIsLoading(true)
-    try {
-      // Llamar directamente al servicio sin usar el store para evitar efectos secundarios
-      const { ideasService } = await import("@/services/ideasService")
-      const ideaCargada = await ideasService.obtenerPorId(ideaId)
-      setIdea(ideaCargada)
-    } catch (error) {
-      console.error("Error al cargar idea:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleVote = async () => {
     if (!idea) return
-    await votarIdea(idea.id)
-    await cargarIdea()
+    voteIdeaMutation.mutate(idea.id)
   }
 
   const handleSuccess = () => {
-    cargarIdea()
+    refetch()
     onUpdate?.()
   }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,7 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MessageSquare, Send, Loader2, MoreVertical, Trash2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useIdeaComments } from "@/hooks/queries"
+import { useAddIdeaComment, useDeleteIdeaComment } from "@/hooks/mutations/useIdeaMutations"
 import { useAuthStore } from "@/store/authStore"
 import { toast } from "sonner"
 import {
@@ -28,32 +29,14 @@ interface IdeaCommentsProps {
 }
 
 export function IdeaComments({ ideaId }: IdeaCommentsProps) {
-  const [comentarios, setComentarios] = useState<any[]>([])
   const [nuevoComentario, setNuevoComentario] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [comentarioAEliminar, setComentarioAEliminar] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
 
-  const { obtenerComentarios, crearComentario, eliminarComentario } = useIdeasStore()
+  // TanStack Query hooks
+  const { data: comentarios = [], isLoading } = useIdeaComments(ideaId)
+  const addCommentMutation = useAddIdeaComment()
+  const deleteCommentMutation = useDeleteIdeaComment()
   const { user } = useAuthStore()
-
-  useEffect(() => {
-    cargarComentarios()
-  }, [ideaId])
-
-  const cargarComentarios = async () => {
-    setIsLoading(true)
-    try {
-      const data = await obtenerComentarios(ideaId)
-      setComentarios(data)
-    } catch (error) {
-      console.error("Error al cargar comentarios:", error)
-      toast.error("Error al cargar comentarios")
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,37 +46,24 @@ export function IdeaComments({ ideaId }: IdeaCommentsProps) {
       return
     }
 
-    setIsSubmitting(true)
-
-    try {
-      await crearComentario(ideaId, { contenido: nuevoComentario.trim() })
-      setNuevoComentario("")
-      toast.success("Comentario agregado")
-      await cargarComentarios()
-    } catch (error: any) {
-      console.error("Error al crear comentario:", error)
-      toast.error(error.response?.data?.message || "Error al agregar comentario")
-    } finally {
-      setIsSubmitting(false)
-    }
+    addCommentMutation.mutate(
+      { ideaId, contenido: nuevoComentario.trim() },
+      {
+        onSuccess: () => {
+          setNuevoComentario("")
+        },
+      }
+    )
   }
 
   const handleDelete = async () => {
     if (!comentarioAEliminar) return
 
-    setIsDeleting(true)
-
-    try {
-      await eliminarComentario(comentarioAEliminar)
-      toast.success("Comentario eliminado")
-      setComentarioAEliminar(null)
-      await cargarComentarios()
-    } catch (error: any) {
-      console.error("Error al eliminar comentario:", error)
-      toast.error(error.response?.data?.message || "Error al eliminar comentario")
-    } finally {
-      setIsDeleting(false)
-    }
+    deleteCommentMutation.mutate(comentarioAEliminar, {
+      onSuccess: () => {
+        setComentarioAEliminar(null)
+      },
+    })
   }
 
   const getInitials = (name: string) => {
@@ -125,11 +95,11 @@ export function IdeaComments({ ideaId }: IdeaCommentsProps) {
             value={nuevoComentario}
             onChange={(e) => setNuevoComentario(e.target.value)}
             rows={3}
-            disabled={isSubmitting}
+            disabled={addCommentMutation.isPending}
           />
           <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={isSubmitting || !nuevoComentario.trim()}>
-              {isSubmitting ? (
+            <Button type="submit" size="sm" disabled={addCommentMutation.isPending || !nuevoComentario.trim()}>
+              {addCommentMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Enviando...
@@ -213,16 +183,16 @@ export function IdeaComments({ ideaId }: IdeaCommentsProps) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleteCommentMutation.isPending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault()
                   handleDelete()
                 }}
-                disabled={isDeleting}
+                disabled={deleteCommentMutation.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {deleteCommentMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Eliminar
               </AlertDialogAction>
             </AlertDialogFooter>

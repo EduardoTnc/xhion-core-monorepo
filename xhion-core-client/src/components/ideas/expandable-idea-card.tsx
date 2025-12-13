@@ -23,7 +23,7 @@ import {
     ShieldCheck,
     XCircle,
 } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useVoteIdea, useDeleteIdea } from "@/hooks/mutations/useIdeaMutations"
 import { useAuthStore } from "@/store/authStore"
 import { ideasService } from "@/services/ideasService"
 import type { Idea } from "@/services/ideasService"
@@ -50,12 +50,13 @@ interface ExpandableIdeaCardProps {
 }
 
 export function ExpandableIdeaCard({ idea, isExpanded, onToggleExpand, onUpdate }: ExpandableIdeaCardProps) {
-    const { votarIdea, eliminarIdea } = useIdeasStore()
+    // TanStack Query mutations
+    const voteIdeaMutation = useVoteIdea()
+    const deleteIdeaMutation = useDeleteIdea()
     const { user } = useAuthStore()
 
     const [isEditing, setIsEditing] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
     const [ideaData, setIdeaData] = useState(idea)
 
     // Comments
@@ -103,35 +104,32 @@ export function ExpandableIdeaCard({ idea, isExpanded, onToggleExpand, onUpdate 
             }
         }))
 
-        try {
-            await votarIdea(ideaData.id)
-            // Silent update to parent for stats only (no list reload)
-            onUpdate?.()
-        } catch (error) {
-            // Revert on error
-            setIdeaData(prev => ({
-                ...prev,
-                hasVoted: wasVoted,
-                _count: {
-                    ...prev._count,
-                    votos: wasVoted ? prev._count.votos + 1 : prev._count.votos - 1
-                }
-            }))
-            toast.error("Error al votar")
-        }
+        voteIdeaMutation.mutate(ideaData.id, {
+            onSuccess: () => {
+                // Silent update to parent for stats only (no list reload)
+                onUpdate?.()
+            },
+            onError: () => {
+                // Revert on error
+                setIdeaData(prev => ({
+                    ...prev,
+                    hasVoted: wasVoted,
+                    _count: {
+                        ...prev._count,
+                        votos: wasVoted ? prev._count.votos + 1 : prev._count.votos - 1
+                    }
+                }))
+            },
+        })
     }
 
     const handleDelete = async () => {
-        setIsDeleting(true)
-        try {
-            await eliminarIdea(ideaData.id)
-            onUpdate?.()
-        } catch (error) {
-            console.error("Error deleting:", error)
-        } finally {
-            setIsDeleting(false)
-            setShowDeleteDialog(false)
-        }
+        deleteIdeaMutation.mutate(ideaData.id, {
+            onSuccess: () => {
+                setShowDeleteDialog(false)
+                onUpdate?.()
+            },
+        })
     }
 
     const handleSendComment = async () => {
@@ -511,10 +509,10 @@ export function ExpandableIdeaCard({ idea, isExpanded, onToggleExpand, onUpdate 
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            disabled={isDeleting}
+                            disabled={deleteIdeaMutation.isPending}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {isDeleting ? (
+                            {deleteIdeaMutation.isPending ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                     Eliminando...

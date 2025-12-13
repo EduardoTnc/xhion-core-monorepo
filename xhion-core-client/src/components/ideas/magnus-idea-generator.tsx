@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X, Sparkles, Loader2, Bot, Wand2, Check, RefreshCw } from "lucide-react"
-import { useIdeasStore } from "@/store/ideasStore"
+import { useCreateIdea } from "@/hooks/mutations/useIdeaMutations"
 import { aiService } from "@/services/aiService"
 import { toast } from "sonner"
 import type { CrearIdeaDto } from "@/services/ideasService"
@@ -27,7 +27,8 @@ interface GeneratedIdea {
 }
 
 export function MagnusIdeaGenerator({ onClose, onSuccess }: MagnusIdeaGeneratorProps) {
-    const { crearIdea, isLoading: isSaving } = useIdeasStore()
+    // TanStack Query mutation
+    const createIdeaMutation = useCreateIdea()
 
     const [prompt, setPrompt] = useState("")
     const [categoria, setCategoria] = useState("Feature")
@@ -115,22 +116,22 @@ Responde EXACTAMENTE en este formato JSON (sin markdown, sin texto extra):
     const handleCreateIdea = async () => {
         if (!generatedIdea) return
 
-        try {
-            await crearIdea({
+        createIdeaMutation.mutate(
+            {
                 titulo: generatedIdea.titulo,
                 descripcion: generatedIdea.descripcion,
                 categoria: generatedIdea.categoria,
                 tags: generatedIdea.tags,
                 aiScore: generatedIdea.aiScore,
                 aiInsight: generatedIdea.aiInsight,
-            } as CrearIdeaDto)
-
-            toast.success("¡Idea creada exitosamente!")
-            onSuccess?.()
-            onClose()
-        } catch (error) {
-            console.error("Error creating idea:", error)
-        }
+            } as CrearIdeaDto,
+            {
+                onSuccess: () => {
+                    onSuccess?.()
+                    onClose()
+                },
+            }
+        )
     }
 
     return (
@@ -282,10 +283,10 @@ Responde EXACTAMENTE en este formato JSON (sin markdown, sin texto extra):
                                     </Button>
                                     <Button
                                         onClick={handleCreateIdea}
-                                        disabled={isSaving}
+                                        disabled={createIdeaMutation.isPending}
                                         className="gap-2 bg-gradient-to-r from-green-600 to-green-500"
                                     >
-                                        {isSaving ? (
+                                        {createIdeaMutation.isPending ? (
                                             <>
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 Creando...
