@@ -1,5 +1,20 @@
 import apiClient from '@/api/axios';
-import type { UserPreferences, NotificationSettings } from '../store/settingsStore';
+
+// Types previously in settingsStore - now defined locally
+export interface UserPreferences {
+  language: string;
+  timezone: string;
+  dateFormat: string;
+  theme: 'light' | 'dark' | 'system';
+}
+
+export interface NotificationSettings {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  taskReminders: boolean;
+  projectUpdates: boolean;
+  mentionAlerts: boolean;
+}
 
 export interface UpdateProfileDto {
   nombreCompleto?: string;

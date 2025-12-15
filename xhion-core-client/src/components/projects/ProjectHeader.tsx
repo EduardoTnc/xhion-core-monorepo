@@ -22,7 +22,7 @@ import {
 import { UserPlus, Settings, MoreVertical, Calendar, Users, Eye, Copy, Download, Archive } from "lucide-react";
 import { type Proyecto } from "@/services/projectService";
 import { type ProyectoMiembro } from "@/services/projectService";
-import { useProjectStore } from "@/store/projectStore";
+import { useDuplicateProject, useUpdateProject } from "@/hooks/mutations/useProjectMutations";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProjectDetailsModal } from "./ProjectDetailsModal";
@@ -55,7 +55,10 @@ export function ProjectHeader({
   etapasCount,
   tareasCount,
 }: ProjectHeaderProps) {
-  const { duplicateProyecto, updateProyecto } = useProjectStore();
+  // TanStack Query mutations
+  const duplicateProjectMutation = useDuplicateProject();
+  const updateProjectMutation = useUpdateProject();
+
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -87,13 +90,12 @@ export function ProjectHeader({
   const handleDuplicar = async () => {
     try {
       setIsDuplicating(true);
-      await duplicateProyecto(proyecto.id);
-      toast.success("Proyecto duplicado exitosamente");
+      await duplicateProjectMutation.mutateAsync(proyecto.id);
       if (onDuplicate) {
         onDuplicate();
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al duplicar el proyecto");
+      // Mutations handle errors
     } finally {
       setIsDuplicating(false);
     }
@@ -147,14 +149,16 @@ export function ProjectHeader({
   const handleArchivar = async () => {
     try {
       setIsArchiving(true);
-      await updateProyecto(proyecto.id, { estado: "Archivado" });
-      toast.success("Proyecto archivado exitosamente");
+      await updateProjectMutation.mutateAsync({
+        id: proyecto.id,
+        data: { estado: "Archivado" }
+      });
       setShowArchiveDialog(false);
       if (onArchive) {
         onArchive();
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al archivar el proyecto");
+      // Mutations handle errors
     } finally {
       setIsArchiving(false);
     }
@@ -283,7 +287,7 @@ export function ProjectHeader({
                     Exportar datos
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => setShowArchiveDialog(true)}
                   >

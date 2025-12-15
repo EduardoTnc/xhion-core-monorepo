@@ -20,7 +20,6 @@ import { EventosModule } from './eventos/eventos.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { SolicitudesAccesoModule } from './solicitudes-acceso/solicitudes-acceso.module';
 import { RecursosModule } from './recursos/recursos.module';
-import { FinanzasModule } from './finanzas/finanzas.module';
 import { SystemSettingsModule } from './system-settings/system-settings.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -56,8 +55,6 @@ import { HealthModule } from './health/health.module';
     NotificacionesModule,
     SolicitudesAccesoModule,
     RecursosModule,
-    FinanzasModule,
-    FinanzasModule,
     SystemSettingsModule,
     FilesModule,
     HealthModule,

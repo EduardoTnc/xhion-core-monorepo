@@ -95,7 +95,7 @@ export class TareasController {
   @ApiResponse({ status: 403, description: 'No tienes acceso a esta tarea' })
   @ApiResponse({ status: 404, description: 'Tarea no encontrada' })
   findOne(@Param('id') id: string, @Request() req) {
-    return this.tareasService.findOne(id, req.user.id);
+    return this.tareasService.findOne(id, req.user.id, req.user.permisos);
   }
 
   @Patch(':id')
@@ -226,7 +226,7 @@ export class TareasController {
   @RequiresPermission('tareas.ver')
   @ApiOperation({ summary: 'Listar adjuntos de una tarea' })
   getAdjuntos(@Param('id') id: string, @Request() req) {
-    return this.tareasService.getAdjuntos(id, req.user.id);
+    return this.tareasService.getAdjuntos(id, req.user.id, req.user.permisos);
   }
 
   @Delete(':id/adjuntos/:archivoId')

@@ -113,6 +113,27 @@ export function useDeleteProject() {
     });
 }
 
+/**
+ * Mutation para duplicar un proyecto
+ */
+export function useDuplicateProject() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => projectService.duplicate(id),
+        onSuccess: () => {
+            toast.success('Proyecto duplicado exitosamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.message || 'Error al duplicar el proyecto');
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.projects.lists() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.activeProjects() });
+        },
+    });
+}
+
 // ==================== MIEMBROS MUTATIONS ====================
 
 /**

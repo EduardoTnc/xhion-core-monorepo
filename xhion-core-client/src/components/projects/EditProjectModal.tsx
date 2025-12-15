@@ -21,8 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { useProjectStore } from "@/store/projectStore";
-import { useDepartmentStore } from "@/store/departmentStore";
+import { useUpdateProject, useDepartments } from "@/hooks/queries";
 import { toast } from "sonner";
 import { Loader2, Building2, Calendar } from "lucide-react";
 import { type Proyecto } from "@/services/projectService";
@@ -43,17 +42,14 @@ interface ProjectFormData {
 }
 
 export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectModalProps) {
-  const { updateProyecto, isLoading } = useProjectStore();
-  const { departamentos, fetchDepartamentos } = useDepartmentStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // TanStack Query mutations
+  const updateProjectMutation = useUpdateProject();
+
+  // TanStack Query for departments
+  const { data: departamentos = [] } = useDepartments({ enabled: open });
+
   const [selectedDepartamento, setSelectedDepartamento] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-
-  useEffect(() => {
-    if (open) {
-      fetchDepartamentos();
-    }
-  }, [open, fetchDepartamentos]);
 
   const {
     register,
@@ -68,15 +64,15 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
     if (proyecto) {
       setValue("nombre", proyecto.nombre);
       setValue("descripcion", proyecto.descripcion || "");
-      
+
       // Convertir fechas ISO string a Date para el DateRangePicker
       const from = proyecto.fechaInicio ? new Date(proyecto.fechaInicio) : undefined;
       const to = proyecto.fechaFin ? new Date(proyecto.fechaFin) : undefined;
-      
+
       if (from || to) {
         setDateRange({ from, to });
       }
-      
+
       setValue("fechaInicio", from);
       setValue("fechaFin", to);
       setValue("estado", proyecto.estado);
@@ -88,8 +84,6 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
     if (!proyecto) return;
 
     try {
-      setIsSubmitting(true);
-
       const projectData = {
         nombre: data.nombre,
         descripcion: data.descripcion || undefined,
@@ -99,13 +93,10 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
         departamentoId: selectedDepartamento === "none" ? undefined : selectedDepartamento,
       };
 
-      await updateProyecto(proyecto.id, projectData);
-      toast.success("Proyecto actualizado exitosamente");
+      await updateProjectMutation.mutateAsync({ id: proyecto.id, data: projectData });
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(error.message || "Error al actualizar proyecto");
-    } finally {
-      setIsSubmitting(false);
+      // Mutation handles errors
     }
   };
 
@@ -216,12 +207,12 @@ export function EditProjectModal({ open, onOpenChange, proyecto }: EditProjectMo
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={updateProjectMutation.isPending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || isLoading}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={updateProjectMutation.isPending}>
+              {updateProjectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Actualizar Proyecto
             </Button>
           </DialogFooter>

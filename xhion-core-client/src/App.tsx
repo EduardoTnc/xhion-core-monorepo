@@ -7,7 +7,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { MainLayout } from './components/layout/MainLayout'
 import { ThemeProvider } from './components/providers/ThemeProvider'
 import { useThemeStore } from './store/themeStore'
-import { useSystemSettingsStore } from './store/systemSettingsStore'
+import { useSystemSettings } from './hooks/queries'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import LoginPage from './pages/LoginPage'
 import AceptarInvitacionPage from './pages/AceptarInvitacionPage'
@@ -32,13 +32,37 @@ import SystemSettingsPage from './pages/SystemSettingsPage'
 // Componente interno que usa los hooks
 function AppContent() {
   const { theme } = useThemeStore();
-  const { fetchSettings } = useSystemSettingsStore();
+  const { data: settings } = useSystemSettings();
   const { isOnline } = useServiceWorker();
 
-  // Cargar configuración del sistema al iniciar
+  // Aplicar configuración del sistema cuando cambia
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (!settings) return;
+
+    // Título
+    document.title = `${settings.nombreEmpresa} | Plataforma de Gestión`;
+
+    // Favicon
+    if (settings.faviconUrl) {
+      const faviconFullUrl = settings.faviconUrl.startsWith('http')
+        ? settings.faviconUrl
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${settings.faviconUrl}`;
+      const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = faviconFullUrl;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+
+    // Colores CSS Variables
+    const root = document.documentElement;
+    if (settings.colorPrimario) {
+      root.style.setProperty('--primary', settings.colorPrimario);
+    }
+    if (settings.colorSecundario) {
+      root.style.setProperty('--secondary', settings.colorSecundario);
+    }
+  }, [settings]);
 
   // Aplicar el tema al elemento HTML
   useEffect(() => {

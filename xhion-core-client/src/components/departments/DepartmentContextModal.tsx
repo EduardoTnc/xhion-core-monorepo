@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles } from "lucide-react";
-import { useConocimientoStore } from "@/store/conocimientoStore";
+import { useCreateContextoDepartamento, useUpdateContextoDepartamento } from "@/hooks/queries";
 import type { ContextoDepartamento } from "@/services/conocimientoService";
 
 const contextSchema = z.object({
@@ -42,8 +42,10 @@ export function DepartmentContextModal({
   departamentoNombre,
   contextoExistente,
 }: DepartmentContextModalProps) {
-  const { createContextoDepartamento, updateContextoDepartamento, isLoading } =
-    useConocimientoStore();
+  // TanStack Query mutations
+  const createMutation = useCreateContextoDepartamento();
+  const updateMutation = useUpdateContextoDepartamento();
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   const {
     register,
@@ -84,16 +86,16 @@ export function DepartmentContextModal({
   const onSubmit = async (data: ContextFormData) => {
     try {
       if (contextoExistente) {
-        await updateContextoDepartamento(departamentoId, data);
+        await updateMutation.mutateAsync({ departamentoId, data });
       } else {
-        await createContextoDepartamento({
+        await createMutation.mutateAsync({
           departamentoId,
           ...data,
         });
       }
       onOpenChange(false);
     } catch (error) {
-      // Error manejado por el store
+      // Mutations handle errors
     }
   };
 

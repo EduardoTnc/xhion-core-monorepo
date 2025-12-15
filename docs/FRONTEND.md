@@ -1,6 +1,6 @@
 # 📗 Manual del Frontend - XHION Core
 
-> Guía práctica de la arquitectura frontend: React 19, TypeScript, Zustand, shadcn/ui y mejores prácticas.
+> Guía práctica de la arquitectura frontend: React 19, TypeScript, TanStack Query V5, Zustand, shadcn/ui y mejores prácticas.
 
 ---
 
@@ -8,12 +8,13 @@
 
 1. [Stack Tecnológico](#-stack-tecnológico)
 2. [Estructura del Proyecto](#-estructura-del-proyecto)
-3. [Estado Global (Zustand)](#-estado-global-zustand)
-4. [Comunicación con la API](#-comunicación-con-la-api)
-5. [Sistema de Diseño](#-sistema-de-diseño)
-6. [Routing](#-routing)
-7. [Formularios](#-formularios)
-8. [Performance](#-performance)
+3. [Estado del Servidor (TanStack Query)](#-estado-del-servidor-tanstack-query-v5)
+4. [Estado del Cliente (Zustand)](#-estado-del-cliente-zustand)
+5. [Comunicación con la API](#-comunicación-con-la-api)
+6. [Sistema de Diseño](#-sistema-de-diseño)
+7. [Routing](#-routing)
+8. [Formularios](#-formularios)
+9. [Performance](#-performance)
 
 ---
 
@@ -24,7 +25,8 @@
 | **React** | 19.2.0 | Framework UI |
 | **TypeScript** | 5.9.3 | Tipado estático |
 | **Vite** | 7.1.9 | Build tool ultra-rápido |
-| **Zustand** | 5.0.8 | Estado global simple |
+| **TanStack Query** | 5.x | Server-state, caching, mutations |
+| **Zustand** | 5.0.8 | Client-state (UI, auth, theme) |
 | **React Router** | 7.9.3 | Navegación |
 | **shadcn/ui** | Latest | Componentes UI |
 | **Tailwind CSS** | 4.1.14 | Estilos utility-first |
@@ -34,7 +36,8 @@
 
 **¿Por qué este stack?**
 - ⚡ **Vite:** Build 10-100x más rápido que Webpack
-- 🎯 **Zustand:** Más simple que Redux, más potente que Context
+- 🔄 **TanStack Query:** Caching automático, sincronización con servidor
+- 🎯 **Zustand:** Simple para estado del cliente (UI, auth, theme)
 - 🎨 **shadcn/ui:** Componentes copiables, no una librería
 - 🔒 **TypeScript:** Errores en tiempo de desarrollo, no en producción
 
@@ -58,19 +61,34 @@ xhion-core-client/
 │   │   ├── ProjectsPage.tsx
 │   │   └── ...
 │   │
-│   ├── store/               # Estado global (Zustand)
-│   │   ├── authStore.ts
-│   │   ├── projectStore.ts
-│   │   └── ...
-│   │
-│   ├── services/            # Llamadas a la API
-│   │   ├── api/axiosInstance.ts
-│   │   ├── proyectosService.ts
+│   ├── store/               # Estado del cliente (Zustand)
+│   │   ├── authStore.ts     # Autenticación
+│   │   ├── themeStore.ts    # Tema UI
+│   │   ├── calendarStore.ts # Estado del calendario
+│   │   ├── socketStore.ts   # WebSocket
 │   │   └── ...
 │   │
 │   ├── hooks/               # Custom hooks
-│   ├── types/               # Tipos TypeScript
-│   └── lib/                 # Utilidades
+│   │   ├── queries/         # TanStack Query hooks (16)
+│   │   │   ├── useProjects.ts
+│   │   │   ├── useTasks.ts
+│   │   │   ├── useDepartments.ts
+│   │   │   └── index.ts     # Re-exports
+│   │   ├── mutations/       # TanStack Query mutations (11)
+│   │   │   ├── useProjectMutations.ts
+│   │   │   ├── useTaskMutations.ts
+│   │   │   └── ...
+│   │   └── *.ts             # Otros hooks (useWebSocket, etc.)
+│   │
+│   ├── services/            # Llamadas directas a la API
+│   │   ├── api/axios.ts
+│   │   ├── proyectosService.ts
+│   │   └── ...
+│   │
+│   ├── lib/                 # Utilidades
+│   │   └── queryKeys.ts     # Claves de TanStack Query
+│   │
+│   └── types/               # Tipos TypeScript
 │
 └── package.json
 ```
@@ -79,91 +97,214 @@ xhion-core-client/
 
 ---
 
-## 🗃️ Estado Global (Zustand)
+## 🔄 Estado del Servidor (TanStack Query V5)
 
-### ¿Por qué Zustand?
+### Arquitectura de Estado Dual
+
+XHION Core utiliza un enfoque de **estado dual**:
+
+| Tipo | Tecnología | Propósito | Ejemplos |
+|------|------------|-----------|----------|
+| **Server-State** | TanStack Query V5 | Datos de la API | Proyectos, tareas, usuarios |
+| **Client-State** | Zustand | Estado de la UI | Auth, theme, modals |
+
+### ¿Por qué TanStack Query?
 
 ```typescript
-// ❌ Redux: ~50 líneas para un contador
-// ❌ Context: Re-renders innecesarios
-// ✅ Zustand: 10 líneas, performance óptimo
+// ❌ Antes (Zustand para todo):
+// - Caching manual
+// - Invalidación manual
+// - Estados loading/error manuales
+// - Refetch manual al volver a la página
+
+// ✅ Ahora (TanStack Query):
+// - Caching automático
+// - Invalidación inteligente al mutar
+// - Estados loading/error/success built-in
+// - Background refetching automático
+// - Retry automático en errores
 ```
 
-### Patrón de Store
+### Patrón de Query Hook
 
 ```typescript
-// store/projectStore.ts
-import { create } from 'zustand'
-import { proyectosService } from '@/services/proyectosService'
+// hooks/queries/useProjects.ts
+import { useQuery } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queryKeys'
+import { projectService } from '@/services/projectService'
 
-interface ProjectState {
-  proyectos: Proyecto[]
-  isLoading: boolean
-  
-  // Acciones
-  fetchProyectos: () => Promise<void>
-  createProyecto: (dto: CreateProyectoDto) => Promise<void>
+export function useProjects(filters?: ProjectFilters) {
+  return useQuery({
+    queryKey: queryKeys.projects.list(filters),
+    queryFn: () => projectService.getAll(filters),
+    staleTime: 1000 * 60, // 1 minuto
+  })
 }
 
-export const useProjectStore = create<ProjectState>((set) => ({
-  proyectos: [],
-  isLoading: false,
-  
-  fetchProyectos: async () => {
-    set({ isLoading: true })
-    const data = await proyectosService.getAll()
-    set({ proyectos: data, isLoading: false })
-  },
-  
-  createProyecto: async (dto) => {
-    const proyecto = await proyectosService.create(dto)
-    set(state => ({ proyectos: [...state.proyectos, proyecto] }))
-  }
-}))
+export function useProject(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.projects.detail(id!),
+    queryFn: () => projectService.getById(id!),
+    enabled: !!id, // Solo ejecuta si hay ID
+  })
+}
+```
+
+### Patrón de Mutation Hook
+
+```typescript
+// hooks/mutations/useProjectMutations.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queryKeys'
+import { projectService } from '@/services/projectService'
+import { toast } from 'sonner'
+
+export function useCreateProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateProjectDto) => projectService.create(data),
+    onSuccess: () => {
+      toast.success('Proyecto creado exitosamente')
+      // Invalida la lista para refetch automático
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Error al crear proyecto')
+    },
+  })
+}
 ```
 
 ### Uso en Componentes
 
 ```typescript
+import { useProjects, useCreateProject } from '@/hooks/queries'
+
 function ProjectsList() {
-  const { proyectos, isLoading, fetchProyectos } = useProjectStore()
-  
-  useEffect(() => {
-    fetchProyectos()
-  }, [])
-  
+  // Query - obtiene datos con caching automático
+  const { data: projects, isLoading, error } = useProjects()
+
+  // Mutation - para crear/actualizar/eliminar
+  const createProject = useCreateProject()
+
   if (isLoading) return <Spinner />
-  
-  return <div>{proyectos.map(p => <ProjectCard key={p.id} {...p} />)}</div>
+  if (error) return <Error message={error.message} />
+
+  return (
+    <div>
+      {projects?.map(p => <ProjectCard key={p.id} {...p} />)}
+      <Button
+        onClick={() => createProject.mutate({ nombre: 'Nuevo' })}
+        disabled={createProject.isPending}
+      >
+        {createProject.isPending ? 'Creando...' : 'Crear Proyecto'}
+      </Button>
+    </div>
+  )
 }
 ```
 
-### Store con Persistencia (localStorage)
+### QueryKeys Centralizados
 
 ```typescript
+// lib/queryKeys.ts
+export const queryKeys = {
+  projects: {
+    all: ['projects'] as const,
+    list: (filters?: any) => [...queryKeys.projects.all, 'list', filters] as const,
+    detail: (id: string) => [...queryKeys.projects.all, 'detail', id] as const,
+    stages: (id: string) => [...queryKeys.projects.all, 'stages', id] as const,
+  },
+  tasks: {
+    all: ['tasks'] as const,
+    byProject: (projectId: string) => [...queryKeys.tasks.all, 'project', projectId] as const,
+  },
+  // ... más entidades
+}
+```
+
+### Hooks Disponibles
+
+**Queries (16):**
+- `useProjects`, `useProject`, `useProjectStages`, `useProjectMembers`
+- `useTasks`, `useTask`
+- `useDepartments`, `useDepartment`
+- `useUsers`, `useUser`
+- `useEvents`, `useNotifications`
+- `useIdeas`, `useKnowledge`
+- `useTimeline`, `useDashboard`, `useAudit`
+
+**Mutations (11):**
+- `useCreateProject`, `useUpdateProject`, `useDeleteProject`, `useDuplicateProject`
+- `useCreateTask`, `useUpdateTask`, `useDeleteTask`
+- `useCreateEvent`, `useUpdateEvent`, `useDeleteEvent`
+- ...y más
+
+---
+
+## 🗃️ Estado del Cliente (Zustand)
+
+### ¿Cuándo usar Zustand?
+
+Zustand se usa **solo** para estado que NO viene del servidor:
+
+| Store | Propósito |
+|-------|----------|
+| `authStore` | Token JWT, usuario actual, estado de autenticación |
+| `themeStore` | Tema (dark/light) |
+| `calendarStore` | Vista actual del calendario, fecha seleccionada |
+| `socketStore` | Estado de conexión WebSocket |
+| `connectionStore` | Estado de conexión a internet |
+| `aiSearchStore` | Estado del buscador AI |
+
+### Patrón de Store (Client-State)
+
+```typescript
+// store/authStore.ts
+import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+
+interface AuthState {
+  token: string | null
+  user: Usuario | null
+  status: 'loading' | 'authenticated' | 'unauthenticated'
+  
+  setUser: (user: Usuario) => void
+  logout: () => void
+}
 
 export const useAuthStore = create(
   persist<AuthState>(
     (set) => ({
       token: null,
       user: null,
-      login: async (credentials) => { /* ... */ },
-      logout: () => set({ token: null, user: null })
+      status: 'loading',
+      
+      setUser: (user) => set({ user, status: 'authenticated' }),
+      logout: () => set({ token: null, user: null, status: 'unauthenticated' })
     }),
-    { name: 'auth-storage' } // ← Se guarda en localStorage
+    { name: 'auth-storage' } // ← Persiste en localStorage
   )
 )
 ```
 
-**Stores principales:**
-- `authStore` - Autenticación y usuario actual
-- `projectStore` - Proyectos
-- `taskStore` - Tareas
-- `themeStore` - Tema (dark/light)
-- `roleStore` - Roles y permisos
+### Uso en Componentes
 
----
+```typescript
+function Navbar() {
+  const { user, logout } = useAuthStore()
+  
+  return (
+    <nav>
+      <span>Hola, {user?.nombreCompleto}</span>
+      <Button onClick={logout}>Cerrar Sesión</Button>
+    </nav>
+  )
+}
+```
+
+**Importante:** NO uses Zustand para datos que vienen de la API. Usa TanStack Query para eso.
 
 ## 🌐 Comunicación con la API
 

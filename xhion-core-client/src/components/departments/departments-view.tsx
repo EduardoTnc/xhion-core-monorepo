@@ -1,6 +1,29 @@
+/**
+ * @fileoverview Vista principal de departamentos
+ * 
+ * Este componente es la vista principal para gestionar departamentos de la organización.
+ * 
+ * ## Características principales:
+ * - Tabla expandible de departamentos con información detallada
+ * - Búsqueda y filtrado de departamentos
+ * - Vista de proyectos asociados a cada departamento
+ * - Sección de proyectos sin departamento asignado
+ * - CRUD completo de departamentos (crear, editar, eliminar)
+ * - Modal de contexto organizacional para cada departamento
+ * - Integración con TanStack Query para manejo de estado del servidor
+ * 
+ * ## Componentes hijos utilizados:
+ * - DepartmentDetailWidgets: Vista de detalle cuando se selecciona un departamento
+ * - CreateDepartmentModal: Modal para crear/editar departamentos
+ * - DepartmentContextModal: Modal para definir contexto organizacional
+ * - TaskDetailModal: Modal de detalle de tareas
+ * 
+ * @author Eduardo Tanca
+ */
 "use client"
 
 import { Fragment, useCallback, useEffect, useState } from "react"
+
 import { ChevronRight, Loader2, Plus, Search, MoreVertical, Edit, Trash2, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useCalendarStore } from "@/store/calendarStore"
+import { useDeleteEvent } from "@/hooks/queries"
 import { type Evento } from "@/services/eventosService"
 import { getEventColor, formatEventTimeRange } from "@/lib/calendar-utils"
 import { cn } from "@/lib/utils"
@@ -21,7 +22,8 @@ interface EventDetailPopoverProps {
 }
 
 export function EventDetailPopover({ evento, children, open, onOpenChange }: EventDetailPopoverProps) {
-    const { openEditEventModal, deleteEvento, selectEvento } = useCalendarStore()
+    const { openEditEventModal, selectEvento } = useCalendarStore()
+    const deleteEventMutation = useDeleteEvent()
 
     const handleEdit = () => {
         openEditEventModal(evento)
@@ -30,8 +32,12 @@ export function EventDetailPopover({ evento, children, open, onOpenChange }: Eve
 
     const handleDelete = async () => {
         if (confirm('¿Estás seguro de que deseas eliminar este evento?')) {
-            await deleteEvento(evento.id)
-            onOpenChange?.(false)
+            try {
+                await deleteEventMutation.mutateAsync(evento.id)
+                onOpenChange?.(false)
+            } catch (error) {
+                // Mutation handles errors
+            }
         }
     }
 

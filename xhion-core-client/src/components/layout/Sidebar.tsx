@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   LayoutDashboard,
   FolderKanban,
@@ -9,7 +9,6 @@ import {
   Settings,
   Building2,
   Zap,
-  Wallet,
   Users,
   User,
   Shield,
@@ -28,11 +27,11 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { CreateProjectModal } from "@/components/modals/create-project-modal"
-import { useSystemSettingsStore } from "@/store/systemSettingsStore"
+import { CreateProjectModal } from "@/components/projects/CreateProjectModal"
+import { useSystemSettings } from "@/hooks/queries"
 import { NavMain, type NavItem } from "./nav-main"
 import { useNavigate } from "react-router-dom"
-import { useDepartmentStore } from "@/store/departmentStore"
+import { useDepartments } from "@/hooks/queries"
 import {
   Tooltip,
   TooltipContent,
@@ -85,11 +84,6 @@ const navigationMain: NavItem[] = [
     url: "/calendario",
     icon: Calendar,
   },
-  {
-    title: "Finanzas",
-    url: "/finanzas",
-    icon: Wallet,
-  },
 ]
 
 // Herramientas y funcionalidades avanzadas
@@ -140,8 +134,11 @@ export function Sidebar() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false)
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
-  const { departamentos, fetchDepartamentos } = useDepartmentStore()
-  const { settings } = useSystemSettingsStore()
+
+  // TanStack Query for departments
+  const { data: departamentos = [] } = useDepartments()
+
+  const { data: settings } = useSystemSettings()
 
   const nombreEmpresa = settings?.nombreEmpresa || "Negocios Bigander"
   const logoUrl = settings?.logoUrl
@@ -153,11 +150,6 @@ export function Sidebar() {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
     return `${baseUrl}${url}`
   }
-
-  // Cargar departamentos al montar el componente
-  useEffect(() => {
-    fetchDepartamentos()
-  }, [])
 
   const handleDepartmentClick = (departamentoId: string) => {
     navigate(`/departamentos/${departamentoId}`)

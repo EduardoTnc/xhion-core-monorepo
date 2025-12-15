@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useProjectStore } from "@/store/projectStore";
-import { useTasks, useDeleteTask as useDeleteTaskMutation } from "@/hooks/queries";
+import {
+  useProjects,
+  useProject,
+  useProjectStages,
+  useProjectMembers,
+  useTasks,
+  useDeleteTask as useDeleteTaskMutation,
+  useCreateProjectStage,
+  useUpdateProjectStage,
+  useDeleteProjectStage,
+  useUpdateProject,
+} from "@/hooks/queries";
 import { ProjectSidebarShadcn } from "./ProjectSidebarShadcn";
 import { ProjectHeader } from "./ProjectHeader";
 import { TaskViewSwitcher } from "./TaskViewSwitcher";
@@ -24,7 +34,7 @@ import { Loader2, PanelLeftClose, PanelLeftOpen, Keyboard, Plus } from "lucide-r
 import { toast } from "sonner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
-import { type Etapa, type ProyectoMiembro } from "@/services/projectService";
+import { type Etapa, type ProyectoMiembro, type Proyecto } from "@/services/projectService";
 import { type Tarea } from "@/services/taskService";
 import { Restricted } from "../auth/Restricted";
 
@@ -84,49 +94,37 @@ export function ProjectWorkspaceEnhanced({
   proyectoId: proyectoIdProp,
   hideSidebar = false
 }: ProjectWorkspaceEnhancedProps = {}) {
-  const {
-    proyectos,
-    proyectoActual,
-    etapas,
-    miembros,
-    fetchProyectos,
-    fetchProyectoById,
-    fetchEtapas,
-    fetchMiembros,
-    deleteEtapa,
-    updateEtapa,
-    createEtapa,
-    setProyectoActual,
-    isLoading,
-    updateStagesEnabled,
-  } = useProjectStore();
+  // UI State for project selection
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(proyectoIdProp || null);
 
-  type CachedProjectData = {
-    etapas: Etapa[];
-    miembros: ProyectoMiembro[];
-    tareas: Tarea[];
-  };
+  // TanStack Query hooks for project data
+  const { data: proyectos = [], isLoading: isLoadingProyectos } = useProjects();
+  const { data: proyectoActual, isLoading: isLoadingProject } = useProject(selectedProjectId);
+  const { data: etapas = [], refetch: refetchEtapas } = useProjectStages(selectedProjectId);
+  const { data: miembros = [] } = useProjectMembers(selectedProjectId);
+
+  // TanStack Query for tasks
+  const { data: tareas = [], refetch: refetchTareas } = useTasks(
+    selectedProjectId ? { proyectoId: selectedProjectId } : { proyectoId: '' },
+    { enabled: !!selectedProjectId }
+  );
+  const deleteTaskMutation = useDeleteTaskMutation();
+
+  // TanStack Query mutations for stages
+  const createStageMutation = useCreateProjectStage();
+  const updateStageMutation = useUpdateProjectStage();
+  const deleteStageMutation = useDeleteProjectStage();
+  const updateProjectMutation = useUpdateProject();
+
+  const isLoading = isLoadingProyectos || isLoadingProject;
 
   // UI State
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [defaultView, setDefaultView] = useState<ViewMode>(() => getStoredDefaultView());
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredDefaultView());
   const [stageGradientPreset, setStageGradientPreset] = useState<StageGradientPresetKey>("aurora");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [filters, setFilters] = useState<TaskFiltersType>(initialFilters);
-  const [displayEtapas, setDisplayEtapas] = useState<Etapa[]>([]);
-  const [displayMiembros, setDisplayMiembros] = useState<ProyectoMiembro[]>([]);
-  const [displayTareas, setDisplayTareas] = useState<Tarea[]>([]);
-  const [projectDataCache, setProjectDataCache] = useState<Record<string, CachedProjectData>>({});
-  const [lastFetchedProjectId, setLastFetchedProjectId] = useState<string | null>(null);
-
-  // TanStack Query for tasks (after selectedProjectId is declared)
-  const { data: taskStoreTareas = [], refetch: refetchTareas } = useTasks(
-    selectedProjectId ? { proyectoId: selectedProjectId } : { proyectoId: '' },
-    { enabled: !!selectedProjectId }
-  );
-  const deleteTaskMutation = useDeleteTaskMutation();
 
   // Modals State
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
@@ -146,61 +144,17 @@ export function ProjectWorkspaceEnhanced({
   // Refs for keyboard shortcuts
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const prefillProjectData = useCallback(
-    (projectId: string) => {
-      const cachedData = projectDataCache[projectId];
-      if (cachedData) {
-        setDisplayEtapas(cachedData.etapas);
-        setDisplayMiembros(cachedData.miembros);
-        setDisplayTareas(cachedData.tareas);
-      } else {
-        setDisplayEtapas([]);
-        setDisplayMiembros([]);
-        setDisplayTareas([]);
-      }
-    },
-    [projectDataCache]
-  );
-
-  // Load projects on mount
-  useEffect(() => {
-    loadProyectos();
-  }, []);
-
-  // Load project data when selected
-  useEffect(() => {
-    if (selectedProjectId) {
-      loadProjectData(selectedProjectId);
-    }
-  }, [selectedProjectId]);
-
-  // Auto-select first project or use provided proyectoId
+  // Auto-select first project if none selected
   useEffect(() => {
     if (proyectoIdProp && proyectoIdProp !== selectedProjectId) {
       setSelectedProjectId(proyectoIdProp);
-      prefillProjectData(proyectoIdProp);
-      const targetProject = proyectos.find((p) => p.id === proyectoIdProp);
-      if (targetProject) {
-        setProyectoActual(targetProject);
-      }
       return;
     }
 
     if (!proyectoIdProp && !selectedProjectId && proyectos.length > 0) {
-      const firstProject = proyectos[0];
-      setSelectedProjectId(firstProject.id);
-      prefillProjectData(firstProject.id);
-      setProyectoActual(firstProject);
+      setSelectedProjectId(proyectos[0].id);
     }
-  }, [proyectos, selectedProjectId, proyectoIdProp, setProyectoActual, prefillProjectData]);
-
-  const loadProyectos = async () => {
-    try {
-      await fetchProyectos();
-    } catch (error: any) {
-      toast.error(error.message || "Error al cargar proyectos");
-    }
-  };
+  }, [proyectos, selectedProjectId, proyectoIdProp]);
 
   const handleDeleteStage = (etapa: Etapa) => {
     setEtapaToDelete(etapa);
@@ -210,21 +164,20 @@ export function ProjectWorkspaceEnhanced({
   const handleInlineCreateStage = async (data: StageCreateInput) => {
     if (!selectedProjectId) return;
     try {
-      await createEtapa(selectedProjectId, {
-        nombre: data.nombre,
-        descripcion: data.descripcion ?? undefined,
-        orden: data.orden,
-        fechaInicio: data.fechaInicio ?? undefined,
-        fechaFin: data.fechaFin ?? undefined,
+      await createStageMutation.mutateAsync({
+        projectId: selectedProjectId,
+        data: {
+          nombre: data.nombre,
+          descripcion: data.descripcion ?? undefined,
+          orden: data.orden,
+          fechaInicio: data.fechaInicio ?? undefined,
+          fechaFin: data.fechaFin ?? undefined,
+        },
       });
       toast.success("Etapa creada");
-      await Promise.all([
-        fetchEtapas(selectedProjectId),
-        refetchTareas(),
-      ]);
+      // TQ auto-invalidates queries
     } catch (error: any) {
       const message = error?.message || "Error al crear etapa";
-      toast.error(message);
       throw new Error(message);
     }
   };
@@ -232,84 +185,41 @@ export function ProjectWorkspaceEnhanced({
   const handleInlineUpdateStage = async (etapaId: string, data: StageUpdateInput) => {
     if (!selectedProjectId) return;
     try {
-      await updateEtapa(selectedProjectId, etapaId, data);
-      await Promise.all([fetchEtapas(selectedProjectId), refetchTareas()]);
+      // Convert null to undefined for fields that don't accept null in UpdateEtapaDto
+      await updateStageMutation.mutateAsync({
+        projectId: selectedProjectId,
+        stageId: etapaId,
+        data: {
+          ...data,
+          descripcion: data.descripcion ?? undefined,
+          fechaInicio: data.fechaInicio ?? undefined,
+          fechaFin: data.fechaFin ?? undefined,
+        },
+      });
       toast.success("Etapa actualizada");
+      // TQ auto-invalidates queries
     } catch (error: any) {
-      toast.error(error.message || "Error al actualizar etapa");
+      // Mutation handles errors
     }
   };
 
   const confirmDeleteEtapa = async () => {
     if (!etapaToDelete || !selectedProjectId) return;
     try {
-      await deleteEtapa(selectedProjectId, etapaToDelete.id);
+      await deleteStageMutation.mutateAsync({ projectId: selectedProjectId, stageId: etapaToDelete.id });
       toast.success("Etapa eliminada exitosamente");
       setEtapaToDelete(null);
       setShowDeleteEtapaConfirm(false);
-      await fetchEtapas(selectedProjectId);
-      await refetchTareas();
+      // TQ auto-invalidates queries
     } catch (error: any) {
-      toast.error(error.message || "Error al eliminar etapa");
-    }
-  };
-
-  const loadProjectData = async (projectId: string) => {
-    try {
-      await Promise.all([
-        fetchProyectoById(projectId),
-        fetchEtapas(projectId),
-        fetchMiembros(projectId),
-        refetchTareas(),
-      ]);
-
-      const { etapas: latestEtapas, miembros: latestMiembros } = useProjectStore.getState();
-      // Tasks now come from TanStack Query
-      const latestTareas = taskStoreTareas;
-
-      setLastFetchedProjectId(projectId);
-      setDisplayEtapas(latestEtapas);
-      setDisplayMiembros(latestMiembros);
-      setDisplayTareas(latestTareas);
-      setProjectDataCache((prev) => ({
-        ...prev,
-        [projectId]: {
-          etapas: latestEtapas,
-          miembros: latestMiembros,
-          tareas: latestTareas,
-        },
-      }));
-    } catch (error: any) {
-      toast.error(error.message || "Error al cargar datos del proyecto");
+      // Mutation handles errors
     }
   };
 
   const handleProjectSelect = (projectId: string) => {
-    const cachedProject = proyectos.find((p) => p.id === projectId);
-    if (cachedProject) {
-      setProyectoActual(cachedProject);
-    }
-    prefillProjectData(projectId);
     setSelectedProjectId(projectId);
     setIsMobileSidebarOpen(false);
   };
-
-  useEffect(() => {
-    if (!selectedProjectId) return;
-    if (lastFetchedProjectId !== selectedProjectId) return;
-
-    setDisplayEtapas(etapas);
-    setDisplayMiembros(miembros);
-    setDisplayTareas(taskStoreTareas);
-    setProjectDataCache((prev) => ({
-      ...prev,
-      [selectedProjectId]: {
-        etapas,
-        miembros,
-        tareas: taskStoreTareas,
-      },
-    }));
-  }, [selectedProjectId, lastFetchedProjectId, etapas, miembros, taskStoreTareas]);
 
   const stagesEnabled = proyectoActual?.usaEtapas ?? true;
 
@@ -338,7 +248,7 @@ export function ProjectWorkspaceEnhanced({
   };
 
   const handleEditTaskDirect = (tareaId: string) => {
-    const tarea = displayTareas.find((t) => t.id === tareaId);
+    const tarea = tareas.find((t) => t.id === tareaId);
     if (tarea) {
       setTareaToEdit(tarea);
       setShowEditTaskModal(true);
@@ -389,14 +299,14 @@ export function ProjectWorkspaceEnhanced({
 
   const stageColorMap = useMemo(() => {
     const preset = STAGE_GRADIENT_PRESETS[stageGradientPreset];
-    if (!preset || displayEtapas.length === 0) return {};
-    const ordered = [...displayEtapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+    if (!preset || etapas.length === 0) return {};
+    const ordered = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     return ordered.reduce<Record<string, string>>((acc, etapa, index) => {
       const ratio = ordered.length === 1 ? 0 : index / (ordered.length - 1);
       acc[etapa.id] = getGradientColor(preset.stops, ratio);
       return acc;
     }, {});
-  }, [displayEtapas, stageGradientPreset]);
+  }, [etapas, stageGradientPreset]);
 
   const confirmDeleteTask = async () => {
     if (!tareaToDelete) return;
@@ -418,15 +328,18 @@ export function ProjectWorkspaceEnhanced({
   };
 
   // Apply filters to tasks
-  const filteredTareas = applyTaskFilters(displayTareas, filters);
+  const filteredTareas = applyTaskFilters(tareas, filters);
   const stageFilterOptions = stagesEnabled
-    ? displayEtapas.map((etapa) => ({ id: etapa.id, nombre: etapa.nombre }))
+    ? etapas.map((etapa) => ({ id: etapa.id, nombre: etapa.nombre }))
     : [];
 
   const handleToggleStagesSetting = async (enabled: boolean) => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId || !proyectoActual) return;
     try {
-      await updateStagesEnabled(selectedProjectId, enabled);
+      await updateProjectMutation.mutateAsync({
+        id: selectedProjectId,
+        data: { usaEtapas: enabled },
+      });
       if (!enabled) {
         setFilters((prev) => ({ ...prev, etapaId: "all" }));
       }
@@ -540,17 +453,17 @@ export function ProjectWorkspaceEnhanced({
 
               <ProjectHeader
                 proyecto={proyectoActual}
-                miembros={displayMiembros}
+                miembros={miembros}
                 onEdit={() => setShowEditProjectModal(true)}
                 onInvite={() => setShowAddMiembroModal(true)}
-                etapasCount={displayEtapas.length}
-                tareasCount={displayTareas.length}
+                etapasCount={etapas.length}
+                tareasCount={tareas.length}
               />
             </div>
 
             {/* Project Info Section - Equipo y Documentos */}
             <ProjectInfoSection
-              miembros={displayMiembros?.map((m) => ({
+              miembros={miembros?.map((m) => ({
                 usuarioId: m.usuarioId,
                 usuario: {
                   id: m.usuario?.id || '',
@@ -586,8 +499,8 @@ export function ProjectWorkspaceEnhanced({
 
             <section className="px-3 pt-4 sm:px-4 lg:px-6">
               <StageManagementPanel
-                etapas={displayEtapas}
-                tareas={displayTareas}
+                etapas={etapas}
+                tareas={tareas}
                 stageColorMap={stageColorMap}
                 gradientPresetKey={stageGradientPreset}
                 gradientPresets={STAGE_GRADIENT_PRESETS}
@@ -646,7 +559,7 @@ export function ProjectWorkspaceEnhanced({
                         <TaskFilters
                           filters={filters}
                           onFiltersChange={setFilters}
-                          miembros={displayMiembros}
+                          miembros={miembros}
                           etapas={stageFilterOptions}
                           stagesEnabled={stagesEnabled}
                         />
@@ -663,7 +576,7 @@ export function ProjectWorkspaceEnhanced({
                       onEditTask={handleEditTaskDirect}
                       onDeleteTask={handleDeleteTask}
                       proyectoId={selectedProjectId || ""}
-                      etapas={displayEtapas}
+                      etapas={etapas}
                       stageColorMap={stageColorMap}
                       stagesEnabled={stagesEnabled}
                     />
@@ -674,7 +587,7 @@ export function ProjectWorkspaceEnhanced({
                       onTaskClick={handleTaskClick}
                       onEditTask={handleEditTaskDirect}
                       onDeleteTask={handleDeleteTask}
-                      etapas={displayEtapas}
+                      etapas={etapas}
                       stageColorMap={stageColorMap}
                       stagesEnabled={stagesEnabled}
                     />
@@ -685,7 +598,7 @@ export function ProjectWorkspaceEnhanced({
                       onTaskClick={handleTaskClick}
                       onEditTask={handleEditTaskDirect}
                       onDeleteTask={handleDeleteTask}
-                      etapas={displayEtapas}
+                      etapas={etapas}
                       stageColorMap={stageColorMap}
                       stagesEnabled={stagesEnabled}
                     />
@@ -721,7 +634,7 @@ export function ProjectWorkspaceEnhanced({
         open={showCreateProjectModal}
         onOpenChange={(open) => {
           setShowCreateProjectModal(open);
-          if (!open) loadProyectos();
+          // TQ auto-refetches
         }}
       />
 
@@ -729,17 +642,14 @@ export function ProjectWorkspaceEnhanced({
         open={showEditProjectModal}
         onOpenChange={(open) => {
           setShowEditProjectModal(open);
-          if (!open && selectedProjectId) loadProjectData(selectedProjectId);
+          // TQ auto-refetches
         }}
-        proyecto={proyectoActual}
+        proyecto={proyectoActual ?? null}
       />
 
       <AddMiembroModal
         open={showAddMiembroModal}
-        onOpenChange={(open) => {
-          setShowAddMiembroModal(open);
-          if (!open && selectedProjectId) fetchMiembros(selectedProjectId);
-        }}
+        onOpenChange={setShowAddMiembroModal}
         proyectoId={selectedProjectId || ""}
       />
 

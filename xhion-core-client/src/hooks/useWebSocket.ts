@@ -1,18 +1,20 @@
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import { useNotificacionesStore } from '@/store/notificacionesStore';
-import { useEventosStore } from '@/store/eventosStore';
-import { useTaskStore } from '@/store/taskStore';
 import { useSocketStore } from '@/store/socketStore';
+import { queryKeys } from '@/lib/queryKeys';
 import { toast } from 'sonner';
 
+/**
+ * Hook para gestionar la conexión WebSocket y manejar eventos en tiempo real.
+ * 
+ * Utiliza TanStack Query para invalidar caches cuando llegan eventos del servidor,
+ * manteniendo los datos sincronizados automáticamente.
+ */
 export function useWebSocket() {
   const { token, user } = useAuthStore();
   const { socket, isConnected, isConnecting, connect, disconnect } = useSocketStore();
-
-  const { addNotificacion, fetchContadorNoLeidas } = useNotificacionesStore();
-  const { fetchEventos } = useEventosStore();
-  const { onTaskCreated, onTaskUpdated, onTaskDeleted } = useTaskStore.getState();
+  const queryClient = useQueryClient();
 
   // Gestión de conexión
   useEffect(() => {
@@ -35,46 +37,59 @@ export function useWebSocket() {
     const handleReconnect = (attemptNumber: number) => {
       console.log(`✅ Reconectado después de ${attemptNumber} intentos`);
       toast.success('Conexión restablecida');
-      fetchContadorNoLeidas();
-      fetchEventos();
+      // Invalidate all relevant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
     };
 
     const handleNotification = (notification: any) => {
       console.log('🔔 Nueva notificación:', notification);
-      addNotificacion(notification);
+      // Invalidate notifications cache to show new notification
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
       toast.info(notification.titulo, {
         description: notification.mensaje,
         duration: 5000,
       });
-      fetchContadorNoLeidas();
     };
 
     const handleEventCreated = (event: any) => {
-      fetchEventos();
+      // Invalidate events and calendar cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
       toast.info('Nuevo evento creado', { description: event.titulo });
     };
 
     const handleEventUpdated = (event: any) => {
-      fetchEventos();
+      // Invalidate events and calendar cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
       toast.info('Evento actualizado', { description: event.titulo });
     };
 
     const handleEventDeleted = () => {
-      fetchEventos();
+      // Invalidate events and calendar cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
       toast.info('Evento eliminado');
     };
 
     const handleTaskCreated = (task: any) => {
-      onTaskCreated(task);
+      // Invalidate TanStack Query cache for tasks
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
       toast.success('Nueva tarea creada', { description: task.titulo });
     };
 
     const handleTaskUpdated = (task: any) => {
-      onTaskUpdated(task);
+      // Invalidate TanStack Query cache for tasks
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
     };
 
     const handleTaskDeleted = ({ taskId }: { taskId: string }) => {
-      onTaskDeleted(taskId);
+      // Invalidate TanStack Query cache for tasks
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.removeQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       toast.info('Tarea eliminada');
     };
 
@@ -101,7 +116,7 @@ export function useWebSocket() {
       socket.off('task:updated', handleTaskUpdated);
       socket.off('task:deleted', handleTaskDeleted);
     };
-  }, [socket, addNotificacion, fetchContadorNoLeidas, fetchEventos]);
+  }, [socket, queryClient]);
 
   const sendPing = () => {
     if (socket?.connected) {
@@ -116,4 +131,3 @@ export function useWebSocket() {
     sendPing,
   };
 }
-

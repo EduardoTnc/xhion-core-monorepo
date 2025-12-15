@@ -199,7 +199,10 @@ XHION Core centraliza toda la gestión operativa en una plataforma moderna que:
 ### 🔧 Características Técnicas
 - PWA con Service Worker
 - Modo offline con caché inteligente
-- Optimistic updates en estado global
+- TanStack Query V5 para server-state con caching automático
+- Zustand para client-state (UI, auth, theme)
+- Invalidación inteligente de queries al mutar datos
+- Optimistic updates en mutaciones
 - Code splitting por rutas
 - Lazy loading de componentes
 - Virtualización de listas largas
@@ -215,7 +218,8 @@ XHION Core centraliza toda la gestión operativa en una plataforma moderna que:
 | **TypeScript** | 5.9.3 | Tipado estático |
 | **Vite** | 7.1.9 | Build tool |
 | **React Router** | 7.9.3 | Enrutamiento |
-| **Zustand** | 5.0.8 | Estado global |
+| **TanStack Query** | 5.x | Server-state, caching, mutaciones |
+| **Zustand** | 5.0.8 | Client-state (UI, auth, theme) |
 | **React Hook Form** | 7.60.0 | Formularios |
 | **Zod** | 3.25.76 | Validación de esquemas |
 | **Tailwind CSS** | 4.1.14 | Estilos |
@@ -433,9 +437,12 @@ xhion-core-monorepo/
 │   ├── src/
 │   │   ├── components/       # Componentes UI
 │   │   ├── pages/            # Páginas
-│   │   ├── store/            # Estado global (Zustand)
+│   │   ├── store/            # Estado del cliente (Zustand)
 │   │   ├── services/         # Servicios API
 │   │   ├── hooks/            # Custom hooks
+│   │   │   ├── queries/      # TanStack Query hooks (16)
+│   │   │   ├── mutations/    # TanStack Query mutations (11)
+│   │   │   └── *.ts          # Otros custom hooks
 │   │   ├── types/            # Tipos TypeScript
 │   │   └── lib/              # Utilidades
 │   └── package.json

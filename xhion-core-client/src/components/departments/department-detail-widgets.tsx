@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { ArrowLeft, Loader2, Plus, Users, Briefcase, TrendingUp, AlertCircle } from "lucide-react"
 import { getDepartmentIcon } from "@/lib/department-icons"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useDepartmentStore } from "@/store/departmentStore"
-import { useConocimientoStore } from "@/store/conocimientoStore"
+import { useDepartment, useDepartmentStats, useContextoDepartamento } from "@/hooks/queries"
 import { CreateDepartmentModal } from "./CreateDepartmentModal"
 import { DepartmentContextModal } from "./DepartmentContextModal"
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal"
@@ -12,7 +11,6 @@ import { DepartmentProjectsView } from "./DepartmentProjectsView"
 import { DepartmentTeamView } from "./DepartmentTeamView"
 import { DepartmentContextView } from "./DepartmentContextView"
 import { DepartmentOrgChart } from "./DepartmentOrgChart"
-import { BudgetView } from "@/components/budgets/BudgetView"
 import { DepartmentDocumentsManager } from "./DepartmentDocumentsManager"
 import { useNavigate } from "react-router-dom"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -28,28 +26,12 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false)
   const navigate = useNavigate()
 
-  const {
-    departamentoActual,
-    estadisticas,
-    isLoading,
-    fetchDepartamentoById,
-    fetchEstadisticas,
-    clearDepartamentoActual,
-  } = useDepartmentStore()
+  // TanStack Query for department data
+  const { data: departamentoActual, isLoading, refetch: refetchDepartamento } = useDepartment(departamentoId)
+  const { data: estadisticas, refetch: refetchEstadisticas } = useDepartmentStats(departamentoId)
 
-  const { fetchContextoDepartamento, contextosDepartamento } = useConocimientoStore()
-
-  useEffect(() => {
-    fetchDepartamentoById(departamentoId)
-    fetchEstadisticas(departamentoId)
-    fetchContextoDepartamento(departamentoId)
-
-    return () => {
-      clearDepartamentoActual()
-    }
-  }, [departamentoId])
-
-  const contexto = contextosDepartamento.find((c) => c.departamentoId === departamentoId)
+  // TanStack Query for department context
+  const { data: contexto } = useContextoDepartamento(departamentoId)
 
   if (isLoading && !departamentoActual) {
     return (
@@ -206,15 +188,6 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
                 variant="condensed"
               />
             </section>
-
-            {/* Budget */}
-            <section className="rounded-xl border border-border/70 bg-card/50 p-3">
-              <header className="mb-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Finanzas</p>
-                <p className="text-sm font-medium text-foreground">Presupuesto operativo</p>
-              </header>
-              <BudgetView entityId={departamentoId} entityType="departamento" entityName={departamentoActual.nombre} variant="condensed" />
-            </section>
           </div>
 
           {/* Right Column */}
@@ -323,8 +296,8 @@ export function DepartmentDetailWidgets({ departamentoId, onBack }: DepartmentDe
           onOpenChange={setShowCreateProjectModal}
           departamentoIdPredeterminado={departamentoId}
           onSuccess={() => {
-            fetchDepartamentoById(departamentoId)
-            fetchEstadisticas(departamentoId)
+            refetchDepartamento()
+            refetchEstadisticas()
           }}
         />
       </div>

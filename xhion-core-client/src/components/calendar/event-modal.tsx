@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarIcon, Clock, MapPin, Users, Trash2, Loader2 } from "lucide-react"
+import { CalendarIcon, Clock, MapPin, Trash2, Loader2 } from "lucide-react"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Switch } from "@/components/ui/switch"
 import { useCalendarStore } from "@/store/calendarStore"
+import { useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/queries"
 import { TipoEvento, EstadoEvento, type CreateEventoDto } from "@/services/eventosService"
 import { cn } from "@/lib/utils"
 
@@ -50,19 +51,22 @@ const eventColors = [
 ]
 
 export function EventModal() {
+    // UI state from calendar store
     const {
         isEventModalOpen,
         eventModalMode,
         eventToEdit,
         currentDate,
         closeEventModal,
-        createEvento,
-        updateEvento,
-        deleteEvento
     } = useCalendarStore()
 
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
+    // TanStack Query mutations for CRUD operations
+    const createEventMutation = useCreateEvent()
+    const updateEventMutation = useUpdateEvent()
+    const deleteEventMutation = useDeleteEvent()
+
+    const isSubmitting = createEventMutation.isPending || updateEventMutation.isPending
+    const isDeleting = deleteEventMutation.isPending
 
     const form = useForm<EventFormValues>({
         resolver: zodResolver(eventFormSchema),
@@ -120,8 +124,6 @@ export function EventModal() {
     }, [eventModalMode, eventToEdit, currentDate, form])
 
     const onSubmit = async (values: EventFormValues) => {
-        setIsSubmitting(true)
-
         try {
             // Combine date and time
             const [horaInicioH, horaInicioM] = values.horaInicio.split(':')
@@ -148,28 +150,24 @@ export function EventModal() {
             }
 
             if (eventModalMode === 'create') {
-                await createEvento(eventData)
+                await createEventMutation.mutateAsync(eventData)
             } else if (eventToEdit) {
-                await updateEvento(eventToEdit.id, eventData)
+                await updateEventMutation.mutateAsync({ id: eventToEdit.id, data: eventData })
             }
+            closeEventModal()
         } catch (error) {
-            console.error('Error saving event:', error)
-        } finally {
-            setIsSubmitting(false)
+            // Mutations handle errors
         }
     }
 
     const handleDelete = async () => {
         if (!eventToEdit) return
 
-        setIsDeleting(true)
         try {
-            await deleteEvento(eventToEdit.id)
+            await deleteEventMutation.mutateAsync(eventToEdit.id)
             closeEventModal()
         } catch (error) {
-            console.error('Error deleting event:', error)
-        } finally {
-            setIsDeleting(false)
+            // Mutation handles errors
         }
     }
 

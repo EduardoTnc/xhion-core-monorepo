@@ -79,6 +79,12 @@ export const MODULOS_PERMISOS: ModuloPermisos[] = [
         modulo: 'Proyectos',
         categoria: 'Gestión',
       },
+      {
+        nombreAccion: 'proyectos.asignar_responsable',
+        descripcion: 'Asignar cualquier usuario como responsable de proyectos',
+        modulo: 'Proyectos',
+        categoria: 'Gestión',
+      },
     ],
   },
 

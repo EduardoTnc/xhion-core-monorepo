@@ -310,7 +310,7 @@ export class TareasService {
   /**
    * Obtener una tarea por ID
    */
-  async findOne(id: string, usuarioId: string) {
+  async findOne(id: string, usuarioId: string, permisos: string[] = []) {
     const tarea = await this.prisma.tarea.findUnique({
       where: { id },
       include: {
@@ -371,6 +371,12 @@ export class TareasService {
 
     if (!tarea || tarea.fechaEliminacion) {
       throw new NotFoundException('Tarea no encontrada');
+    }
+
+    // Si tiene permiso tareas.ver_todas, puede ver cualquier tarea
+    const puedeVerTodas = permisos.includes('tareas.ver_todas');
+    if (puedeVerTodas) {
+      return tarea;
     }
 
     // Verificar acceso al proyecto
@@ -754,8 +760,8 @@ export class TareasService {
 
   // ==================== ADJUNTOS ====================
 
-  async getAdjuntos(tareaId: string, usuarioId: string) {
-    await this.findOne(tareaId, usuarioId);
+  async getAdjuntos(tareaId: string, usuarioId: string, permisos: string[] = []) {
+    await this.findOne(tareaId, usuarioId, permisos);
 
     return this.prisma.archivoAdjunto.findMany({
       where: {

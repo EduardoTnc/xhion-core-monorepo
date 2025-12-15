@@ -15,7 +15,6 @@ import {
   Clock, CheckCircle2, File, X, Sparkles, Phone
 } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
-import { useSettingsStore } from "@/store/settingsStore"
 import { settingsService } from "@/services/settingsService"
 // TanStack Query hooks for data fetching
 import { useUserSessions, useProfessionalProfile, useTerminateSession } from "@/hooks/queries"
@@ -89,7 +88,18 @@ export function SettingsView() {
   const [searchParams] = useSearchParams()
   const [activeSection, setActiveSection] = useState("account")
   const { user, setUser } = useAuthStore()
-  const { notifications, updateNotifications } = useSettingsStore()
+  // Local state for notifications (previously from settingsStore)
+  const [notifications, setNotifications] = useState({
+    email: true,
+    push: true,
+    taskAssigned: true,
+    mentions: true,
+    projectUpdates: true,
+    dailySummary: false,
+  })
+  const updateNotifications = (updates: Partial<typeof notifications>) => {
+    setNotifications(prev => ({ ...prev, ...updates }))
+  }
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cvInputRef = useRef<HTMLInputElement>(null)
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})

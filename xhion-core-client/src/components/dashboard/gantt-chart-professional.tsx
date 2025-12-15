@@ -40,7 +40,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react"
-import { useTimelineStore } from "@/store/timelineStore"
+import { useTimeline } from "@/hooks/queries"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays, subDays } from "date-fns"
@@ -95,11 +95,12 @@ const OUTDATED_THRESHOLD_DAYS = 60
 
 export function GanttChartProfessional() {
   const navigate = useNavigate()
+  // TanStack Query for timeline data
   const {
-    timelineData,
-    isLoadingTimeline,
-    fetchTimelineData,
-  } = useTimelineStore()
+    data: timelineData,
+    isLoading: isLoadingTimeline,
+    refetch: fetchTimelineData,
+  } = useTimeline()
 
   // Estados
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -136,10 +137,7 @@ export function GanttChartProfessional() {
     return new Date(value)
   }, [])
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchTimelineData()
-  }, [fetchTimelineData])
+  // Note: TanStack Query auto-fetches on mount, no need for useEffect
 
   // Detectar cambios de tema (Tailwind: clase 'dark' en <html>)
   useEffect(() => {

@@ -5,7 +5,7 @@ import { UpdateDepartamentoDto } from './dto/update-departamento.dto';
 
 @Injectable()
 export class DepartamentosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Crear un nuevo departamento
@@ -401,6 +401,74 @@ export class DepartamentosService {
       },
       jefe: departamento.jefe,
       contexto: departamento.contextoDepartamento,
+    };
+  }
+
+  /**
+   * Asignar usuarios a un departamento.
+   * Los usuarios son asignados a través de un PuestoTrabajo (puesto de trabajo) del departamento.
+   * Si no existe un puesto de trabajo por defecto, se crea uno llamado "Miembro del Departamento".
+   */
+  async asignarUsuarios(departamentoId: string, usuarioIds: string[]) {
+    // Verificar que el departamento existe y no está eliminado
+    const departamento = await this.prisma.departamento.findUnique({
+      where: { id: departamentoId },
+    });
+
+    if (!departamento) {
+      throw new NotFoundException(`Departamento con ID ${departamentoId} no encontrado`);
+    }
+
+    if (departamento.fechaEliminacion) {
+      throw new BadRequestException('No se pueden asignar usuarios a un departamento eliminado');
+    }
+
+    // Buscar o crear un puesto de trabajo por defecto para el departamento
+    let puestoTrabajo = await this.prisma.puestoTrabajo.findFirst({
+      where: { departamentoId },
+    });
+
+    if (!puestoTrabajo) {
+      // Crear un puesto de trabajo por defecto
+      const tituloDefault = `Miembro de ${departamento.nombre}`;
+      puestoTrabajo = await this.prisma.puestoTrabajo.create({
+        data: {
+          titulo: tituloDefault,
+          descripcion: `Puesto de trabajo asignado automáticamente para miembros del departamento ${departamento.nombre}`,
+          departamentoId,
+        },
+      });
+    }
+
+    // Verificar que todos los usuarios existen
+    const usuariosExistentes = await this.prisma.usuario.findMany({
+      where: {
+        id: { in: usuarioIds },
+        fechaEliminacion: null,
+      },
+      select: { id: true },
+    });
+
+    const idsEncontrados = usuariosExistentes.map((u) => u.id);
+    const idsNoEncontrados = usuarioIds.filter((id) => !idsEncontrados.includes(id));
+
+    if (idsNoEncontrados.length > 0) {
+      throw new NotFoundException(
+        `Los siguientes usuarios no fueron encontrados: ${idsNoEncontrados.join(', ')}`
+      );
+    }
+
+    // Asignar usuarios al puesto de trabajo
+    await this.prisma.usuario.updateMany({
+      where: { id: { in: usuarioIds } },
+      data: { puestoTrabajoId: puestoTrabajo.id },
+    });
+
+    return {
+      message: `${usuarioIds.length} usuario(s) asignado(s) al departamento ${departamento.nombre}`,
+      departamentoId,
+      puestoTrabajoId: puestoTrabajo.id,
+      usuariosAsignados: usuarioIds.length,
     };
   }
 }

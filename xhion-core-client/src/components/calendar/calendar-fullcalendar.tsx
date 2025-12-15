@@ -7,6 +7,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useMoveEvent } from '@/hooks/queries'
 import { EventModal } from './event-modal'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -46,8 +47,10 @@ export function CalendarFullCalendar() {
         fetchAllData,
         openCreateEventModal,
         openEditEventModal,
-        moverEvento,
     } = useCalendarStore()
+
+    // TanStack Query mutation for drag/drop
+    const moveEventMutation = useMoveEvent()
 
     // Load data on mount
     useEffect(() => {
@@ -126,15 +129,15 @@ export function CalendarFullCalendar() {
                 return
             }
 
-            await moverEvento(
-                originalItem.evento.id,
-                format(newStart, 'yyyy-MM-dd\'T\'HH:mm:ss'),
-                format(newEnd, 'yyyy-MM-dd\'T\'HH:mm:ss')
-            )
+            await moveEventMutation.mutateAsync({
+                eventId: originalItem.evento.id,
+                fechaInicio: format(newStart, 'yyyy-MM-dd\'T\'HH:mm:ss'),
+                fechaFin: format(newEnd, 'yyyy-MM-dd\'T\'HH:mm:ss'),
+            })
         } catch (error) {
             info.revert()
         }
-    }, [moverEvento])
+    }, [moveEventMutation])
 
     // Navigation handlers
     const handlePrev = () => {

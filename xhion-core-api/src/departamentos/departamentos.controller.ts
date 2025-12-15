@@ -16,13 +16,14 @@ import { RequiresPermission } from '../auth/permissions.decorator';
 import { DepartamentosService } from './departamentos.service';
 import { CreateDepartamentoDto } from './dto/create-departamento.dto';
 import { UpdateDepartamentoDto } from './dto/update-departamento.dto';
+import { AsignarUsuariosDto } from './dto/asignar-usuarios.dto';
 
 @ApiTags('Departamentos')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('departamentos')
 export class DepartamentosController {
-  constructor(private readonly departamentosService: DepartamentosService) {}
+  constructor(private readonly departamentosService: DepartamentosService) { }
 
   @Post()
   @RequiresPermission('departamentos.crear')
@@ -88,5 +89,15 @@ export class DepartamentosController {
   @ApiResponse({ status: 400, description: 'El departamento no está eliminado' })
   async restore(@Param('id') id: string) {
     return this.departamentosService.restore(id);
+  }
+
+  @Post(':id/usuarios')
+  @RequiresPermission('departamentos.editar')
+  @ApiOperation({ summary: 'Asignar usuarios a un departamento' })
+  @ApiResponse({ status: 200, description: 'Usuarios asignados exitosamente' })
+  @ApiResponse({ status: 404, description: 'Departamento o usuarios no encontrados' })
+  @ApiResponse({ status: 400, description: 'No se pueden asignar usuarios a un departamento eliminado' })
+  async asignarUsuarios(@Param('id') id: string, @Body() dto: AsignarUsuariosDto) {
+    return this.departamentosService.asignarUsuarios(id, dto.usuarioIds);
   }
 }

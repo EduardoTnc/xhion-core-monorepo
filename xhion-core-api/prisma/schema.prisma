@@ -6,7 +6,7 @@
 
 // Le dice a Prisma qué debe generar y dónde.
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
   output   = "../node_modules/.prisma/client"
 }
 

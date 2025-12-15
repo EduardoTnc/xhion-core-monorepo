@@ -19,8 +19,8 @@ import { type Proyecto } from "@/services/projectService";
 import { type Departamento } from "@/services/departmentService";
 import { cn } from "@/lib/utils";
 import { getDepartmentIcon } from "@/lib/department-icons";
-import { useDepartmentStore } from "@/store/departmentStore";
-import { useProjectStore } from "@/store/projectStore";
+import { useDepartments, useDeleteProject, useUpdateProject, useDuplicateProject } from "@/hooks/queries";
+import { useDeleteDepartment, useRestoreDepartment } from "@/hooks/mutations/useDepartmentMutations";
 import { toast } from "sonner";
 import {
   HoverCard,
@@ -90,8 +90,15 @@ export function ProjectSidebarShadcn({
   onProjectSelect,
   onCreateProject,
 }: ProjectSidebarShadcnProps) {
-  const { departamentos, deleteDepartamento: deleteDepartment, restoreDepartamento } = useDepartmentStore();
-  const { duplicateProyecto, deleteProyecto, updateProyecto } = useProjectStore();
+  // TanStack Query for departments
+  const { data: departamentos = [] } = useDepartments();
+  const deleteDepartmentMutation = useDeleteDepartment();
+  const restoreDepartmentMutation = useRestoreDepartment();
+
+  // TanStack Query mutations for projects
+  const duplicateProjectMutation = useDuplicateProject();
+  const deleteProjectMutation = useDeleteProject();
+  const updateProjectMutation = useUpdateProject();
   const [searchQuery, setSearchQuery] = useState("");
   const [openDepartments, setOpenDepartments] = useState<Set<string>>(new Set());
   const [userToggledDepartments, setUserToggledDepartments] = useState<Set<string>>(new Set());
@@ -244,7 +251,7 @@ export function ProjectSidebarShadcn({
 
   const handleDuplicateProject = async (project: Proyecto) => {
     try {
-      await duplicateProyecto(project.id);
+      await duplicateProjectMutation.mutateAsync(project.id);
       toast.success(`Proyecto "${project.nombre}" duplicado`);
     } catch (error: any) {
       toast.error(error.message || "Error al duplicar proyecto");
@@ -254,7 +261,7 @@ export function ProjectSidebarShadcn({
   const handleToggleArchiveProject = async (project: Proyecto) => {
     const nextEstado = project.estado === "Archivado" ? "Activo" : "Archivado";
     try {
-      await updateProyecto(project.id, { estado: nextEstado });
+      await updateProjectMutation.mutateAsync({ id: project.id, data: { estado: nextEstado } });
       toast.success(
         nextEstado === "Archivado"
           ? `Proyecto "${project.nombre}" archivado`
@@ -282,7 +289,7 @@ export function ProjectSidebarShadcn({
   const handleConfirmDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
-      await deleteProyecto(projectToDelete.id);
+      await deleteProjectMutation.mutateAsync(projectToDelete.id);
       toast.success(`Proyecto "${projectToDelete.nombre}" eliminado`);
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar proyecto");
@@ -344,10 +351,7 @@ export function ProjectSidebarShadcn({
   const handleConfirmDeleteDepartment = async () => {
     if (!departmentToDelete) return;
     try {
-      await deleteDepartment(departmentToDelete.id);
-      toast.success(`Departamento "${departmentToDelete.nombre}" eliminado`);
-    } catch (error: any) {
-      toast.error(error?.message || "Error al eliminar departamento");
+      await deleteDepartmentMutation.mutateAsync(departmentToDelete.id);
     } finally {
       setDepartmentToDelete(null);
       setShowDeleteDepartmentDialog(false);
@@ -356,12 +360,7 @@ export function ProjectSidebarShadcn({
 
   const handleRestoreDepartmentAction = async (department?: Departamento) => {
     if (!department) return;
-    try {
-      await restoreDepartamento(department.id);
-      toast.success(`Departamento "${department.nombre}" restaurado`);
-    } catch (error: any) {
-      toast.error(error?.message || "Error al restaurar departamento");
-    }
+    await restoreDepartmentMutation.mutateAsync(department.id);
   };
 
   const renderProjectRow = (

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo } from "react"
-import { useSystemSettingsStore } from "@/store/systemSettingsStore"
+import { useSystemSettings } from "@/hooks/queries"
 
 // Preset themes - each with primary and secondary colors
 export const PRESET_THEMES = {
@@ -131,7 +131,7 @@ function adjustLightness(hex: string, factor: number): string {
 }
 
 export function useThemeCustomization() {
-    const { settings } = useSystemSettingsStore()
+    const { data: settings } = useSystemSettings()
 
     // Calculate derived theme values
     const themeValues = useMemo(() => {

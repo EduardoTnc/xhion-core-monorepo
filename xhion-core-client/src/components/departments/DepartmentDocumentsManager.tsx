@@ -42,7 +42,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useConocimientoStore } from "@/store/conocimientoStore"
+import {
+  useDocumentosDepartamento,
+  useCreateDocumentoDepartamento,
+  useUpdateDocumentoDepartamento,
+  useDeleteDocumentoDepartamento,
+} from "@/hooks/queries"
 import { TipoDocumentoDepartamento } from "@/services/conocimientoService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -111,14 +116,11 @@ export function DepartmentDocumentsManager({
   const [filterTipo, setFilterTipo] = useState<string>("all")
   const isCondensed = variant === "condensed"
 
-  const {
-    documentosDepartamento,
-    isLoading,
-    fetchDocumentosDepartamento,
-    createDocumentoDepartamento,
-    updateDocumentoDepartamento,
-    deleteDocumentoDepartamento,
-  } = useConocimientoStore()
+  // TanStack Query for documents
+  const { data: documentosDepartamento = [], isLoading } = useDocumentosDepartamento(departamentoId)
+  const createMutation = useCreateDocumentoDepartamento()
+  const updateMutation = useUpdateDocumentoDepartamento()
+  const deleteMutation = useDeleteDocumentoDepartamento()
 
   const {
     register,
@@ -139,10 +141,6 @@ export function DepartmentDocumentsManager({
   const selectedTipo = watch("tipo")
 
   useEffect(() => {
-    fetchDocumentosDepartamento(departamentoId)
-  }, [departamentoId, fetchDocumentosDepartamento])
-
-  useEffect(() => {
     if (selectedDocumento && showEditModal) {
       reset({
         tipo: selectedDocumento.tipo,
@@ -160,35 +158,39 @@ export function DepartmentDocumentsManager({
 
   const onSubmitCreate = async (data: DocumentoFormData) => {
     try {
-      await createDocumentoDepartamento({
+      await createMutation.mutateAsync({
         ...data,
         departamentoId,
       })
       setShowCreateModal(false)
       reset()
     } catch (error) {
-      console.error("Error al crear documento:", error)
+      // Mutations handle errors
     }
   }
 
   const onSubmitEdit = async (data: DocumentoFormData) => {
     if (!selectedDocumento) return
     try {
-      await updateDocumentoDepartamento(selectedDocumento.id, data)
+      await updateMutation.mutateAsync({
+        id: selectedDocumento.id,
+        data,
+        departamentoId,
+      })
       setShowEditModal(false)
       setSelectedDocumento(null)
       reset()
     } catch (error) {
-      console.error("Error al actualizar documento:", error)
+      // Mutations handle errors
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de eliminar este documento?")) return
     try {
-      await deleteDocumentoDepartamento(id)
+      await deleteMutation.mutateAsync({ id, departamentoId })
     } catch (error) {
-      console.error("Error al eliminar documento:", error)
+      // Mutations handle errors
     }
   }
 

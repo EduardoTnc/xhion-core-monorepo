@@ -21,10 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { usePuestosTrabajoStore } from "@/store/puestosTrabajoStore"
-import { useUsuariosStore } from "@/store/usuariosStore"
+import puestosTrabajoService from "@/services/puestosTrabajoService"
+import type { PuestoTrabajo, CreatePuestoTrabajoDto, UpdatePuestoTrabajoDto } from "@/services/puestosTrabajoService"
+import { userService } from "@/services/userService"
 import { cn } from "@/lib/utils"
 import type { Usuario } from "@/types"
+import { toast } from "sonner"
 
 interface DepartmentOrgChartProps {
   departamentoId: string
@@ -60,27 +62,35 @@ export function DepartmentOrgChart({ departamentoId, departamentoNombre }: Depar
     puestoSuperiorId: "",
   })
 
-  const {
-    puestos,
-    isLoading,
-    fetchPuestosByDepartamento,
-    createPuesto,
-    updatePuesto,
-    deletePuesto,
-    asignarEmpleado,
-    desasignarEmpleado,
-  } = usePuestosTrabajoStore()
+  // Local state for data (replacing stores)
+  const [puestos, setPuestos] = useState<PuestoTrabajo[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  const { usuarios, fetchUsuarios } = useUsuariosStore()
-
+  // Fetch puestos and usuarios
   useEffect(() => {
-    fetchPuestosByDepartamento(departamentoId)
-    fetchUsuarios()
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const [puestosData, usuariosData] = await Promise.all([
+          puestosTrabajoService.getPuestosByDepartamento(departamentoId),
+          userService.obtenerTodosLosUsuarios(),
+        ])
+        setPuestos(puestosData)
+        setUsuarios(usuariosData)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        toast.error("Error al cargar datos del organigrama")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
   }, [departamentoId])
 
   // Construir árbol jerárquico
   const buildTree = (): OrgNode[] => {
-    const puestosDepartamento = puestos.get(departamentoId) || []
+    const puestosDepartamento = puestos // Now it's a direct array
     const nodeMap = new Map<string, OrgNode>()
 
     // Crear nodos
@@ -133,56 +143,71 @@ export function DepartmentOrgChart({ departamentoId, departamentoNombre }: Depar
 
   const handleCreate = async () => {
     try {
-      await createPuesto({
+      const newPuesto = await puestosTrabajoService.createPuesto({
         ...formData,
         departamentoId,
         puestoSuperiorId: formData.puestoSuperiorId || undefined,
       })
+      setPuestos(prev => [...prev, newPuesto])
       setShowCreateModal(false)
       resetForm()
+      toast.success("Puesto creado exitosamente")
     } catch (error) {
       console.error("Error al crear puesto:", error)
+      toast.error("Error al crear puesto")
     }
   }
 
   const handleEdit = async () => {
     if (!selectedPuesto) return
     try {
-      await updatePuesto(selectedPuesto.id, formData)
+      const updatedPuesto = await puestosTrabajoService.updatePuesto(selectedPuesto.id, formData)
+      setPuestos(prev => prev.map(p => p.id === selectedPuesto.id ? updatedPuesto : p))
       setShowEditModal(false)
       setSelectedPuesto(null)
       resetForm()
+      toast.success("Puesto actualizado exitosamente")
     } catch (error) {
       console.error("Error al actualizar puesto:", error)
+      toast.error("Error al actualizar puesto")
     }
   }
 
   const handleDelete = async (puestoId: string) => {
     if (!confirm("¿Eliminar este puesto? Los empleados asignados serán desasignados.")) return
     try {
-      await deletePuesto(puestoId)
+      await puestosTrabajoService.deletePuesto(puestoId)
+      setPuestos(prev => prev.filter(p => p.id !== puestoId))
+      toast.success("Puesto eliminado exitosamente")
     } catch (error) {
       console.error("Error al eliminar puesto:", error)
+      toast.error("Error al eliminar puesto")
     }
   }
 
   const handleAssignEmployee = async (empleadoId: string) => {
     if (!selectedPuesto) return
     try {
-      await asignarEmpleado(selectedPuesto.id, empleadoId)
+      const updatedPuesto = await puestosTrabajoService.asignarEmpleado(selectedPuesto.id, empleadoId)
+      setPuestos(prev => prev.map(p => p.id === selectedPuesto.id ? updatedPuesto : p))
       setShowAssignModal(false)
       setSelectedPuesto(null)
+      toast.success("Empleado asignado exitosamente")
     } catch (error) {
       console.error("Error al asignar empleado:", error)
+      toast.error("Error al asignar empleado")
     }
   }
 
   const handleUnassignEmployee = async (puestoId: string, empleadoId: string) => {
     if (!confirm("¿Desasignar este empleado del puesto?")) return
     try {
-      await desasignarEmpleado(puestoId, empleadoId)
+      const updatedPuesto = await puestosTrabajoService.desasignarEmpleado(puestoId, empleadoId)
+      setPuestos(prev => prev.map(p => p.id === puestoId ? updatedPuesto : p))
+      toast.success("Empleado desasignado exitosamente")
     } catch (error) {
       console.error("Error al desasignar empleado:", error)
+      toast.error("Error al desasignar empleado")
     }
   }
 
@@ -475,7 +500,7 @@ export function DepartmentOrgChart({ departamentoId, departamentoNombre }: Depar
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Sin puesto superior</SelectItem>
-                    {(puestos.get(departamentoId) || []).map((puesto) => (
+                    {puestos.map((puesto) => (
                       <SelectItem key={puesto.id} value={puesto.id}>
                         {puesto.nombre} (Nivel {puesto.nivel})
                       </SelectItem>
@@ -568,7 +593,7 @@ export function DepartmentOrgChart({ departamentoId, departamentoNombre }: Depar
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Sin puesto superior</SelectItem>
-                    {(puestos.get(departamentoId) || [])
+                    {puestos
                       .filter((p) => p.id !== selectedPuesto?.id)
                       .map((puesto) => (
                         <SelectItem key={puesto.id} value={puesto.id}>

@@ -175,6 +175,19 @@ export const projectService = {
     }
   },
 
+  /**
+   * Duplicar un proyecto
+   */
+  async duplicate(id: string): Promise<Proyecto> {
+    try {
+      const response = await apiClient.post<Proyecto>(`/proyectos/${id}/duplicate`);
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Error al duplicar proyecto';
+      throw new Error(errorMessage);
+    }
+  },
+
   // ==================== GESTIÓN DE MIEMBROS ====================
 
   /**

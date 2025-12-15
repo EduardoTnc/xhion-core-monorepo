@@ -5,7 +5,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { CreateProjectModal } from "@/components/modals/create-project-modal"
+import { CreateProjectModal } from "@/components/projects/CreateProjectModal"
 
 export function NavUser() {
   const [showCreateProject, setShowCreateProject] = useState(false)

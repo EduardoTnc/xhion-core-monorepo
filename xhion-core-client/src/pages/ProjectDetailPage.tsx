@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useProjectStore } from "@/store/projectStore";
-import { useTaskStore } from "@/store/taskStore";
+import {
+  useProject,
+  useProjectStages,
+  useProjectMembers,
+  useTasks,
+  useDeleteTask,
+  useRemoveProjectMember,
+  useCreateProjectStage,
+  useUpdateProjectStage,
+  useDeleteProjectStage,
+  useUpdateProject,
+} from "@/hooks/queries";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,11 +34,8 @@ import {
   Plus,
   Loader2,
   Trash2,
-  Edit,
-  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { type Etapa } from "@/services/projectService";
 
 const estadoColors = {
@@ -42,21 +49,21 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    proyectoActual,
-    etapas,
-    miembros,
-    fetchProyectoById,
-    fetchEtapas,
-    fetchMiembros,
-    deleteEtapa,
-    removeMiembro,
-    createEtapa,
-    updateEtapa,
-    updateStagesEnabled,
-    isLoading,
-  } = useProjectStore();
-  const { tareas, fetchTareas, deleteTarea } = useTaskStore();
+
+  // TanStack Query hooks for project data
+  const { data: proyectoActual, isLoading, refetch: refetchProyecto } = useProject(id);
+  const { data: etapas = [], refetch: refetchEtapas } = useProjectStages(id);
+  const { data: miembros = [] } = useProjectMembers(id);
+  const { data: tareas = [], refetch: refetchTareas } = useTasks({ proyectoId: id });
+
+  // TanStack Query mutations
+  const deleteTaskMutation = useDeleteTask();
+  const removeProjectMemberMutation = useRemoveProjectMember();
+  const createStageMutation = useCreateProjectStage();
+  const updateStageMutation = useUpdateProjectStage();
+  const deleteStageMutation = useDeleteProjectStage();
+  const updateProjectMutation = useUpdateProject();
+
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -69,35 +76,14 @@ export default function ProjectDetailPage() {
   const stagesEnabled = proyectoActual?.usaEtapas ?? true;
   const stageColorMap = useMemo(() => buildStageColorMap(etapas, stageGradientPreset), [etapas, stageGradientPreset]);
 
-  useEffect(() => {
-    if (id) {
-      loadProjectData(id);
-    }
-  }, [id]);
-
-  // Abrir modal de tarea si se llega con state.openTaskId desde el Gantt
+  // Open task modal if arrived with state.openTaskId from Gantt
   useEffect(() => {
     const state = location.state as any
     if (state?.openTaskId) {
       setSelectedTaskId(state.openTaskId)
       setShowTaskModal(true)
     }
-    // No limpiar el state aquí para permitir back/forward mantener contexto
   }, [location.state])
-
-  const loadProjectData = async (projectId: string) => {
-    try {
-      await Promise.all([
-        fetchProyectoById(projectId),
-        fetchEtapas(projectId),
-        fetchMiembros(projectId),
-        fetchTareas({ proyectoId: projectId }),
-      ]);
-    } catch (error: any) {
-      toast.error(error.message || "Error al cargar proyecto");
-      navigate("/proyectos");
-    }
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -125,31 +111,32 @@ export default function ProjectDetailPage() {
 
   const handleDeleteTask = async (tareaId: string, titulo: string) => {
     if (!confirm(`¿Estás seguro de eliminar la tarea "${titulo}"?`)) return;
-    
+
     try {
-      await deleteTarea(tareaId);
-      toast.success("Tarea eliminada exitosamente");
-      if (id) await fetchTareas({ proyectoId: id });
+      await deleteTaskMutation.mutateAsync(tareaId);
+      // TanStack Query auto-invalidates
     } catch (error: any) {
-      toast.error(error.message || "Error al eliminar tarea");
+      // Mutation handles errors
     }
   };
 
   const handleInlineCreateStage = async (data: StageCreateInput) => {
     if (!id) return;
     try {
-      await createEtapa(id, {
-        nombre: data.nombre,
-        descripcion: data.descripcion ?? undefined,
-        orden: data.orden,
-        fechaInicio: data.fechaInicio ?? undefined,
-        fechaFin: data.fechaFin ?? undefined,
+      await createStageMutation.mutateAsync({
+        projectId: id,
+        data: {
+          nombre: data.nombre,
+          descripcion: data.descripcion ?? undefined,
+          orden: data.orden,
+          fechaInicio: data.fechaInicio ?? undefined,
+          fechaFin: data.fechaFin ?? undefined,
+        },
       });
       toast.success("Etapa creada");
-      await Promise.all([fetchEtapas(id), fetchTareas({ proyectoId: id })]);
+      // TanStack Query auto-invalidates
     } catch (error: any) {
       const message = error?.message || "Error al crear etapa";
-      toast.error(message);
       throw new Error(message);
     }
   };
@@ -157,11 +144,21 @@ export default function ProjectDetailPage() {
   const handleInlineUpdateStage = async (etapaId: string, data: StageUpdateInput) => {
     if (!id) return;
     try {
-      await updateEtapa(id, etapaId, data);
-      await Promise.all([fetchEtapas(id), fetchTareas({ proyectoId: id })]);
+      await updateStageMutation.mutateAsync({
+        projectId: id,
+        stageId: etapaId,
+        data: {
+          ...data,
+          // Convert null to undefined for fields that don't accept null in UpdateEtapaDto
+          descripcion: data.descripcion ?? undefined,
+          fechaInicio: data.fechaInicio ?? undefined,
+          fechaFin: data.fechaFin ?? undefined,
+        },
+      });
       toast.success("Etapa actualizada");
+      // TanStack Query auto-invalidates
     } catch (error: any) {
-      toast.error(error?.message || "Error al actualizar etapa");
+      // Mutation handles errors
     }
   };
 
@@ -173,35 +170,35 @@ export default function ProjectDetailPage() {
   const confirmDeleteEtapa = async () => {
     if (!etapaToDelete || !id) return;
     try {
-      await deleteEtapa(id, etapaToDelete.id);
+      await deleteStageMutation.mutateAsync({ projectId: id, stageId: etapaToDelete.id });
       toast.success("Etapa eliminada exitosamente");
       setEtapaToDelete(null);
       setShowDeleteEtapaConfirm(false);
-      await Promise.all([fetchEtapas(id), fetchTareas({ proyectoId: id })]);
+      // TanStack Query auto-invalidates
     } catch (error: any) {
-      toast.error(error.message || "Error al eliminar etapa");
+      // Mutation handles errors
     }
   };
 
   const handleToggleStagesSetting = async (enabled: boolean) => {
     if (!id) return;
     try {
-      await updateStagesEnabled(id, enabled);
+      await updateProjectMutation.mutateAsync({ id, data: { usaEtapas: enabled } });
       toast.success(enabled ? "Gestión de etapas activada" : "Gestión de etapas desactivada");
     } catch (error: any) {
-      toast.error(error?.message || "Error al actualizar la configuración de etapas");
+      // Mutation handles errors
     }
   };
 
   const handleRemoveMiembro = async (usuarioId: string, nombre: string) => {
     if (!confirm(`¿Estás seguro de remover a ${nombre} del proyecto?`)) return;
-    
+
     try {
       if (!id) return;
-      await removeMiembro(id, usuarioId);
-      toast.success("Miembro removido exitosamente");
+      await removeProjectMemberMutation.mutateAsync({ projectId: id, userId: usuarioId });
+      // Mutation handles success toast and auto-invalidates
     } catch (error: any) {
-      toast.error(error.message || "Error al remover miembro");
+      // Mutation handles errors
     }
   };
 
@@ -503,14 +500,14 @@ export default function ProjectDetailPage() {
         open={showTaskModal}
         onOpenChange={setShowTaskModal}
       />
-      
+
       <CreateTaskModal
         open={showCreateTaskModal}
         onOpenChange={(open) => {
           setShowCreateTaskModal(open);
           if (!open) {
             setTaskToEdit(null);
-            if (id) fetchTareas({ proyectoId: id });
+            refetchTareas();
           }
         }}
         proyectoId={id || ""}
@@ -528,7 +525,7 @@ export default function ProjectDetailPage() {
         open={showEditProjectModal}
         onOpenChange={(open) => {
           setShowEditProjectModal(open);
-          if (!open && id) fetchProyectoById(id);
+          if (!open && id) refetchProyecto();
         }}
         proyecto={proyectoActual}
       />

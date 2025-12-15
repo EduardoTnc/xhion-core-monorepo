@@ -160,6 +160,20 @@ class DepartmentService {
     const response = await apiClient.post(`/departamentos/${id}/restore`);
     return response.data;
   }
+
+  /**
+   * Asignar usuarios a un departamento.
+   * Los usuarios serán asociados a un puesto de trabajo del departamento.
+   */
+  async asignarUsuariosDepartamento(
+    departamentoId: string,
+    usuarioIds: string[]
+  ): Promise<{ message: string; departamentoId: string; usuariosAsignados: number }> {
+    const response = await apiClient.post(`/departamentos/${departamentoId}/usuarios`, {
+      usuarioIds,
+    });
+    return response.data;
+  }
 }
 
 export const departmentService = new DepartmentService();

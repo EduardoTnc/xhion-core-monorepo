@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Users, Search, Wallet, FolderPlus, UploadCloud, X } from "lucide-react";
-import { useDepartmentStore } from "@/store/departmentStore";
-import type { Departamento } from "@/services/departmentService";
+import { Loader2, Users, Search, FolderPlus, UploadCloud, X } from "lucide-react";
+import { useCreateDepartment, useUpdateDepartment } from "@/hooks/mutations/useDepartmentMutations";
+import { departmentService, type Departamento } from "@/services/departmentService";
 import { DEPARTMENT_ICONS } from "@/lib/department-icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,8 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TipoDocumentoDepartamento } from "@/services/conocimientoService";
-import { useFinanzasStore } from "@/store/finanzasStore";
-import { useConocimientoStore } from "@/store/conocimientoStore";
+import { useCreateContextoDepartamento, useCreateDocumentoDepartamento } from "@/hooks/queries";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
 import "@/styles/estilos_personalizados.css";
@@ -96,14 +95,12 @@ export function CreateDepartmentModal({
   onOpenChange,
   departamento,
 }: CreateDepartmentModalProps) {
-  const {
-    createDepartamento,
-    updateDepartamento,
-    asignarUsuariosDepartamento,
-    isLoading,
-  } = useDepartmentStore();
-  const { crearPresupuestoDepartamento } = useFinanzasStore();
-  const { createContextoDepartamento, createDocumentoDepartamento } = useConocimientoStore();
+  // TanStack Query mutations
+  const createDepartmentMutation = useCreateDepartment();
+  const updateDepartmentMutation = useUpdateDepartment();
+  const createContextMutation = useCreateContextoDepartamento();
+  const createDocumentMutation = useCreateDocumentoDepartamento();
+  const isLoading = createDepartmentMutation.isPending || updateDepartmentMutation.isPending;
   const [selectedColor, setSelectedColor] = useState(departamento?.color || "bg-blue-500");
   const [selectedIcon, setSelectedIcon] = useState(departamento?.icono || "Building2");
   const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(departamento?.jefeId || null);
@@ -113,16 +110,8 @@ export function CreateDepartmentModal({
   const [selectedUsers, setSelectedUsers] = useState<Record<string, boolean>>({});
   const [searchUsuario, setSearchUsuario] = useState("");
   const [teamEnabled, setTeamEnabled] = useState(false);
-  const [budgetEnabled, setBudgetEnabled] = useState(false);
   const [contextEnabled, setContextEnabled] = useState(false);
   const [documentsEnabled, setDocumentsEnabled] = useState(false);
-  const [budgetForm, setBudgetForm] = useState({
-    montoTotal: "",
-    periodo: "",
-    fechaInicio: "",
-    fechaFin: "",
-    descripcion: "",
-  });
   const [contextForm, setContextForm] = useState({
     funciones: "",
     responsabilidades: "",
@@ -181,14 +170,12 @@ export function CreateDepartmentModal({
       setSelectedColor("bg-blue-500");
       setSelectedIcon("Building2");
     }
-    setBudgetForm({ montoTotal: "", periodo: "", fechaInicio: "", fechaFin: "", descripcion: "" });
     setContextForm({ funciones: "", responsabilidades: "", procesosClave: "", objetivos: "", kpis: "" });
     setDocumentDrafts([{ id: crypto.randomUUID(), tipo: TipoDocumentoDepartamento.Resumen, titulo: "", contenido: "", file: null }]);
     setSelectedUsers({});
     setSelectedLeaderId(departamento?.jefeId || null);
     setValue("jefeId", departamento?.jefeId || "");
     setTeamEnabled(false);
-    setBudgetEnabled(false);
     setContextEnabled(false);
     setDocumentsEnabled(false);
   }, [departamento, reset]);
@@ -239,10 +226,6 @@ export function CreateDepartmentModal({
     setSelectedUsers((prev) => ({ ...prev, [userId]: true }));
     setSelectedLeaderId(userId);
     setValue("jefeId", userId);
-  };
-
-  const handleBudgetChange = (field: keyof typeof budgetForm, value: string) => {
-    setBudgetForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleContextChange = (field: keyof typeof contextForm, value: string) => {
@@ -315,9 +298,9 @@ export function CreateDepartmentModal({
       let targetDepartment = departamento;
 
       if (departamento) {
-        await updateDepartamento(departamento.id, payload);
+        await updateDepartmentMutation.mutateAsync({ id: departamento.id, data: payload });
       } else {
-        targetDepartment = await createDepartamento(payload);
+        targetDepartment = await createDepartmentMutation.mutateAsync(payload);
       }
 
       if (!targetDepartment) {
@@ -328,25 +311,7 @@ export function CreateDepartmentModal({
 
       if (teamEnabled && selectedUserIds.length > 0) {
         followUpPromises.push(
-          asignarUsuariosDepartamento(targetDepartment.id, selectedUserIds)
-        );
-      }
-
-      if (
-        budgetEnabled &&
-        budgetForm.montoTotal &&
-        budgetForm.periodo &&
-        budgetForm.fechaInicio &&
-        budgetForm.fechaFin
-      ) {
-        followUpPromises.push(
-          crearPresupuestoDepartamento(targetDepartment.id, {
-            montoTotal: Number(budgetForm.montoTotal),
-            periodo: budgetForm.periodo,
-            fechaInicio: new Date(budgetForm.fechaInicio).toISOString(),
-            fechaFin: new Date(budgetForm.fechaFin).toISOString(),
-            descripcion: budgetForm.descripcion,
-          } as any)
+          departmentService.asignarUsuariosDepartamento(targetDepartment.id, selectedUserIds)
         );
       }
 
@@ -354,7 +319,7 @@ export function CreateDepartmentModal({
         const hasContextData = Object.values(contextForm).some((value) => value.trim().length);
         if (hasContextData) {
           followUpPromises.push(
-            createContextoDepartamento({
+            createContextMutation.mutateAsync({
               departamentoId: targetDepartment.id,
               ...contextForm,
             })
@@ -385,7 +350,7 @@ export function CreateDepartmentModal({
             })
           );
           followUpPromises.push(
-            Promise.all(documentsPayload.map((payload) => createDocumentoDepartamento(payload)))
+            Promise.all(documentsPayload.map((payload) => createDocumentMutation.mutateAsync(payload)))
           );
         }
       }
@@ -497,8 +462,8 @@ export function CreateDepartmentModal({
                           key={color.value}
                           type="button"
                           className={`h-11 rounded-xl transition focus-visible:ring-2 focus-visible:ring-offset-2 ${color.value} ${selectedColor === color.value
-                              ? "ring-2 ring-primary ring-offset-2"
-                              : "hover:scale-105"
+                            ? "ring-2 ring-primary ring-offset-2"
+                            : "hover:scale-105"
                             }`}
                           onClick={() => {
                             setSelectedColor(color.value);
@@ -612,8 +577,8 @@ export function CreateDepartmentModal({
                                   <button
                                     type="button"
                                     className={`ml-auto rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${selectedLeaderId === usuario.id
-                                        ? "border-primary bg-primary/10 text-primary"
-                                        : "border-border/60 text-muted-foreground hover:text-foreground"
+                                      ? "border-primary bg-primary/10 text-primary"
+                                      : "border-border/60 text-muted-foreground hover:text-foreground"
                                       }`}
                                     onClick={() => handleSelectLeader(usuario.id)}
                                   >
@@ -631,70 +596,6 @@ export function CreateDepartmentModal({
                   <p className="mt-4 text-xs text-muted-foreground">
                     Activa este módulo para asignar colaboradores y definir al líder del departamento.
                   </p>
-                )}
-              </section>
-
-              {/* Presupuesto */}
-              <section className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Presupuesto inicial</p>
-                    <h4 className="text-sm font-semibold text-foreground">Define recursos financieros</h4>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{budgetEnabled ? "Activo" : "Configurar"}</span>
-                    <Switch checked={budgetEnabled} onCheckedChange={setBudgetEnabled} />
-                  </div>
-                </div>
-                {budgetEnabled ? (
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
-                        <Wallet className="h-3.5 w-3.5" /> Monto (S/.)
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="50000"
-                        value={budgetForm.montoTotal}
-                        onChange={(e) => handleBudgetChange("montoTotal", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">Periodo</Label>
-                      <Input
-                        placeholder="2025-Q1"
-                        value={budgetForm.periodo}
-                        onChange={(e) => handleBudgetChange("periodo", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">Inicio</Label>
-                      <Input
-                        type="date"
-                        value={budgetForm.fechaInicio}
-                        onChange={(e) => handleBudgetChange("fechaInicio", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">Fin</Label>
-                      <Input
-                        type="date"
-                        value={budgetForm.fechaFin}
-                        onChange={(e) => handleBudgetChange("fechaFin", e.target.value)}
-                      />
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">Notas</Label>
-                      <Textarea
-                        rows={2}
-                        placeholder="Detalle de supuestos o restricciones"
-                        value={budgetForm.descripcion}
-                        onChange={(e) => handleBudgetChange("descripcion", e.target.value)}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-xs text-muted-foreground">Activa para definir presupuesto desde esta vista.</p>
                 )}
               </section>
 
@@ -734,11 +635,12 @@ export function CreateDepartmentModal({
                   </div>
                 ) : (
                   <p className="mt-4 text-xs text-muted-foreground">Activa para documentar el contexto operativo y habilitar IA contextual.</p>
-                )}
-              </section>
+                )
+                }
+              </section >
 
               {/* Documentos */}
-              <section className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
+              < section className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm" >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Documentos clave</p>
@@ -749,102 +651,104 @@ export function CreateDepartmentModal({
                     <Switch checked={documentsEnabled} onCheckedChange={setDocumentsEnabled} />
                   </div>
                 </div>
-                {documentsEnabled ? (
-                  <div className="mt-3 space-y-3">
-                    {documentDrafts.map((doc, index) => (
-                      <div key={doc.id} className="rounded-xl border border-dashed border-border/60 p-3 space-y-3">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Documento #{index + 1}</span>
-                          {documentDrafts.length > 1 && (
-                            <button
-                              type="button"
-                              className="text-destructive underline-offset-2 hover:underline"
-                              onClick={() => removeDocumentDraft(doc.id)}
-                            >
-                              Eliminar
-                            </button>
-                          )}
-                        </div>
-                        <div className="grid gap-2 md:grid-cols-2">
-                          <Select
-                            value={doc.tipo}
-                            onValueChange={(value) => handleDocumentChange(doc.id, "tipo", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DOCUMENT_TYPE_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            placeholder="Título"
-                            value={doc.titulo}
-                            onChange={(e) => handleDocumentChange(doc.id, "titulo", e.target.value)}
-                          />
-                        </div>
-                        <div
-                          className={`rounded-xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-sm transition ${draggingDocId === doc.id ? "border-primary bg-primary/5" : ""
-                            }`}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDragEnter={() => setDraggingDocId(doc.id)}
-                          onDragLeave={() => setDraggingDocId(null)}
-                          onDrop={(event) => handleDocumentDrop(doc.id, event)}
-                        >
-                          <input
-                            id={`file-${doc.id}`}
-                            type="file"
-                            className="hidden"
-                            onChange={(event) => handleDocumentFileChange(doc.id, event.target.files)}
-                          />
-                          <label htmlFor={`file-${doc.id}`} className="flex cursor-pointer flex-col items-center gap-2 text-muted-foreground">
-                            <UploadCloud className="h-6 w-6" />
-                            <span className="text-xs uppercase tracking-wide">
-                              Arrastra tu archivo o haz clic para seleccionarlo
-                            </span>
-                          </label>
-                          {doc.file ? (
-                            <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-left text-xs text-foreground">
-                              <div className="flex flex-col">
-                                <span className="font-medium">{doc.file.name}</span>
-                                <span className="text-[11px] text-muted-foreground">{(doc.file.size / 1024).toFixed(1)} KB</span>
-                              </div>
-                              <button type="button" onClick={() => removeDocumentFile(doc.id)} className="text-destructive">
-                                <X className="h-4 w-4" />
+                {
+                  documentsEnabled ? (
+                    <div className="mt-3 space-y-3">
+                      {documentDrafts.map((doc, index) => (
+                        <div key={doc.id} className="rounded-xl border border-dashed border-border/60 p-3 space-y-3">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Documento #{index + 1}</span>
+                            {documentDrafts.length > 1 && (
+                              <button
+                                type="button"
+                                className="text-destructive underline-offset-2 hover:underline"
+                                onClick={() => removeDocumentDraft(doc.id)}
+                              >
+                                Eliminar
                               </button>
-                            </div>
-                          ) : (
-                            <p className="mt-2 text-xs text-muted-foreground">Formatos admitidos: PDF, DOCX, PPT, imágenes.</p>
-                          )}
+                            )}
+                          </div>
+                          <div className="grid gap-2 md:grid-cols-2">
+                            <Select
+                              value={doc.tipo}
+                              onValueChange={(value) => handleDocumentChange(doc.id, "tipo", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Tipo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DOCUMENT_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              placeholder="Título"
+                              value={doc.titulo}
+                              onChange={(e) => handleDocumentChange(doc.id, "titulo", e.target.value)}
+                            />
+                          </div>
+                          <div
+                            className={`rounded-xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-sm transition ${draggingDocId === doc.id ? "border-primary bg-primary/5" : ""
+                              }`}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDragEnter={() => setDraggingDocId(doc.id)}
+                            onDragLeave={() => setDraggingDocId(null)}
+                            onDrop={(event) => handleDocumentDrop(doc.id, event)}
+                          >
+                            <input
+                              id={`file-${doc.id}`}
+                              type="file"
+                              className="hidden"
+                              onChange={(event) => handleDocumentFileChange(doc.id, event.target.files)}
+                            />
+                            <label htmlFor={`file-${doc.id}`} className="flex cursor-pointer flex-col items-center gap-2 text-muted-foreground">
+                              <UploadCloud className="h-6 w-6" />
+                              <span className="text-xs uppercase tracking-wide">
+                                Arrastra tu archivo o haz clic para seleccionarlo
+                              </span>
+                            </label>
+                            {doc.file ? (
+                              <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-left text-xs text-foreground">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{doc.file.name}</span>
+                                  <span className="text-[11px] text-muted-foreground">{(doc.file.size / 1024).toFixed(1)} KB</span>
+                                </div>
+                                <button type="button" onClick={() => removeDocumentFile(doc.id)} className="text-destructive">
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="mt-2 text-xs text-muted-foreground">Formatos admitidos: PDF, DOCX, PPT, imágenes.</p>
+                            )}
+                          </div>
+                          <Textarea
+                            rows={2}
+                            placeholder="Notas o descripción opcional"
+                            value={doc.contenido}
+                            onChange={(e) => handleDocumentChange(doc.id, "contenido", e.target.value)}
+                          />
                         </div>
-                        <Textarea
-                          rows={2}
-                          placeholder="Notas o descripción opcional"
-                          value={doc.contenido}
-                          onChange={(e) => handleDocumentChange(doc.id, "contenido", e.target.value)}
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="w-full border border-dashed border-border/70"
-                      onClick={addDocumentDraft}
-                    >
-                      <FolderPlus className="mr-2 h-4 w-4" /> Añadir documento
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-xs text-muted-foreground">Activa para adjuntar documentación estratégica con drag & drop.</p>
-                )}
-              </section>
-            </div>
-          </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full border border-dashed border-border/70"
+                        onClick={addDocumentDraft}
+                      >
+                        <FolderPlus className="mr-2 h-4 w-4" /> Añadir documento
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-xs text-muted-foreground">Activa para adjuntar documentación estratégica con drag & drop.</p>
+                  )
+                }
+              </section >
+            </div >
+          </div >
 
           <DialogFooter>
             <Button
@@ -860,8 +764,8 @@ export function CreateDepartmentModal({
               {departamento ? "Actualizar" : "Crear"} Departamento
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </form >
+      </DialogContent >
+    </Dialog >
   );
 }

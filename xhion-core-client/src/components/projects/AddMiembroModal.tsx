@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useProjectStore } from "@/store/projectStore";
+import { useProjectMembers } from "@/hooks/queries";
+import { useAddProjectMember } from "@/hooks/mutations/useProjectMutations";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
 import { Loader2, Search, Users } from "lucide-react";
@@ -38,7 +39,11 @@ interface Usuario {
 }
 
 export function AddMiembroModal({ open, onOpenChange, proyectoId }: AddMiembroModalProps) {
-  const { addMiembro, miembros, isLoading } = useProjectStore();
+  // TanStack Query for project members
+  const { data: miembros = [] } = useProjectMembers(proyectoId);
+  const addMemberMutation = useAddProjectMember();
+  const isLoading = addMemberMutation.isPending;
+
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
@@ -109,17 +114,19 @@ export function AddMiembroModal({ open, onOpenChange, proyectoId }: AddMiembroMo
     try {
       setIsSubmitting(true);
       for (const [usuarioId, rol] of Object.entries(selectedUsers)) {
-        await addMiembro(proyectoId, {
-          usuarioId,
-          rol: rol as any,
+        await addMemberMutation.mutateAsync({
+          projectId: proyectoId,
+          data: {
+            usuarioId,
+            rol: rol as any,
+          }
         });
       }
-      toast.success(`${selectedCount} miembro(s) agregados al proyecto`);
       setSelectedUsers({});
       setSearchTerm("");
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(error.message || "Error al agregar miembros");
+      // Mutations handle errors
     } finally {
       setIsSubmitting(false);
     }

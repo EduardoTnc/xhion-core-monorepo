@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { EditProjectModal } from "@/components/projects/EditProjectModal"
-import { useProjectStore } from "@/store/projectStore"
+import { useDeleteProject } from "@/hooks/mutations/useProjectMutations"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -89,6 +89,7 @@ export function DepartmentProjectsView({
 }: DepartmentProjectsViewProps) {
   const [editingProject, setEditingProject] = useState<Proyecto | null>(null)
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null)
+  const deleteProjectMutation = useDeleteProject()
 
   const estadisticas = useMemo(() => {
     if (!proyectos) {
@@ -208,12 +209,10 @@ export function DepartmentProjectsView({
               onClick={async () => {
                 if (deletingProjectId) {
                   try {
-                    const { deleteProyecto } = useProjectStore.getState();
-                    await deleteProyecto(deletingProjectId);
-                    toast.success("Proyecto eliminado correctamente");
+                    await deleteProjectMutation.mutateAsync(deletingProjectId);
                     setDeletingProjectId(null);
                   } catch (error) {
-                    toast.error("Error al eliminar el proyecto");
+                    // Mutation handles error toast
                   }
                 }
               }}

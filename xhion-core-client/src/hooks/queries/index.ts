@@ -129,6 +129,15 @@ export {
     useUserProfessionalLinks,
 } from './useUserSettings';
 
+// Knowledge
+export {
+    useContextoOrganizacional,
+    useContextosDepartamento,
+    useContextoDepartamento,
+    useDocumentosProyecto,
+    useDocumentosDepartamento,
+} from './useKnowledge';
+
 // ==================== MUTATIONS ====================
 
 // Users
@@ -168,6 +177,7 @@ export {
     useCreateProject,
     useUpdateProject,
     useDeleteProject,
+    useDuplicateProject,
     useAddProjectMember,
     useRemoveProjectMember,
     useCreateProjectStage,
@@ -250,3 +260,17 @@ export {
     useAssignEmployeeToPosition,
     useUnassignEmployeeFromPosition,
 } from './useJobPositions';
+
+// Knowledge
+export {
+    useUpsertContextoOrganizacional,
+    useCreateContextoDepartamento,
+    useUpdateContextoDepartamento,
+    useDeleteContextoDepartamento,
+    useCreateDocumentoProyecto,
+    useUpdateDocumentoProyecto,
+    useDeleteDocumentoProyecto,
+    useCreateDocumentoDepartamento,
+    useUpdateDocumentoDepartamento,
+    useDeleteDocumentoDepartamento,
+} from '../mutations/useKnowledgeMutations';

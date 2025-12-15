@@ -55,6 +55,11 @@ export const PERMISOS_CATALOGO: PermisoDefinicion[] = [
     descripcion: 'Permite crear, editar y reordenar etapas del proyecto',
     modulo: 'Proyectos',
   },
+  {
+    nombreAccion: 'proyectos.asignar_responsable',
+    descripcion: 'Permite asignar cualquier usuario como responsable de un proyecto al crearlo',
+    modulo: 'Proyectos',
+  },
 
   // ========================================
   // MÓDULO: TAREAS

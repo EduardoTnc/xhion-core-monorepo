@@ -156,9 +156,18 @@ export const queryKeys = {
     // ============ CONOCIMIENTO ============
     knowledge: {
         all: ['knowledge'] as const,
-        list: (filters?: Record<string, any>) =>
-            [...queryKeys.knowledge.all, 'list', filters] as const,
-        detail: (id: string) => [...queryKeys.knowledge.all, 'detail', id] as const,
+        // Contexto organizacional
+        organizationalContext: () => [...queryKeys.knowledge.all, 'org-context'] as const,
+        // Contextos de departamento
+        departmentContexts: () => [...queryKeys.knowledge.all, 'dept-contexts'] as const,
+        departmentContext: (departamentoId: string) =>
+            [...queryKeys.knowledge.departmentContexts(), departamentoId] as const,
+        // Documentos de proyecto
+        projectDocuments: (proyectoId: string) =>
+            [...queryKeys.knowledge.all, 'project-docs', proyectoId] as const,
+        // Documentos de departamento
+        departmentDocuments: (departamentoId: string) =>
+            [...queryKeys.knowledge.all, 'dept-docs', departamentoId] as const,
     },
 } as const;
 
