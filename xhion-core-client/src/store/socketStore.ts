@@ -45,15 +45,17 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         newSocket.on('disconnect', (reason) => {
             console.log('❌ WebSocket Singleton desconectado:', reason);
             set({ isConnected: false, isConnecting: false });
-            // Sync with connectionStore
-            useConnectionStore.getState().setServerConnected(false);
+            // Note: We intentionally do NOT call setServerConnected(false) here
+            // because the REST API may still be working. Only reconnect_failed
+            // should mark the server as disconnected. Socket.io will attempt
+            // automatic reconnection which often succeeds quickly.
         });
 
         newSocket.on('connect_error', (error) => {
             console.error('❌ Error de conexión WebSocket Singleton:', error.message);
             set({ isConnecting: false });
-            // Sync with connectionStore
-            useConnectionStore.getState().setServerConnected(false);
+            // Don't set server disconnected on first connect_error either - 
+            // wait for reconnect_failed instead
             useConnectionStore.getState().setError(`WebSocket: ${error.message}`);
         });
 

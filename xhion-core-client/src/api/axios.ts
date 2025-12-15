@@ -37,13 +37,22 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Helper to check if it's a network/connection error
+// Helper to check if it's a network/connection error (not timeout)
 const isNetworkError = (error: any): boolean => {
+  // Only treat actual network errors as connection issues
+  // Timeouts are NOT network errors - they often happen with slow endpoints like AI
+  return (
+    !error.response &&
+    (error.code === 'ERR_NETWORK' ||
+      error.message?.includes('Network Error'))
+  );
+};
+
+// Helper to check if it's a timeout error (separate from network errors)
+const isTimeoutError = (error: any): boolean => {
   return (
     !error.response &&
     (error.code === 'ECONNABORTED' ||
-      error.code === 'ERR_NETWORK' ||
-      error.message?.includes('Network Error') ||
       error.message?.includes('timeout'))
   );
 };
@@ -67,7 +76,7 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
     const connectionStore = useConnectionStore.getState();
 
-    // Handle network errors (no response from server)
+    // Handle network errors (no response from server) - true connection loss
     if (isNetworkError(error)) {
       connectionStore.setServerConnected(false);
       connectionStore.setError('No se puede conectar con el servidor');
@@ -79,6 +88,14 @@ apiClient.interceptors.response.use(
         connectionStore.showBlockedOperationToast();
       }
 
+      return Promise.reject(error);
+    }
+
+    // Handle timeout errors separately - server might still be up, just slow
+    if (isTimeoutError(error)) {
+      // Log but don't disconnect - this is often AI or heavy operations
+      console.warn('Request timeout:', originalRequest?.url);
+      // Don't touch connection status - server is likely still available
       return Promise.reject(error);
     }
 

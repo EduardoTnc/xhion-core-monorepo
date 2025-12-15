@@ -75,8 +75,13 @@ export interface AiProjectAssistResponse {
 }
 
 export const aiService = {
+  /**
+   * Search using AI - longer timeout since AI processing can take time
+   */
   async search(payload: AiSearchPayload): Promise<AiSearchResult> {
-    const response = await apiClient.post<AiSearchResult>("/ai/search", payload);
+    const response = await apiClient.post<AiSearchResult>("/ai/search", payload, {
+      timeout: 60000, // 60 second timeout for AI operations
+    });
     return response.data;
   },
 
@@ -89,7 +94,9 @@ export const aiService = {
    * Generates project structure, stages, tasks and risk analysis based on natural language description
    */
   async assistProject(payload: AiProjectAssistRequest): Promise<AiProjectAssistResponse> {
-    const response = await apiClient.post<AiProjectAssistResponse>("/ai/projects/assist", payload);
+    const response = await apiClient.post<AiProjectAssistResponse>("/ai/projects/assist", payload, {
+      timeout: 90000, // 90 second timeout for complex project generation
+    });
     return response.data;
   },
 };
