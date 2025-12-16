@@ -4,7 +4,6 @@ import {
   FolderKanban,
   CheckSquare,
   Calendar,
-  Sparkles,
   Lightbulb,
   Settings,
   Building2,
@@ -14,6 +13,7 @@ import {
   Shield,
   Lock,
 } from "lucide-react"
+import { useAuthStore } from "@/store/authStore"
 import { getDepartmentIcon } from "@/lib/department-icons"
 import { Button } from "@/components/ui/button"
 import {
@@ -68,35 +68,35 @@ const navigationMain: NavItem[] = [
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
+    // Dashboard siempre visible
   },
   {
     title: "Proyectos",
     url: "/proyectos",
     icon: FolderKanban,
+    requiredPermission: "proyectos.ver",
   },
   {
     title: "Tareas",
     url: "/tareas",
     icon: CheckSquare,
+    requiredPermission: "tareas.ver",
   },
   {
     title: "Calendario",
     url: "/calendario",
     icon: Calendar,
+    // Calendario siempre visible
   },
 ]
 
 // Herramientas y funcionalidades avanzadas
 const navigationTools: NavItem[] = [
   {
-    title: "IA Insights",
-    url: "/ai-insights",
-    icon: Sparkles,
-  },
-  {
     title: "Ideas",
     url: "/ideas",
     icon: Lightbulb,
+    requiredPermission: "ideas.ver",
   },
 ]
 
@@ -106,26 +106,31 @@ const navigationAdmin: NavItem[] = [
     title: "Usuarios",
     url: "/usuarios",
     icon: Users,
+    requiredPermission: "usuarios.ver",
   },
   {
     title: "Roles y Permisos",
     url: "/roles",
     icon: Shield,
+    requiredPermission: "roles.ver",
   },
   {
     title: "Configuración de Cuenta",
     url: "/perfil/configuracion",
     icon: User,
+    // Perfil propio siempre visible
   },
   {
     title: "Config. Sistema",
     url: "/sistema/configuracion",
     icon: Settings,
+    requiredPermission: "sistema.configurar",
   },
   {
     title: "Seguridad",
     url: "/auditoria",
     icon: Lock,
+    requiredPermission: "auditoria.ver",
   },
 ]
 
@@ -134,9 +139,19 @@ export function Sidebar() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false)
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
 
-  // TanStack Query for departments
-  const { data: departamentos = [] } = useDepartments()
+  // Check if user has a specific permission
+  const hasPermission = (permission: string): boolean => {
+    if (!user?.permisos) return false
+    return user.permisos.includes(permission)
+  }
+
+  // Check if user can view departments
+  const canViewDepartments = hasPermission("departamentos.ver")
+
+  // TanStack Query for departments - only fetch if user has permission
+  const { data: departamentos = [] } = useDepartments({ enabled: canViewDepartments })
 
   const { data: settings } = useSystemSettings()
 
@@ -208,7 +223,8 @@ export function Sidebar() {
         {/* Footer with Departments & Quick Actions */}
         <SidebarFooter className="border-t group-data-[collapsible=icon]:p-2">
 
-          {/* Departamentos */}
+          {/* Departamentos - Solo visible si tiene permiso */}
+          {canViewDepartments ? (
           <div className="px-3 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-1">
             <div className="flex items-center justify-between mb-2 px-2 group-data-[collapsible=icon]:justify-center">
               <p className="text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -284,6 +300,33 @@ export function Sidebar() {
               </div>
             </TooltipProvider>
           </div>
+          ) : (
+            /* Departamentos deshabilitado si no tiene permiso */
+            <div className="px-3 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-1 opacity-50">
+              <div className="flex items-center justify-between mb-2 px-2 group-data-[collapsible=icon]:justify-center">
+                <p className="text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
+                  Departamentos
+                </p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7 cursor-not-allowed"
+                        disabled
+                      >
+                        <Lock className="h-3.5 w-3.5 group-data-[collapsible=icon]:h-4 group-data-[collapsible=icon]:w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="font-medium">
+                      <p>No tienes permiso para ver departamentos</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
 
 
 

@@ -24,7 +24,7 @@ export class TareasService {
     private readonly prisma: PrismaService,
     private readonly aiEmbeddingSync: AiEmbeddingSyncService,
     private readonly notificationsGateway: NotificationsGateway,
-  ) { }
+  ) {}
 
   private readonly ENTIDAD_TAREA = 'Tarea';
 
@@ -38,7 +38,16 @@ export class TareasService {
     archivoId?: string;
     actividadPadreId?: string;
   }) {
-    const { tareaId, usuarioId, tipo, descripcion, payload, comentarioId, archivoId, actividadPadreId } = params;
+    const {
+      tareaId,
+      usuarioId,
+      tipo,
+      descripcion,
+      payload,
+      comentarioId,
+      archivoId,
+      actividadPadreId,
+    } = params;
 
     return this.prisma.tareaActividad.create({
       data: {
@@ -91,7 +100,11 @@ export class TareasService {
   /**
    * Crear una nueva tarea
    */
-  async create(createTareaDto: CreateTareaDto, usuarioId: string) {
+  async create(
+    createTareaDto: CreateTareaDto,
+    usuarioId: string,
+    permisos: string[] = [],
+  ) {
     // Verificar que el proyecto existe y el usuario tiene acceso
     const proyecto = await this.prisma.proyecto.findUnique({
       where: { id: createTareaDto.proyectoId },
@@ -104,13 +117,18 @@ export class TareasService {
       throw new NotFoundException('Proyecto no encontrado');
     }
 
-    // Verificar acceso al proyecto
-    const tieneAcceso =
-      proyecto.responsableId === usuarioId ||
-      proyecto.miembros.some((m) => m.usuarioId === usuarioId);
+    // Si tiene permiso tareas.ver_todas, puede crear en cualquier proyecto (admin)
+    const puedeCrearEnCualquierProyecto = permisos.includes('tareas.ver_todas');
 
-    if (!tieneAcceso) {
-      throw new ForbiddenException('No tienes acceso a este proyecto');
+    // Verificar acceso al proyecto (a menos que tenga permiso global)
+    if (!puedeCrearEnCualquierProyecto) {
+      const tieneAcceso =
+        proyecto.responsableId === usuarioId ||
+        proyecto.miembros.some((m) => m.usuarioId === usuarioId);
+
+      if (!tieneAcceso) {
+        throw new ForbiddenException('No tienes acceso a este proyecto');
+      }
     }
 
     // Verificar etapa si se proporciona
@@ -144,7 +162,9 @@ export class TareasService {
         etapaId: createTareaDto.etapaId,
         asignadoId: createTareaDto.asignadoId,
         prioridad: createTareaDto.prioridad,
-        fechaVencimiento: createTareaDto.fechaVencimiento ? new Date(createTareaDto.fechaVencimiento) : undefined,
+        fechaVencimiento: createTareaDto.fechaVencimiento
+          ? new Date(createTareaDto.fechaVencimiento)
+          : undefined,
         creadorId: usuarioId,
       },
       include: {
@@ -416,7 +436,10 @@ export class TareasService {
     }
 
     // Verificar usuario asignado si se cambia
-    if (updateTareaDto.asignadoId && updateTareaDto.asignadoId !== tarea.asignadoId) {
+    if (
+      updateTareaDto.asignadoId &&
+      updateTareaDto.asignadoId !== tarea.asignadoId
+    ) {
       const usuario = await this.prisma.usuario.findUnique({
         where: { id: updateTareaDto.asignadoId },
       });
@@ -435,7 +458,9 @@ export class TareasService {
       asignadoId: updateTareaDto.asignadoId,
       estado: updateTareaDto.estado,
       prioridad: updateTareaDto.prioridad,
-      fechaVencimiento: updateTareaDto.fechaVencimiento ? new Date(updateTareaDto.fechaVencimiento) : undefined,
+      fechaVencimiento: updateTareaDto.fechaVencimiento
+        ? new Date(updateTareaDto.fechaVencimiento)
+        : undefined,
     };
 
     if (updateTareaDto.estado === 'Hecho' && tarea.estado !== 'Hecho') {
@@ -586,15 +611,22 @@ export class TareasService {
   /**
    * Eliminar una tarea (soft delete)
    */
-  async remove(id: string, usuarioId: string) {
-    const tarea = await this.findOne(id, usuarioId);
+  async remove(id: string, usuarioId: string, permisos: string[] = []) {
+    const tarea = await this.findOne(id, usuarioId, permisos);
 
     // Solo el creador o el responsable del proyecto pueden eliminar
     const proyecto = await this.prisma.proyecto.findUnique({
       where: { id: tarea.proyectoId },
     });
 
-    if (tarea.creadorId !== usuarioId && proyecto?.responsableId !== usuarioId) {
+    // Si tiene permiso tareas.ver_todas, puede eliminar cualquier tarea (admin)
+    const puedeEliminarCualquierTarea = permisos.includes('tareas.ver_todas');
+
+    if (
+      !puedeEliminarCualquierTarea &&
+      tarea.creadorId !== usuarioId &&
+      proyecto?.responsableId !== usuarioId
+    ) {
       throw new ForbiddenException(
         'Solo el creador de la tarea o el responsable del proyecto pueden eliminarla',
       );
@@ -621,7 +653,11 @@ export class TareasService {
   /**
    * Agregar un comentario a una tarea
    */
-  async addComentario(tareaId: string, createComentarioDto: CreateComentarioDto, usuarioId: string) {
+  async addComentario(
+    tareaId: string,
+    createComentarioDto: CreateComentarioDto,
+    usuarioId: string,
+  ) {
     // Verificar acceso a la tarea
     await this.findOne(tareaId, usuarioId);
 
@@ -685,7 +721,11 @@ export class TareasService {
   /**
    * Eliminar un comentario
    */
-  async removeComentario(tareaId: string, comentarioId: string, usuarioId: string) {
+  async removeComentario(
+    tareaId: string,
+    comentarioId: string,
+    usuarioId: string,
+  ) {
     // Verificar acceso a la tarea
     await this.findOne(tareaId, usuarioId);
 
@@ -699,7 +739,9 @@ export class TareasService {
 
     // Solo el autor del comentario puede eliminarlo
     if (comentario.usuarioId !== usuarioId) {
-      throw new ForbiddenException('Solo el autor puede eliminar el comentario');
+      throw new ForbiddenException(
+        'Solo el autor puede eliminar el comentario',
+      );
     }
 
     await this.prisma.comentario.delete({
@@ -749,10 +791,7 @@ export class TareasService {
           },
         },
       },
-      orderBy: [
-        { prioridad: 'desc' },
-        { fechaVencimiento: 'asc' },
-      ],
+      orderBy: [{ prioridad: 'desc' }, { fechaVencimiento: 'asc' }],
     });
 
     return tareas;
@@ -760,7 +799,11 @@ export class TareasService {
 
   // ==================== ADJUNTOS ====================
 
-  async getAdjuntos(tareaId: string, usuarioId: string, permisos: string[] = []) {
+  async getAdjuntos(
+    tareaId: string,
+    usuarioId: string,
+    permisos: string[] = [],
+  ) {
     await this.findOne(tareaId, usuarioId, permisos);
 
     return this.prisma.archivoAdjunto.findMany({

@@ -14,7 +14,15 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { TareasService } from './tareas.service';
 import {
   CreateTareaDto,
@@ -38,7 +46,7 @@ import type { Express } from 'express';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('tareas')
 export class TareasController {
-  constructor(private readonly tareasService: TareasService) { }
+  constructor(private readonly tareasService: TareasService) {}
 
   // ==================== CRUD DE TAREAS ====================
 
@@ -47,21 +55,54 @@ export class TareasController {
   @Auditar('Crear Tarea')
   @ApiOperation({ summary: 'Crear una nueva tarea' })
   @ApiResponse({ status: 201, description: 'Tarea creada exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos o etapa no pertenece al proyecto' })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos o etapa no pertenece al proyecto',
+  })
   @ApiResponse({ status: 403, description: 'No tienes acceso a este proyecto' })
-  @ApiResponse({ status: 404, description: 'Proyecto o usuario asignado no encontrado' })
+  @ApiResponse({
+    status: 404,
+    description: 'Proyecto o usuario asignado no encontrado',
+  })
   create(@Body() createTareaDto: CreateTareaDto, @Request() req) {
-    return this.tareasService.create(createTareaDto, req.user.id);
+    return this.tareasService.create(
+      createTareaDto,
+      req.user.id,
+      req.user.permisos,
+    );
   }
 
   @Get()
   @RequiresPermission('tareas.ver')
-  @ApiOperation({ summary: 'Obtener tareas del usuario (o todas si tiene permiso tareas.ver_todas)' })
-  @ApiQuery({ name: 'proyectoId', required: false, description: 'Filtrar por proyecto' })
-  @ApiQuery({ name: 'etapaId', required: false, description: 'Filtrar por etapa' })
-  @ApiQuery({ name: 'asignadoId', required: false, description: 'Filtrar por usuario asignado' })
-  @ApiQuery({ name: 'estado', required: false, description: 'Filtrar por estado' })
-  @ApiQuery({ name: 'prioridad', required: false, description: 'Filtrar por prioridad' })
+  @ApiOperation({
+    summary:
+      'Obtener tareas del usuario (o todas si tiene permiso tareas.ver_todas)',
+  })
+  @ApiQuery({
+    name: 'proyectoId',
+    required: false,
+    description: 'Filtrar por proyecto',
+  })
+  @ApiQuery({
+    name: 'etapaId',
+    required: false,
+    description: 'Filtrar por etapa',
+  })
+  @ApiQuery({
+    name: 'asignadoId',
+    required: false,
+    description: 'Filtrar por usuario asignado',
+  })
+  @ApiQuery({
+    name: 'estado',
+    required: false,
+    description: 'Filtrar por estado',
+  })
+  @ApiQuery({
+    name: 'prioridad',
+    required: false,
+    description: 'Filtrar por prioridad',
+  })
   @ApiResponse({ status: 200, description: 'Lista de tareas' })
   findAll(
     @Request() req,
@@ -106,7 +147,11 @@ export class TareasController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a esta tarea' })
   @ApiResponse({ status: 404, description: 'Tarea no encontrada' })
-  update(@Param('id') id: string, @Body() updateTareaDto: UpdateTareaDto, @Request() req) {
+  update(
+    @Param('id') id: string,
+    @Body() updateTareaDto: UpdateTareaDto,
+    @Request() req,
+  ) {
     return this.tareasService.update(id, updateTareaDto, req.user.id);
   }
 
@@ -118,7 +163,11 @@ export class TareasController {
   @ApiResponse({ status: 400, description: 'Etapa no pertenece al proyecto' })
   @ApiResponse({ status: 403, description: 'No tienes acceso a esta tarea' })
   @ApiResponse({ status: 404, description: 'Tarea no encontrada' })
-  move(@Param('id') id: string, @Body() moveTareaDto: MoveTareaDto, @Request() req) {
+  move(
+    @Param('id') id: string,
+    @Body() moveTareaDto: MoveTareaDto,
+    @Request() req,
+  ) {
     return this.tareasService.move(id, moveTareaDto, req.user.id);
   }
 
@@ -128,10 +177,13 @@ export class TareasController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar una tarea (soft delete)' })
   @ApiResponse({ status: 200, description: 'Tarea eliminada exitosamente' })
-  @ApiResponse({ status: 403, description: 'Solo el creador o responsable del proyecto pueden eliminar' })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo el creador o responsable del proyecto pueden eliminar',
+  })
   @ApiResponse({ status: 404, description: 'Tarea no encontrada' })
   remove(@Param('id') id: string, @Request() req) {
-    return this.tareasService.remove(id, req.user.id);
+    return this.tareasService.remove(id, req.user.id, req.user.permisos);
   }
 
   // ==================== GESTIÓN DE COMENTARIOS ====================
@@ -148,7 +200,11 @@ export class TareasController {
     @Body() createComentarioDto: CreateComentarioDto,
     @Request() req,
   ) {
-    return this.tareasService.addComentario(id, createComentarioDto, req.user.id);
+    return this.tareasService.addComentario(
+      id,
+      createComentarioDto,
+      req.user.id,
+    );
   }
 
   @Get(':id/comentarios')
@@ -166,8 +222,14 @@ export class TareasController {
   @Auditar('Eliminar Comentario')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar un comentario' })
-  @ApiResponse({ status: 200, description: 'Comentario eliminado exitosamente' })
-  @ApiResponse({ status: 403, description: 'Solo el autor puede eliminar el comentario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Comentario eliminado exitosamente',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo el autor puede eliminar el comentario',
+  })
   @ApiResponse({ status: 404, description: 'Tarea o comentario no encontrado' })
   removeComentario(
     @Param('id') id: string,
@@ -204,7 +266,8 @@ export class TareasController {
       storage: diskStorage({
         destination: './uploads/tareas',
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `tarea-${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
@@ -219,7 +282,12 @@ export class TareasController {
     @Body() uploadAdjuntoDto: UploadAdjuntoDto,
     @Request() req,
   ) {
-    return this.tareasService.addAdjunto(id, file, uploadAdjuntoDto, req.user.id);
+    return this.tareasService.addAdjunto(
+      id,
+      file,
+      uploadAdjuntoDto,
+      req.user.id,
+    );
   }
 
   @Get(':id/adjuntos')
@@ -233,7 +301,11 @@ export class TareasController {
   @RequiresPermission('tareas.editar')
   @Auditar('Eliminar Adjunto de Tarea')
   @ApiOperation({ summary: 'Eliminar un archivo adjunto de una tarea' })
-  removeAdjunto(@Param('id') id: string, @Param('archivoId') archivoId: string, @Request() req) {
+  removeAdjunto(
+    @Param('id') id: string,
+    @Param('archivoId') archivoId: string,
+    @Request() req,
+  ) {
     return this.tareasService.removeAdjunto(id, archivoId, req.user.id);
   }
 
@@ -249,13 +321,20 @@ export class TareasController {
   @Post(':id/actividad/:actividadId/responder')
   @RequiresPermission('tareas.comentar')
   @Auditar('Responder actividad de tarea')
-  @ApiOperation({ summary: 'Responder a un evento dentro de la actividad de la tarea' })
+  @ApiOperation({
+    summary: 'Responder a un evento dentro de la actividad de la tarea',
+  })
   responderActividad(
     @Param('id') id: string,
     @Param('actividadId') actividadId: string,
     @Body() responderActividadDto: ResponderActividadDto,
     @Request() req,
   ) {
-    return this.tareasService.responderActividad(id, actividadId, responderActividadDto, req.user.id);
+    return this.tareasService.responderActividad(
+      id,
+      actividadId,
+      responderActividadDto,
+      req.user.id,
+    );
   }
 }

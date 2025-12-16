@@ -144,61 +144,66 @@ export function Header() {
         </div>
 
 
-        {/* AI Search Bar */}
+        {/* AI Search Bar - Only visible if user has ai.search permission */}
         <div className="flex flex-1 items-center gap-2">
-          <div className="relative w-full max-w-2xl group">
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 transition-transform duration-300 group-hover:scale-110">
-              {isAiLoading || backgroundQuery?.status === "processing" ? (
-                <div className="h-6 w-6 flex items-center justify-center">
-                  <Loader2 className="h-5 w-5 text-[#FFBF00] animate-spin" />
-                </div>
-              ) : backgroundQuery?.status === "success" && !isSearchOpen ? (
-                <div className="h-6 w-6 flex items-center justify-center relative">
-                  <MagnusAvatar state="speaking" size="sm" className="h-6 w-6" />
-                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                </div>
-              ) : (
-                <MagnusAvatar state="idle" size="sm" className="h-6 w-6" />
-              )}
-            </div>
-            <Input
-              type="search"
-              placeholder={
-                isAiLoading || backgroundQuery?.status === "processing"
-                  ? "Magnus está pensando..."
-                  : backgroundQuery?.status === "success" && !isSearchOpen
-                    ? "¡Respuesta lista! Haz clic para ver"
-                    : "Preguntar a Magnus..."
-              }
-              className={cn(
-                "w-full cursor-pointer pl-10 pr-12 md:pr-20 text-sm transition-all placeholder:text-[#FFBF00]/70",
-                isAiLoading || backgroundQuery?.status === "processing"
-                  ? "border-[#FFBF00]/50 bg-[#FFBF00]/10 animate-pulse"
-                  : backgroundQuery?.status === "success" && !isSearchOpen
-                    ? "border-green-500/50 bg-green-500/10 hover:bg-green-500/15"
-                    : "border-[#FFBF00]/30 bg-[#FFBF00]/5 hover:bg-[#FFBF00]/10 hover:border-[#FFBF00]/50 focus-visible:ring-[#FFBF00]/50"
-              )}
-              onClick={() => setIsSearchOpen(true)}
-              readOnly
-            />
-
-            {/* Status indicator badge */}
-            {aiStatus.show && (
-              <div className={cn(
-                "absolute right-14 md:right-20 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium",
-                aiStatus.type === "loading" && "bg-[#FFBF00]/20 text-[#FFBF00]",
-                aiStatus.type === "success" && "bg-green-500/20 text-green-600 dark:text-green-400",
-                aiStatus.type === "error" && "bg-red-500/20 text-red-600 dark:text-red-400"
-              )}>
-                {aiStatus.icon}
-                <span className="hidden sm:inline">{aiStatus.text}</span>
+          {user?.permisos?.includes('ai.search') ? (
+            <div className="relative w-full max-w-2xl group">
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 transition-transform duration-300 group-hover:scale-110">
+                {isAiLoading || backgroundQuery?.status === "processing" ? (
+                  <div className="h-6 w-6 flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 text-[#FFBF00] animate-spin" />
+                  </div>
+                ) : backgroundQuery?.status === "success" && !isSearchOpen ? (
+                  <div className="h-6 w-6 flex items-center justify-center relative">
+                    <MagnusAvatar state="speaking" size="sm" className="h-6 w-6" />
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  </div>
+                ) : (
+                  <MagnusAvatar state="idle" size="sm" className="h-6 w-6" />
+                )}
               </div>
-            )}
+              <Input
+                type="search"
+                placeholder={
+                  isAiLoading || backgroundQuery?.status === "processing"
+                    ? "Magnus está pensando..."
+                    : backgroundQuery?.status === "success" && !isSearchOpen
+                      ? "¡Respuesta lista! Haz clic para ver"
+                      : "Preguntar a Magnus..."
+                }
+                className={cn(
+                  "w-full cursor-pointer pl-10 pr-12 md:pr-20 text-sm transition-all placeholder:text-[#FFBF00]/70",
+                  isAiLoading || backgroundQuery?.status === "processing"
+                    ? "border-[#FFBF00]/50 bg-[#FFBF00]/10 animate-pulse"
+                    : backgroundQuery?.status === "success" && !isSearchOpen
+                      ? "border-green-500/50 bg-green-500/10 hover:bg-green-500/15"
+                      : "border-[#FFBF00]/30 bg-[#FFBF00]/5 hover:bg-[#FFBF00]/10 hover:border-[#FFBF00]/50 focus-visible:ring-[#FFBF00]/50"
+                )}
+                onClick={() => setIsSearchOpen(true)}
+                readOnly
+              />
 
-            <kbd className="pointer-events-none absolute right-2 md:right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-[#FFBF00]/20 bg-[#FFBF00]/10 px-1.5 font-mono text-[10px] font-medium text-[#FFBF00] opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </div>
+              {/* Status indicator badge */}
+              {aiStatus.show && (
+                <div className={cn(
+                  "absolute right-14 md:right-20 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium",
+                  aiStatus.type === "loading" && "bg-[#FFBF00]/20 text-[#FFBF00]",
+                  aiStatus.type === "success" && "bg-green-500/20 text-green-600 dark:text-green-400",
+                  aiStatus.type === "error" && "bg-red-500/20 text-red-600 dark:text-red-400"
+                )}>
+                  {aiStatus.icon}
+                  <span className="hidden sm:inline">{aiStatus.text}</span>
+                </div>
+              )}
+
+              <kbd className="pointer-events-none absolute right-2 md:right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-[#FFBF00]/20 bg-[#FFBF00]/10 px-1.5 font-mono text-[10px] font-medium text-[#FFBF00] opacity-100">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </div>
+          ) : (
+            /* Placeholder when user doesn't have AI permission */
+            <div className="flex-1" />
+          )}
         </div>
 
         {/* Right Actions */}

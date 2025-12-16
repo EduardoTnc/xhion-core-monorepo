@@ -1,12 +1,13 @@
 // xhion-core-client/src/components/layout/MainLayout.tsx
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { Sidebar } from './sidebar';
+import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { ConnectionBanner } from './ConnectionBanner';
 import { GlobalLoader } from './GlobalLoader';
 import { Outlet } from 'react-router-dom';
 import { useThemeCustomization } from '@/hooks/useThemeCustomization';
 import { useConnectionRefresh } from '@/hooks/useConnectionRefresh';
+import { usePermissionSync } from '@/hooks/usePermissionSync';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const MainLayout = () => {
@@ -14,6 +15,10 @@ export const MainLayout = () => {
 
   // Apply theme customization from system settings
   useThemeCustomization();
+
+  // Automatically sync user permissions in background
+  // Syncs every 5 minutes and on window focus (optimized)
+  usePermissionSync();
 
   // Invalidate all queries when connection is restored (instead of page reload)
   useConnectionRefresh({

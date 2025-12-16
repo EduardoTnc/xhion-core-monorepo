@@ -49,6 +49,7 @@ import { Button } from "@/components/ui/button"
 import { useAiSearchStore } from "@/store/aiSearchStore"
 import type { AiActionSuggestion } from "@/services/aiService"
 import { toast } from "sonner"
+import { useAuthStore } from "@/store/authStore"
 import { cn } from "@/lib/utils"
 import { MODULOS_PERMISOS, type PermisoDefinicion } from "@/constants/permissions"
 import { formatDistanceToNow, format, isToday, isTomorrow, isThisWeek, getHours } from "date-fns"
@@ -170,6 +171,10 @@ const thinkingMessages = [
 ]
 
 export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
+  // Check if user has permission to use AI
+  const user = useAuthStore((state) => state.user)
+  const hasAiPermission = user?.permisos?.includes('ai.search') ?? false
+
   const {
     query,
     setQuery,
@@ -281,6 +286,11 @@ export function AISearchModal({ open, onOpenChange }: AISearchModalProps) {
   const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "k") {
       e.preventDefault()
+      // Only open if user has AI permission
+      if (!hasAiPermission) {
+        toast.error('No tienes permiso para acceder a Magnus IA')
+        return
+      }
       onOpenChange(!open)
       return
     }

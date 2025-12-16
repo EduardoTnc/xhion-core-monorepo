@@ -71,6 +71,8 @@ export class ProyectosService {
           select: {
             id: true,
             nombre: true,
+            color: true,
+            icono: true,
           },
         },
         miembros: {
@@ -107,9 +109,9 @@ export class ProyectosService {
    * Si no, solo verá proyectos donde es responsable o miembro
    */
   async findAll(
-    usuarioId: string, 
-    permisos: string[], 
-    filters?: { estado?: string; departamentoId?: string }
+    usuarioId: string,
+    permisos: string[],
+    filters?: { estado?: string; departamentoId?: string },
   ) {
     // Verificar si el usuario tiene permiso para ver todos los proyectos
     const puedeVerTodos = permisos.includes('proyectos.ver_todos');
@@ -149,6 +151,8 @@ export class ProyectosService {
           select: {
             id: true,
             nombre: true,
+            color: true,
+            icono: true,
           },
         },
         _count: {
@@ -188,6 +192,8 @@ export class ProyectosService {
           select: {
             id: true,
             nombre: true,
+            color: true,
+            icono: true,
           },
         },
         miembros: {
@@ -228,19 +234,25 @@ export class ProyectosService {
     // Si el usuario tiene el permiso 'proyectos.ver', puede acceder a cualquier proyecto
     // La verificación de permisos ya se hizo en el PermissionsGuard
     // Solo verificamos que sea miembro para operaciones de escritura
-    
+
     return proyecto;
   }
 
   /**
    * Actualizar un proyecto
    */
-  async update(id: string, updateProyectoDto: UpdateProyectoDto, usuarioId: string) {
+  async update(
+    id: string,
+    updateProyectoDto: UpdateProyectoDto,
+    usuarioId: string,
+  ) {
     const proyecto = await this.findOne(id, usuarioId);
 
     // Solo el responsable puede actualizar el proyecto
     if (proyecto.responsableId !== usuarioId) {
-      throw new ForbiddenException('Solo el responsable puede actualizar el proyecto');
+      throw new ForbiddenException(
+        'Solo el responsable puede actualizar el proyecto',
+      );
     }
 
     const updated = await this.prisma.proyecto.update({
@@ -259,6 +271,8 @@ export class ProyectosService {
           select: {
             id: true,
             nombre: true,
+            color: true,
+            icono: true,
           },
         },
         miembros: {
@@ -292,7 +306,9 @@ export class ProyectosService {
 
     // Solo el responsable puede eliminar el proyecto
     if (proyecto.responsableId !== usuarioId) {
-      throw new ForbiddenException('Solo el responsable puede eliminar el proyecto');
+      throw new ForbiddenException(
+        'Solo el responsable puede eliminar el proyecto',
+      );
     }
 
     await this.prisma.proyecto.update({
@@ -313,12 +329,18 @@ export class ProyectosService {
   /**
    * Agregar un miembro al proyecto
    */
-  async addMiembro(proyectoId: string, addMiembroDto: AddMiembroDto, usuarioId: string) {
+  async addMiembro(
+    proyectoId: string,
+    addMiembroDto: AddMiembroDto,
+    usuarioId: string,
+  ) {
     const proyecto = await this.findOne(proyectoId, usuarioId);
 
     // Solo el responsable puede agregar miembros
     if (proyecto.responsableId !== usuarioId) {
-      throw new ForbiddenException('Solo el responsable puede agregar miembros');
+      throw new ForbiddenException(
+        'Solo el responsable puede agregar miembros',
+      );
     }
 
     // Verificar que el usuario existe
@@ -398,17 +420,25 @@ export class ProyectosService {
   /**
    * Remover un miembro del proyecto
    */
-  async removeMiembro(proyectoId: string, miembroId: string, usuarioId: string) {
+  async removeMiembro(
+    proyectoId: string,
+    miembroId: string,
+    usuarioId: string,
+  ) {
     const proyecto = await this.findOne(proyectoId, usuarioId);
 
     // Solo el responsable puede remover miembros
     if (proyecto.responsableId !== usuarioId) {
-      throw new ForbiddenException('Solo el responsable puede remover miembros');
+      throw new ForbiddenException(
+        'Solo el responsable puede remover miembros',
+      );
     }
 
     // No se puede remover al responsable
     if (miembroId === proyecto.responsableId) {
-      throw new BadRequestException('No se puede remover al responsable del proyecto');
+      throw new BadRequestException(
+        'No se puede remover al responsable del proyecto',
+      );
     }
 
     const miembro = await this.prisma.proyectoMiembro.findUnique({
@@ -441,7 +471,11 @@ export class ProyectosService {
   /**
    * Crear una etapa en un proyecto
    */
-  async createEtapa(proyectoId: string, createEtapaDto: CreateEtapaDto, usuarioId: string) {
+  async createEtapa(
+    proyectoId: string,
+    createEtapaDto: CreateEtapaDto,
+    usuarioId: string,
+  ) {
     const proyecto = await this.findOne(proyectoId, usuarioId);
 
     // Solo el responsable puede crear etapas
@@ -460,7 +494,9 @@ export class ProyectosService {
     });
 
     if (etapaExistente) {
-      throw new ConflictException(`Ya existe una etapa con el orden ${createEtapaDto.orden}`);
+      throw new ConflictException(
+        `Ya existe una etapa con el orden ${createEtapaDto.orden}`,
+      );
     }
 
     const etapa = await this.prisma.etapa.create({
@@ -468,8 +504,12 @@ export class ProyectosService {
         nombre: createEtapaDto.nombre,
         descripcion: createEtapaDto.descripcion,
         orden: createEtapaDto.orden,
-        fechaInicio: createEtapaDto.fechaInicio ? new Date(createEtapaDto.fechaInicio) : undefined,
-        fechaFin: createEtapaDto.fechaFin ? new Date(createEtapaDto.fechaFin) : undefined,
+        fechaInicio: createEtapaDto.fechaInicio
+          ? new Date(createEtapaDto.fechaInicio)
+          : undefined,
+        fechaFin: createEtapaDto.fechaFin
+          ? new Date(createEtapaDto.fechaFin)
+          : undefined,
         proyectoId,
       },
       include: {
@@ -518,7 +558,9 @@ export class ProyectosService {
 
     // Solo el responsable puede actualizar etapas
     if (proyecto.responsableId !== usuarioId) {
-      throw new ForbiddenException('Solo el responsable puede actualizar etapas');
+      throw new ForbiddenException(
+        'Solo el responsable puede actualizar etapas',
+      );
     }
 
     const etapa = await this.prisma.etapa.findUnique({
@@ -541,7 +583,9 @@ export class ProyectosService {
       });
 
       if (etapaConOrden) {
-        throw new ConflictException(`Ya existe una etapa con el orden ${updateEtapaDto.orden}`);
+        throw new ConflictException(
+          `Ya existe una etapa con el orden ${updateEtapaDto.orden}`,
+        );
       }
     }
 
@@ -551,8 +595,12 @@ export class ProyectosService {
         nombre: updateEtapaDto.nombre,
         descripcion: updateEtapaDto.descripcion,
         orden: updateEtapaDto.orden,
-        fechaInicio: updateEtapaDto.fechaInicio ? new Date(updateEtapaDto.fechaInicio) : undefined,
-        fechaFin: updateEtapaDto.fechaFin ? new Date(updateEtapaDto.fechaFin) : undefined,
+        fechaInicio: updateEtapaDto.fechaInicio
+          ? new Date(updateEtapaDto.fechaInicio)
+          : undefined,
+        fechaFin: updateEtapaDto.fechaFin
+          ? new Date(updateEtapaDto.fechaFin)
+          : undefined,
         estado: updateEtapaDto.estado,
       },
       include: {
@@ -610,12 +658,18 @@ export class ProyectosService {
   /**
    * Reordenar etapas
    */
-  async reorderEtapas(proyectoId: string, reorderDto: ReorderEtapasDto, usuarioId: string) {
+  async reorderEtapas(
+    proyectoId: string,
+    reorderDto: ReorderEtapasDto,
+    usuarioId: string,
+  ) {
     const proyecto = await this.findOne(proyectoId, usuarioId);
 
     // Solo el responsable puede reordenar etapas
     if (proyecto.responsableId !== usuarioId) {
-      throw new ForbiddenException('Solo el responsable puede reordenar etapas');
+      throw new ForbiddenException(
+        'Solo el responsable puede reordenar etapas',
+      );
     }
 
     // Verificar que todas las etapas pertenecen al proyecto
@@ -628,7 +682,9 @@ export class ProyectosService {
     });
 
     if (etapas.length !== etapasIds.length) {
-      throw new BadRequestException('Algunas etapas no pertenecen a este proyecto');
+      throw new BadRequestException(
+        'Algunas etapas no pertenecen a este proyecto',
+      );
     }
 
     // Actualizar el orden de cada etapa en una transacción

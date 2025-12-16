@@ -52,9 +52,11 @@ export function TasksView() {
 
   const canViewAll = user?.permisos?.includes("tareas.ver_todas")
   const canCreate = user?.permisos?.includes("tareas.crear")
+  const canViewUsers = user?.permisos?.includes("usuarios.ver")
 
   // ==================== TanStack Query Hooks ====================
-  const { data: users = [], isLoading: isLoadingUsers } = useUsers()
+  // Only fetch users if user has permission to view them (for filters)
+  const { data: users = [], isLoading: isLoadingUsers } = useUsers({ enabled: canViewUsers })
   const { data: tareas = [], isLoading: isLoadingAllTasks, refetch: refetchTareas } = useTasks({}, { enabled: canViewAll })
   const { data: misTareas = [], isLoading: isLoadingMyTasks, refetch: refetchMisTareas } = useMyTasks({ enabled: !canViewAll })
   const deleteTaskMutation = useDeleteTask()
@@ -72,7 +74,23 @@ export function TasksView() {
   }
 
   // Map users to ProyectoMiembro format for TaskFilters
+  // If user can't view all users, show only current user as option
   const miembrosForFilters: ProyectoMiembro[] = useMemo(() => {
+    if (!canViewUsers && user) {
+      return [{
+        id: user.id,
+        usuarioId: user.id,
+        proyectoId: "global",
+        rol: "Miembro",
+        fechaUnion: new Date().toISOString(),
+        usuario: {
+          id: user.id,
+          nombreCompleto: user.nombreCompleto,
+          email: user.email,
+          avatarUrl: user.avatarUrl || undefined
+        }
+      }]
+    }
     return users.map(u => ({
       id: u.id,
       usuarioId: u.id,
@@ -86,7 +104,7 @@ export function TasksView() {
         avatarUrl: u.avatarUrl || undefined
       }
     }))
-  }, [users])
+  }, [users, user, canViewUsers])
 
   // Apply filters locally
   const filteredTasks = useMemo(() => {
@@ -115,7 +133,9 @@ export function TasksView() {
 
   const hasActiveFilters = Object.values(filters).some(v => v !== "all" && v !== "")
 
-  const isLoading = isLoadingTasks || isLoadingUsers
+  // Only wait for users if user has permission to view them
+  const isLoading = isLoadingTasks || (canViewUsers && isLoadingUsers)
+
 
   return (
     <div className="flex h-full flex-col bg-background overflow-hidden">
